@@ -47,20 +47,11 @@ public class DBContext {
         }
     }
     
-    /**
-     * Get current connection
-     */
     public Connection getConnection() {
-        try {
-            // Check if connection is still active
-            if (connection == null || connection.isClosed()) {
-                LOGGER.log(Level.WARNING, "Connection is closed, creating new connection");
-                initializeConnection();
-            }
-        } catch (SQLException e) {
-            LOGGER.log(Level.WARNING, "Error checking connection, creating new connection", e);
-            initializeConnection();
-        }
         return connection;
     }
+
+    public void setConnection(Connection connection) {
+        this.connection = connection;
+    }  
 }
