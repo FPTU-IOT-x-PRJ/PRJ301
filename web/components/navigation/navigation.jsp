@@ -21,7 +21,7 @@
                     </a>
                 </li>
 
-                <c:if test="${sessionScope.user.role == 'admin'}">
+                <c:if test="${sessionScope.user.role == 'Admin'}">
                     <li class="nav-item">
                         <a class="nav-link" href="${pageContext.request.contextPath}/users">
                             <i class="fas fa-users me-1"></i>Quản lý User
@@ -57,7 +57,7 @@
                             <i class="fas fa-cog me-2"></i>Cài đặt
                         </a></li>
                         <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item" href="${pageContext.request.contextPath}/logout">
+                        <li><a class="dropdown-item" href="${pageContext.request.contextPath}/auth/logout">
                             <i class="fas fa-sign-out-alt me-2"></i>Đăng xuất
                         </a></li>
                     </ul>

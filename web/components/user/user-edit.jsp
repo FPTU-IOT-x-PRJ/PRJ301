@@ -1,7 +1,5 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
-<%@page import="java.util.*" %>
-<%@page import="entity.*" %>
 <!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -12,9 +10,6 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
 </head>
-<%
-    User user = (User) request.getAttribute("user");
-%>
 <body>
     <jsp:include page="../navigation/navigation.jsp" />
 

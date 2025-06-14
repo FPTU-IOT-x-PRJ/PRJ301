@@ -13,6 +13,7 @@ import java.sql.SQLException;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.mindrot.jbcrypt.BCrypt;
 
 public class UserController extends HttpServlet {
     private static final Logger LOGGER = Logger.getLogger(UserController.class.getName());
@@ -65,7 +66,7 @@ public class UserController extends HttpServlet {
     private void displayDashboard(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         // 1. Lấy các tham số từ request
         String search = request.getParameter("search");
-        String roleFilter = request.getParameter("role"); // "admin" hoặc "user"
+        String roleFilter = request.getParameter("role"); // "Admin" hoặc "User"
         String sortOrder = request.getParameter("sort"); // "createdAt_desc", "firstName_asc", v.v.
         String pageStr = request.getParameter("page");
 
@@ -150,7 +151,14 @@ public class UserController extends HttpServlet {
         String role = request.getParameter("role");
 
         try {
-            userDAO.insertUser(new User(username, email, password, firstName, lastName, role));
+            String salt = BCrypt.gensalt();
+            String hashedPassword = BCrypt.hashpw(password, salt);
+            
+            LOGGER.log(Level.INFO, "Password from form: {0}", password);
+            LOGGER.log(Level.INFO, "Generated Salt: {0}", salt);
+            LOGGER.log(Level.INFO, "Hashed Password: {0}", hashedPassword);
+            
+            userDAO.insertUser(new User(username, email, hashedPassword, firstName, lastName, role));
             response.sendRedirect(request.getContextPath() + "/user/dashboard");
         } catch (SQLException e) {
             // Nếu lỗi là do trùng UNIQUE key
@@ -180,10 +188,9 @@ public class UserController extends HttpServlet {
         String lastName = request.getParameter("lastName");
         String username = request.getParameter("username");
         String email = request.getParameter("email");
-        String password = request.getParameter("password");
         String role = request.getParameter("role");
 
-        userDAO.updateUserProfile(new User(id, username, email, password, firstName, lastName, role));
+        userDAO.updateUserProfile(new User(id, username, email, firstName, lastName, role));
         response.sendRedirect(request.getContextPath() + "/user/dashboard");
     }
     
