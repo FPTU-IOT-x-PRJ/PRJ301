@@ -1,32 +1,43 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
-<%@page import="java.util.*" %>
-<%@page import="entity.*" %>
 <!DOCTYPE html>
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chỉnh Sửa Người Dùng - EduPlan</title>
-    <link href="/css/common.css" rel="stylesheet">
+    <title>Chỉnh Sửa Hồ Sơ Cá Nhân - EduPlan</title> <%-- Thay đổi tiêu đề --%>
+    <link href="${pageContext.request.contextPath}/css/common.css" rel="stylesheet"> <%-- Sửa đường dẫn CSS --%>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: var(--light-color); /* Nền trắng nhạt theo common.css */
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+        .container {
+            flex-grow: 1; /* Cho phép container mở rộng để chiếm không gian còn lại */
+            display: flex; /* Dùng flexbox để căn giữa nội dung bên trong */
+            align-items: center; /* Căn giữa theo chiều dọc */
+            justify-content: center; /* Căn giữa theo chiều ngang */
+            padding-top: 20px; /* Đảm bảo có padding sau navigation */
+            padding-bottom: 20px;
+        }
+    </style>
 </head>
-<%
-    User user = (User) request.getAttribute("user");
-%>
 <body>
     <jsp:include page="../navigation/navigation.jsp" />
 
-    <div class="container py-4">
-        <div class="row justify-content-center">
+    <div class="container">
+        <div class="row justify-content-center w-100">
             <div class="col-lg-8 col-md-10">
-                <div class="card shadow-sm">
-                    <div class="card-header bg-warning text-dark">
-                        <h4 class="mb-0"><i class="fas fa-user-edit me-2"></i>Chỉnh sửa người dùng</h4>
+                <div class="card shadow-lg"> <%-- Thêm shadow-lg --%>
+                    <div class="card-header bg-dark text-white py-3"> <%-- Đổi màu header sang bg-dark --%>
+                        <h4 class="mb-0 text-center"><i class="fas fa-user-edit me-2"></i>Chỉnh sửa hồ sơ của bạn</h4> <%-- Thay đổi tiêu đề header --%>
                     </div>
-                    <div class="card-body">
-                        <%-- Hiển thị thông báo lỗi từ backend nếu có (ví dụ: lỗi trùng email khi update) --%>
+                    <div class="card-body p-4"> <%-- Thêm padding --%>
+                        <%-- Hiển thị thông báo lỗi từ backend nếu có (ví dụ: lỗi khi cập nhật) --%>
                         <c:if test="${not empty errorMessage}">
                             <div class="alert alert-danger alert-dismissible fade show" role="alert">
                                 <i class="fas fa-exclamation-triangle me-2"></i>${errorMessage}
@@ -34,56 +45,61 @@
                             </div>
                         </c:if>
                         
-                        <%-- Thông báo nếu không tìm thấy người dùng (user object rỗng) --%>
-                        <c:if test="${empty user}">
+                        <%-- Thông báo nếu người dùng chưa đăng nhập --%>
+                        <c:if test="${empty sessionScope.loggedInUser}">
                             <div class="alert alert-warning text-center" role="alert">
-                                <i class="fas fa-exclamation-circle me-2"></i>Không tìm thấy thông tin người dùng để chỉnh sửa.
+                                <i class="fas fa-exclamation-circle me-2"></i>Bạn cần đăng nhập để chỉnh sửa hồ sơ cá nhân.
+                                <p class="mt-2"><a href="${pageContext.request.contextPath}/auth/login" class="alert-link">Đăng nhập ngay</a></p>
                             </div>
                         </c:if>
                         
-                        <%-- Hiển thị form chỉ khi có user object --%>
-                        <c:if test="${not empty user}">
-                            Role: ${user.role}
-                            <form id="editUserForm" action="${pageContext.request.contextPath}/user/edit" method="POST" class="needs-validation" novalidate>
-                                <input type="hidden" id="id" name="id" value="${user.id}">
+                        <%-- Hiển thị form chỉ khi có user object trong session --%>
+                        <c:if test="${not empty sessionScope.loggedInUser}">
+                            <form id="editUserProfileForm" action="${pageContext.request.contextPath}/user/updateProfile" method="POST" class="needs-validation" novalidate> <%-- Đổi action --%>
+                                <input type="hidden" id="id" name="id" value="${sessionScope.loggedInUser.id}"> <%-- Lấy ID từ session --%>
                                 <div class="row g-3">
                                     <div class="col-md-6">
-                                        <label for="firstName" class="form-label">Họ <span class="text-danger">*</span></label>
-                                        <input type="text" class="form-control" id="firstName" name="firstName" value="${user.firstName}" required>
-                                        <div class="invalid-feedback">Vui lòng nhập họ.</div>
+                                        <label for="firstName" class="form-label">Tên <span class="text-danger">*</span></label> <%-- Đổi Họ -> Tên, Tên -> Họ đệm --%>
+                                        <input type="text" class="form-control" id="firstName" name="firstName" value="${sessionScope.loggedInUser.firstName}" required>
+                                        <div class="invalid-feedback">Vui lòng nhập tên của bạn.</div>
                                     </div>
                                     <div class="col-md-6">
-                                        <label for="lastName" class="form-label">Tên <span class="text-danger">*</span></label>
-                                        <input type="text" class="form-control" id="lastName" name="lastName" value="${user.lastName}" required>
-                                        <div class="invalid-feedback">Vui lòng nhập tên.</div>
+                                        <label for="lastName" class="form-label">Họ đệm <span class="text-danger">*</span></label>
+                                        <input type="text" class="form-control" id="lastName" name="lastName" value="${sessionScope.loggedInUser.lastName}" required>
+                                        <div class="invalid-feedback">Vui lòng nhập họ đệm của bạn.</div>
                                     </div>
                                     <div class="col-md-6">
                                         <label for="username" class="form-label">Tên đăng nhập</label>
-                                        <input type="text" class="form-control" id="username" name="username" value="${user.username}" readonly>
+                                        <input type="text" class="form-control" id="username" name="username" value="${sessionScope.loggedInUser.username}" readonly>
                                         <div class="form-text">Tên đăng nhập không thể thay đổi.</div>
                                     </div>
                                     <div class="col-md-6">
-                                        <label for="email" class="form-label">Email <span class="text-danger">*</span></label>
-                                        <input type="email" class="form-control" id="email" name="email" value="${user.email}" readonly>
-                                        <div class="form-text">Email không thể thay đổi</div>
+                                        <label for="email" class="form-label">Email</label>
+                                        <input type="email" class="form-control" id="email" name="email" value="${sessionScope.loggedInUser.email}" readonly>
+                                        <div class="form-text">Email không thể thay đổi.</div>
                                     </div>
+                                    <%-- Bỏ phần chọn Role vì người dùng không thể tự thay đổi vai trò của mình --%>
                                     <div class="col-md-12">
-                                        <label for="role" class="form-label">Vai trò <span class="text-danger">*</span></label>
-                                        <select class="form-select" id="role" name="role" required>
-                                            <option value="">Chọn vai trò</option>
-                                            <option value="user" <c:if test="${user.role eq 'User'}">selected</c:if>>User</option>
-                                            <option value="admin" <c:if test="${user.role eq 'Admin'}">selected</c:if>>Admin</option>
-                                        </select>
-                                        <div class="invalid-feedback">Vui lòng chọn vai trò.</div>
+                                        <label class="form-label">Vai trò hiện tại:</label>
+                                        <p class="form-control-plaintext">
+                                            <c:choose>
+                                                <c:when test="${sessionScope.loggedInUser.role eq 'Admin'}">
+                                                    <span class="badge bg-danger"><i class="fas fa-user-shield me-1"></i>Admin</span>
+                                                </c:when>
+                                                <c:otherwise>
+                                                    <span class="badge bg-success"><i class="fas fa-user me-1"></i>User</span>
+                                                </c:otherwise>
+                                            </c:choose>
+                                        </p>
                                     </div>
                                 </div>
                                 <hr class="my-4">
                                 <div class="d-flex justify-content-end">
-                                    <a href="${pageContext.request.contextPath}/user/dashboard" class="btn btn-secondary me-2">
+                                    <a href="${pageContext.request.contextPath}/user/profile" class="btn btn-secondary me-2"> <%-- Sửa đường dẫn Hủy --%>
                                         <i class="fas fa-times me-2"></i>Hủy
                                     </a>
                                     <button type="submit" class="btn btn-primary">
-                                        <i class="fas fa-save me-2"></i>Cập nhật
+                                        <i class="fas fa-save me-2"></i>Lưu thay đổi
                                     </button>
                                 </div>
                             </form>
@@ -99,32 +115,19 @@
         // Form validation
         (function () {
             'use strict';
-            var form = document.getElementById('editUserForm');
-            form.addEventListener('submit', function (event) {
-                // Kiểm tra validation của Bootstrap
-                if (!form.checkValidity()) {
-                    event.preventDefault(); // Ngăn chặn gửi form nếu có lỗi
-                    event.stopPropagation(); // Ngăn chặn sự kiện nổi bọt
-                }
-                form.classList.add('was-validated'); // Thêm class để hiển thị lỗi validation của Bootstrap
-            }, false);
-        })();
-
-        // Các hàm togglePassword không còn cần thiết cho trang edit này vì đã bỏ phần mật khẩu.
-        // Tuy nhiên, tôi vẫn để lại ở đây nếu bạn muốn sử dụng lại trong tương lai hoặc ở trang khác.
-        function togglePassword(id) {
-            var input = document.getElementById(id);
-            var icon = input.nextElementSibling.querySelector('i');
-            if (input.type === 'password') {
-                input.type = 'text';
-                icon.classList.remove('fa-eye');
-                icon.classList.add('fa-eye-slash');
-            } else {
-                input.type = 'password';
-                icon.classList.remove('fa-eye-slash');
-                icon.classList.add('fa-eye');
+            var form = document.getElementById('editUserProfileForm'); // Sửa ID form
+            if (form) { // Đảm bảo form tồn tại trước khi thêm event listener
+                form.addEventListener('submit', function (event) {
+                    // Kiểm tra validation của Bootstrap
+                    if (!form.checkValidity()) {
+                        event.preventDefault(); // Ngăn chặn gửi form nếu có lỗi
+                        event.stopPropagation(); // Ngăn chặn sự kiện nổi bọt
+                    }
+                    form.classList.add('was-validated'); // Thêm class để hiển thị lỗi validation của Bootstrap
+                }, false);
             }
-        }
+        })();
+        // Các hàm togglePassword không còn cần thiết cho trang này
     </script>
 </body>
 </html>

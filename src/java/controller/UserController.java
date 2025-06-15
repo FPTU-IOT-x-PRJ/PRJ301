@@ -13,6 +13,7 @@ import java.sql.SQLException;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.mindrot.jbcrypt.BCrypt;
 
 public class UserController extends HttpServlet {
     private static final Logger LOGGER = Logger.getLogger(UserController.class.getName());
@@ -23,21 +24,29 @@ public class UserController extends HttpServlet {
             throws ServletException, IOException {
         String action = request.getPathInfo();
         LOGGER.log(Level.INFO, "action: {0}", action);
+        
         switch (action != null ? action : "") {
             case "/dashboard":
                 displayDashboard(request, response);
                 break;
             case "/add":
-                request.getRequestDispatcher("/components/user/user-add.jsp").forward(request, response);
+                request.getRequestDispatcher("/components/user/admin-user-add.jsp").forward(request, response);
                 break;
             case "/edit":
                 displayEditUser(request, response);
-                break;       
+                break;
             case "/detail":
                 displayGetUser(request, response);
                 break;
             case "/delete-confirm":
                 displayDeleteUser(request, response);
+                break;
+            case "/profile-edit":
+                request.getRequestDispatcher("/components/user/user-edit.jsp").forward(request, response);
+                break;
+            case "/profile":
+                request.getRequestDispatcher("/components/user/user-profile.jsp").forward(request, response);
+                break;
             default:
                 break;
         }
@@ -65,7 +74,7 @@ public class UserController extends HttpServlet {
     private void displayDashboard(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         // 1. Lấy các tham số từ request
         String search = request.getParameter("search");
-        String roleFilter = request.getParameter("role"); // "admin" hoặc "user"
+        String roleFilter = request.getParameter("role"); // "Admin" hoặc "User"
         String sortOrder = request.getParameter("sort"); // "createdAt_desc", "firstName_asc", v.v.
         String pageStr = request.getParameter("page");
  
@@ -121,7 +130,7 @@ public class UserController extends HttpServlet {
         int id = Integer.parseInt((String) request.getParameter("id"));
         User user = userDAO.selectUserById(id);
         request.setAttribute("user", user);
-        request.getRequestDispatcher("/components/user/user-edit.jsp").forward(request, response);        
+        request.getRequestDispatcher("/components/user/admin-user-edit.jsp").forward(request, response);        
     }
     
     private void displayGetUser(HttpServletRequest request, HttpServletResponse response)
@@ -129,7 +138,7 @@ public class UserController extends HttpServlet {
         int id = Integer.parseInt(request.getParameter("id"));
         User user = userDAO.selectUserById(id);
         request.setAttribute("user", user);
-        request.getRequestDispatcher("/components/user/user-detail.jsp").forward(request, response);
+        request.getRequestDispatcher("/components/user/admin-user-detail.jsp").forward(request, response);
     }
     
     private void displayDeleteUser(HttpServletRequest request, HttpServletResponse response)
@@ -137,7 +146,7 @@ public class UserController extends HttpServlet {
         int id = Integer.parseInt(request.getParameter("id"));
         User user = userDAO.selectUserById(id);
         request.setAttribute("userToDelete", user);
-        request.getRequestDispatcher("/components/user/user-delete-confirm.jsp").forward(request, response);
+        request.getRequestDispatcher("/components/user/admin-user-delete-confirm.jsp").forward(request, response);
     }    
     
     private void addUser(HttpServletRequest request, HttpServletResponse response)
@@ -150,7 +159,14 @@ public class UserController extends HttpServlet {
         String role = request.getParameter("role");
 
         try {
-            userDAO.insertUser(new User(username, email, password, firstName, lastName, role));
+            String salt = BCrypt.gensalt();
+            String hashedPassword = BCrypt.hashpw(password, salt);
+            
+            LOGGER.log(Level.INFO, "Password from form: {0}", password);
+            LOGGER.log(Level.INFO, "Generated Salt: {0}", salt);
+            LOGGER.log(Level.INFO, "Hashed Password: {0}", hashedPassword);
+            
+            userDAO.insertUser(new User(username, email, hashedPassword, firstName, lastName, role));
             response.sendRedirect(request.getContextPath() + "/user/dashboard");
         } catch (SQLException e) {
             // Nếu lỗi là do trùng UNIQUE key
@@ -169,7 +185,7 @@ public class UserController extends HttpServlet {
             request.setAttribute("formEmail", email);
             request.setAttribute("formRole", role);
 
-            request.getRequestDispatcher("/components/user/user-add.jsp").forward(request, response);
+            request.getRequestDispatcher("/components/user/admin-user-add.jsp").forward(request, response);
         }
     }
 
@@ -180,10 +196,9 @@ public class UserController extends HttpServlet {
         String lastName = request.getParameter("lastName");
         String username = request.getParameter("username");
         String email = request.getParameter("email");
-        String password = request.getParameter("password");
         String role = request.getParameter("role");
 
-        userDAO.updateUserProfile(new User(id, username, email, password, firstName, lastName, role));
+        userDAO.updateUserProfile(new User(id, username, email, firstName, lastName, role));
         response.sendRedirect(request.getContextPath() + "/user/dashboard");
     }
     

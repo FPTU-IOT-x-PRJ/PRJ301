@@ -76,8 +76,8 @@
                                     <label for="role" class="form-label">Vai trò <span class="text-danger">*</span></label>
                                     <select class="form-select" id="role" name="role" required>
                                         <option value="">Chọn vai trò</option>
-                                        <option value="user" <c:if test="${formRole eq 'user'}">selected</c:if>>User</option>
-                                        <option value="admin" <c:if test="${formRole eq 'admin'}">selected</c:if>>Admin</option>
+                                        <option value="User" <c:if test="${formRole eq 'User'}">selected</c:if>>User</option>
+                                        <option value="Admin" <c:if test="${formRole eq 'Admin'}">selected</c:if>>Admin</option>
                                     </select>
                                     <div class="invalid-feedback">Vui lòng chọn vai trò.</div>
                                 </div>

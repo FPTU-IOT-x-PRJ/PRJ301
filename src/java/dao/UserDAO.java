@@ -12,6 +12,7 @@ import java.time.LocalDate;
 import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
 import java.util.List;
+import org.mindrot.jbcrypt.BCrypt;
 
 public class UserDAO extends DBContext {
 
@@ -51,6 +52,27 @@ public class UserDAO extends DBContext {
         }
         return exists;
     }
+    
+    public User authenticateUser(String identifier, String password) {
+        User user = null;
+        try (PreparedStatement preparedStatement = connection.prepareStatement(SELECT_USER_BY_USERNAME_OR_EMAIL_SQL)) {
+            preparedStatement.setString(1, identifier);
+            preparedStatement.setString(2, identifier);
+            try (ResultSet rs = preparedStatement.executeQuery()) {
+                if (rs.next()) {
+                    // Lấy mật khẩu đã hash từ DB
+                    String hashedPasswordFromDb = rs.getString("password");
+                    // So sánh mật khẩu thô với mật khẩu đã hash
+                    if (BCrypt.checkpw(password, hashedPasswordFromDb)) {
+                        user = extractUserFromResultSet(rs);
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            printSQLException(e);
+        }
+        return user;
+    }    
 
     /**
      * Kiểm tra xem email đã tồn tại trong cơ sở dữ liệu chưa.
@@ -304,7 +326,7 @@ public class UserDAO extends DBContext {
         return new UserStatistics(newUsersThisMonth, adminUsers, activeUsers, totalUsers);
     }
     
-        public List<User> getFilteredAndPaginatedUsers(String search, String roleFilter, String sortOrder, int offset, int limit) {
+    public List<User> getFilteredAndPaginatedUsers(String search, String roleFilter, String sortOrder, int offset, int limit) {
         List<User> users = new ArrayList<>();
         StringBuilder sqlBuilder = new StringBuilder("SELECT id, firstName, lastName, username, email, role, createdAt FROM Users WHERE 1=1");
 

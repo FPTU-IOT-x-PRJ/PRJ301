@@ -190,7 +190,7 @@
                                             <td>${user.email}</td>
                                             <td>
                                                 <c:choose>
-                                                    <c:when test="${user.role == 'admin'}">
+                                                    <c:when test="${user.role == 'Admin'}">
                                                         <span class="badge bg-danger">
                                                             <i class="fas fa-user-shield me-1"></i>Admin
                                                         </span>

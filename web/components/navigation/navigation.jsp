@@ -21,14 +21,6 @@
                     </a>
                 </li>
 
-                <c:if test="${sessionScope.user.role == 'admin'}">
-                    <li class="nav-item">
-                        <a class="nav-link" href="${pageContext.request.contextPath}/users">
-                            <i class="fas fa-users me-1"></i>Quản lý User
-                        </a>
-                    </li>
-                </c:if>
-
                 <li class="nav-item">
                     <a class="nav-link" href="${pageContext.request.contextPath}/semesters">
                         <i class="fas fa-calendar-alt me-1"></i>Kỳ học
@@ -50,14 +42,14 @@
                         <c:out value="${sessionScope.user.firstName} ${sessionScope.user.lastName}" />
                     </a>
                     <ul class="dropdown-menu" aria-labelledby="navbarDropdown">
-                        <li><a class="dropdown-item" href="${pageContext.request.contextPath}/profile">
+                        <li><a class="dropdown-item" href="${pageContext.request.contextPath}/user/profile">
                             <i class="fas fa-user me-2"></i>Hồ sơ
                         </a></li>
                         <li><a class="dropdown-item" href="${pageContext.request.contextPath}/settings">
                             <i class="fas fa-cog me-2"></i>Cài đặt
                         </a></li>
                         <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item" href="${pageContext.request.contextPath}/logout">
+                        <li><a class="dropdown-item" href="${pageContext.request.contextPath}/auth/logout">
                             <i class="fas fa-sign-out-alt me-2"></i>Đăng xuất
                         </a></li>
                     </ul>
