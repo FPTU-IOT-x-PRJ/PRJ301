@@ -12,6 +12,10 @@
         <servlet-name>AuthController</servlet-name>
         <servlet-class>controller.AuthController</servlet-class>
     </servlet>
+    <servlet>
+        <servlet-name>SemestersController</servlet-name>
+        <servlet-class>controller.SemestersController</servlet-class>
+    </servlet>
     <servlet-mapping>
         <servlet-name>TestDB</servlet-name>
         <url-pattern>/TestDB</url-pattern>
@@ -24,13 +28,17 @@
         <servlet-name>AuthController</servlet-name>
         <url-pattern>/auth/*</url-pattern>
     </servlet-mapping>
-    
+    <servlet-mapping>
+        <servlet-name>SemestersController</servlet-name>
+        <url-pattern>/semesters/*</url-pattern>
+    </servlet-mapping>
     <filter>
         <filter-name>AuthFilter</filter-name>
         <filter-class>filter.AuthFilter</filter-class>
     </filter>
     <filter-mapping>
         <filter-name>AuthFilter</filter-name>
-        <url-pattern>/user/*</url-pattern> 
-    </filter-mapping>    
+        <url-pattern>/user/*</url-pattern>
+    </filter-mapping>
+    
 </web-app>
