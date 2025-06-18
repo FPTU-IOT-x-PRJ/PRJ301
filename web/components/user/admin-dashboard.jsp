@@ -238,7 +238,7 @@
                         </tbody>
                     </table>
                 </div>
-            </div>
+        </div>
         </div>
                 
         <jsp:include page="../pagination/pagination.jsp"/>

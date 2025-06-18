@@ -10,7 +10,9 @@ import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.sql.SQLException;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.mindrot.jbcrypt.BCrypt;
@@ -114,13 +116,17 @@ public class UserController extends HttpServlet {
         request.setAttribute("totalUsersCount", totalUsers); // Tổng số người dùng sau khi lọc
 
         // Đặt lại các tham số lọc vào request để giữ trạng thái trên form
-        // (Hoặc bạn có thể dùng ${param.search} trực tiếp trong JSP như bạn đã làm, cũng rất tốt)
-        request.setAttribute("searchParam", search);
-        request.setAttribute("roleFilterParam", roleFilter);
-        request.setAttribute("sortOrderParam", sortOrder);
         
         request.setAttribute("totalPages", totalPages);
         request.setAttribute("currentPage", currentPage);
+
+        // Trong UserDashboardServlet
+        Map<String, String> paginationParams = new HashMap<>();
+        paginationParams.put("search", request.getParameter("search"));
+        paginationParams.put("role", request.getParameter("role"));
+        paginationParams.put("sort", request.getParameter("sort"));
+        request.setAttribute("paginationParams", paginationParams);
+        request.setAttribute("baseUrl", request.getContextPath() + "/user/dashboard");
 
         // 6. Chuyển tiếp đến JSP
         request.getRequestDispatcher("/components/user/admin-dashboard.jsp").forward(request, response);

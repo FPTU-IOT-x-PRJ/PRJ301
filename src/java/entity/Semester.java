@@ -13,13 +13,14 @@ public class Semester {
     private String name;
     private Date startDate;
     private Date endDate;
+    private String description;
     private String status;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private int userId;    
 
-    
     public Semester(){}
-    public Semester( String name, Date startDate, Date endDate, String status, LocalDateTime createdAt, LocalDateTime updatedAt) {
+    public Semester( String name, Date startDate, Date endDate, String status, LocalDateTime createdAt, LocalDateTime updatedAt, String description, int userId) {
        
         this.name = name;
         this.startDate = startDate;
@@ -27,9 +28,11 @@ public class Semester {
         this.status = status;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
+        this.description = description;
+        this.userId = userId;
     }
     
-    public Semester(int id, String name, Date startDate, Date endDate, String status, LocalDateTime createdAt, LocalDateTime updatedAt) {
+    public Semester(int id, String name, Date startDate, Date endDate, String status, LocalDateTime createdAt, LocalDateTime updatedAt, String description, int userId) {
         this.id = id;
         this.name = name;
         this.startDate = startDate;
@@ -37,11 +40,8 @@ public class Semester {
         this.status = status;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
-    }
-
-    @Override
-    public String toString() {
-        return "Semester{" + "id=" + id + ", name=" + name + ", startDate=" + startDate + ", endDate=" + endDate + ", status=" + status + ", createdAt=" + createdAt + ", updatedAt=" + updatedAt + '}';
+        this.description = description;
+        this.userId = userId;
     }
 
     public int getId() {
@@ -100,7 +100,21 @@ public class Semester {
         this.updatedAt = updatedAt;
     }
     
+    public int getUserId() {
+        return userId;
+    }
     
+    public void setUserId(int userId) {
+        this.userId = userId;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
     
     
 }

@@ -3,24 +3,25 @@
 <%
     int totalPages = (int) request.getAttribute("totalPages");
     int currentPage = (int) request.getAttribute("currentPage");
-%>                
+%>
+
 <c:if test="${totalPages > 0}">
     <nav aria-label="Page navigation" class="mt-4">
         <ul class="pagination justify-content-center">
             <li class="page-item ${currentPage <= 1 ? 'disabled' : ''}">
-                <a class="page-link" href="?page=${currentPage - 1}&search=${param.search}&role=${param.role}&sort=${param.sort}" aria-label="Previous">
+                <a class="page-link" href="${baseUrl}?page=${currentPage - 1}<c:forEach items='${paginationParams}' var='param'><c:if test='${not empty param.value}'>&${param.key}=${param.value}</c:if></c:forEach>" aria-label="Previous">
                     <i class="fas fa-chevron-left"></i>
                 </a>
             </li>
 
             <c:forEach begin="1" end="${totalPages}" var="pageNum">
                 <li class="page-item ${pageNum == currentPage ? 'active' : ''}">
-                    <a class="page-link" href="?page=${pageNum}&search=${param.search}&role=${param.role}&sort=${param.sort}">${pageNum}</a>
+                    <a class="page-link" href="${baseUrl}?page=${pageNum}<c:forEach items='${paginationParams}' var='param'><c:if test='${not empty param.value}'>&${param.key}=${param.value}</c:if></c:forEach>">${pageNum}</a>
                 </li>
             </c:forEach>
 
             <li class="page-item ${currentPage >= totalPages ? 'disabled' : ''}">
-                <a class="page-link" href="?page=${currentPage + 1}&search=${param.search}&role=${param.role}&sort=${param.sort}" aria-label="Next">
+                <a class="page-link" href="${baseUrl}?page=${currentPage + 1}<c:forEach items='${paginationParams}' var='param'><c:if test='${not empty param.value}'>&${param.key}=${param.value}</c:if></c:forEach>" aria-label="Next">
                     <i class="fas fa-chevron-right"></i>
                 </a>
             </li>
