@@ -33,8 +33,8 @@
         <div class="row justify-content-center w-100">
             <div class="col-lg-8 col-md-10">
                 <div class="card shadow-lg">
-                    <div class="card-header bg-dark text-white py-3">
-                        <h4 class="mb-0 text-center"><i class="fas fa-calendar-edit me-2"></i>Chỉnh sửa kỳ học</h4>
+                    <div class="card-header bg-warning py-3">
+                        <h4 class="mb-0 text-start"><i class="fas fa-edit me-2"></i>Chỉnh sửa kỳ học</h4>
                     </div>
                     <div class="card-body p-4">
                         <%-- Hiển thị thông báo lỗi từ backend nếu có --%>
