@@ -16,6 +16,10 @@
         <servlet-name>SemestersController</servlet-name>
         <servlet-class>controller.SemestersController</servlet-class>
     </servlet>
+    <servlet>
+        <servlet-name>SubjectsController</servlet-name>
+        <servlet-class>controller.SubjectsController</servlet-class>
+    </servlet>
     <servlet-mapping>
         <servlet-name>TestDB</servlet-name>
         <url-pattern>/TestDB</url-pattern>
@@ -31,6 +35,10 @@
     <servlet-mapping>
         <servlet-name>SemestersController</servlet-name>
         <url-pattern>/semesters/*</url-pattern>
+    </servlet-mapping>
+    <servlet-mapping>
+        <servlet-name>SubjectsController</servlet-name>
+        <url-pattern>/subjects/*</url-pattern>
     </servlet-mapping>
     <filter>
         <filter-name>AuthFilter</filter-name>
