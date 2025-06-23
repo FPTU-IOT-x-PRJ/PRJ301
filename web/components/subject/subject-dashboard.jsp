@@ -6,7 +6,7 @@
     <head>
         <meta charset="UTF-8">
         <title>Quản lý Môn học - EduPlan</title>
-        <link href="/css/common.css" rel="stylesheet">
+        <link href="${pageContext.request.contextPath}/css/common.css" rel="stylesheet">
         <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" rel="stylesheet">
         <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     </head>
@@ -18,7 +18,6 @@
                     <div>
                         <h2 class="mb-1">Quản lý Môn học</h2>
                         <p class="text-muted mb-0">Danh sách môn học trong hệ thống</p>
-                        <!-- Hiển thị kỳ học hiện tại và dropdown chuyển kỳ học -->
                         <div class="mt-3 d-flex align-items-center gap-3">
                             <h5 class="mb-0 text-primary">
                                 <i class="fas fa-calendar-alt me-1"></i>
@@ -82,10 +81,13 @@
                                         </td>
                                         <td>
                                             <div class="btn-group btn-group-sm">
-                                                <a href="${pageContext.request.contextPath}/subjects/edit?id=${subject.id}&semesterId=${semesterId}" class="btn btn-outline-warning">
+                                                <a href="${pageContext.request.contextPath}/lessons?subjectId=${subject.id}" class="btn btn-outline-info" title="Xem buổi học">
+                                                    <i class="fas fa-eye"></i>
+                                                </a>
+                                                <a href="${pageContext.request.contextPath}/subjects/edit?id=${subject.id}&semesterId=${semesterId}" class="btn btn-outline-warning" title="Chỉnh sửa">
                                                     <i class="fas fa-edit"></i>
                                                 </a>
-                                                <a href="${pageContext.request.contextPath}/subjects/delete?id=${subject.id}" class="btn btn-outline-danger" onclick="return confirm('Xóa môn học này?');">
+                                                <a href="${pageContext.request.contextPath}/subjects/delete?id=${subject.id}&semesterId=${semesterId}" class="btn btn-outline-danger" onclick="return confirm('Xóa môn học này?');" title="Xóa">
                                                     <i class="fas fa-trash"></i>
                                                 </a>
                                             </div>
