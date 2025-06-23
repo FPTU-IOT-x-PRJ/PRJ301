@@ -11,7 +11,6 @@
         <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" rel="stylesheet">
         <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
         
-        <!-- CSS tùy chỉnh cho table -->
         <style>
             .table-custom {
                 font-size: 14px;
@@ -135,12 +134,10 @@
                 </div>
             </div>
 
-            <!-- Bộ lọc -->
             <div class="card mb-4 shadow-sm">
                 <div class="card-body">
                     <form method="GET" action="${pageContext.request.contextPath}/semesters/dashboard" id="filterForm">
                         <div class="row g-3">
-                            <!-- Tìm kiếm theo tên -->
                             <div class="col-md-4">
                                 <div class="input-group">
                                     <span class="input-group-text"><i class="fas fa-search"></i></span>
@@ -149,7 +146,6 @@
                                 </div>
                             </div>
                             
-                            <!-- Lọc theo trạng thái -->
                             <div class="col-md-3">
                                 <select class="form-select" name="status">
                                     <option value="">Tất cả trạng thái</option>
@@ -159,7 +155,6 @@
                                 </select>
                             </div>
                             
-                            <!-- Lọc theo thời gian bắt đầu -->
                             <div class="col-md-2">
                                 <div class="input-group">
                                     <span class="input-group-text"><i class="fas fa-calendar-plus"></i></span>
@@ -168,7 +163,6 @@
                                 </div>
                             </div>
                             
-                            <!-- Lọc theo thời gian kết thúc -->
                             <div class="col-md-2">
                                 <div class="input-group">
                                     <span class="input-group-text"><i class="fas fa-calendar-minus"></i></span>
@@ -177,7 +171,6 @@
                                 </div>
                             </div>
                             
-                            <!-- Nút lọc -->
                             <div class="col-md-1 d-grid">
                                 <button type="submit" class="btn btn-primary" title="Áp dụng bộ lọc">
                                     <i class="fas fa-filter"></i>
@@ -188,7 +181,6 @@
                 </div>
             </div>
 
-            <!-- Danh sách kỳ học -->
             <div class="card shadow-sm">
                 <div class="card-header bg-light d-flex align-items-center">
                     <h5 class="mb-0"><i class="fas fa-calendar-alt me-2"></i>Danh sách kỳ học</h5>
@@ -250,9 +242,9 @@
                                                 </td>
                                                 <td>
                                                     <div class="btn-group-actions">
-                                                        <a href="${pageContext.request.contextPath}/semesters/detail?id=${semester.id}" 
+                                                        <a href="${pageContext.request.contextPath}/subjects?semesterId=${semester.id}" 
                                                            class="btn btn-sm btn-outline-info" 
-                                                           title="Xem chi tiết"
+                                                           title="Xem các môn học của kỳ này"
                                                            data-bs-toggle="tooltip">
                                                             <i class="fas fa-eye"></i>
                                                         </a>

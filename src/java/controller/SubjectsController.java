@@ -1,7 +1,3 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package controller;
 
 import dao.SemesterDAO;
@@ -10,23 +6,25 @@ import entity.Semester;
 import entity.Subject;
 import entity.User;
 import java.io.IOException;
-import java.sql.Date;
-import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
+import java.sql.Date; // Giữ nguyên, có thể dùng ở các hàm khác
+import java.time.LocalDateTime; // Giữ nguyên
+import java.util.HashMap; // Giữ nguyên
+import java.util.List;
+import java.util.Map; // Giữ nguyên
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class SubjectsController extends HttpServlet {
 
     private static final Logger LOGGER = Logger.getLogger(SubjectsController.class.getName());
     SubjectDAO subjectDao = new SubjectDAO();
+    // Khai báo SemesterDAO ở đây để dùng chung
+    SemesterDAO semesterDao = new SemesterDAO(); 
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
@@ -35,6 +33,7 @@ public class SubjectsController extends HttpServlet {
 
         HttpSession session = request.getSession(false);
         if (session == null || session.getAttribute("loggedInUser") == null) {
+            // Nên dùng filter AuthFilter để xử lý, nhưng vẫn giữ ở đây phòng trường hợp không có filter
             throw new ServletException("Không có quyền truy cập");
         }
 
@@ -42,8 +41,8 @@ public class SubjectsController extends HttpServlet {
 
         switch (action == null ? "" : action) {
             case "/add":
-                int semesterId = Integer.parseInt(request.getParameter("semesterId"));
-                request.setAttribute("semesterId", semesterId);
+                int semesterIdForAdd = Integer.parseInt(request.getParameter("semesterId"));
+                request.setAttribute("semesterId", semesterIdForAdd);
                 request.getRequestDispatcher("/components/subject/subject-add.jsp").forward(request, response);
                 break;
             case "/edit":
@@ -54,8 +53,9 @@ public class SubjectsController extends HttpServlet {
                 break;
             case "/delete":
                 int deleteId = Integer.parseInt(request.getParameter("id"));
+                int currentSemesterIdAfterDelete = Integer.parseInt(request.getParameter("semesterId")); // Lấy semesterId hiện tại để redirect về đúng trang
                 subjectDao.deleteSubject(deleteId);
-                response.sendRedirect("subjects");
+                response.sendRedirect(request.getContextPath() + "/subjects?semesterId=" + currentSemesterIdAfterDelete); // Chỉnh sửa để redirect đúng
                 break;
             default:
                 displaySubjectDashboard(request, response, user);
@@ -77,29 +77,42 @@ public class SubjectsController extends HttpServlet {
                 editSubject(request, response);
                 break;
             default:
+                // Xử lý POST mặc định nếu cần
                 break;
         }
     }
 
     private void displaySubjectDashboard(HttpServletRequest request, HttpServletResponse response, User user)
             throws ServletException, IOException {
-        SemesterDAO semesterDao = new SemesterDAO();
+        // SemesterDAO semesterDao = new SemesterDAO(); // Đã khai báo ở trên
         String search = request.getParameter("search");
         String pageStr = request.getParameter("page");
         String semesterIdStr = request.getParameter("semesterId");
         String isActiveStr = request.getParameter("isActive");
 
-        // Nếu chưa có semesterId → yêu cầu chọn học kỳ
+        int semesterId;
+        // Nếu chưa có semesterId trên URL
         if (semesterIdStr == null || semesterIdStr.isEmpty()) {
-            // Lấy danh sách học kỳ của user
-            List<Semester> semesters = semesterDao.selectAllSemesters(user.getId());
-            request.setAttribute("semesters", semesters);
-            request.getRequestDispatcher("/components/subject/semester-select.jsp").forward(request, response);
-            return;
+            // Lấy kỳ học mới nhất của người dùng
+            Semester latestSemester = semesterDao.getLatestSemester(user.getId());
+            if (latestSemester != null) {
+                // Nếu tìm thấy kỳ học mới nhất, chuyển hướng về chính URL này
+                // với tham số semesterId để hiển thị môn học của kỳ đó
+                response.sendRedirect(request.getContextPath() + "/subjects?semesterId=" + latestSemester.getId());
+                return; // Rất quan trọng: Dừng xử lý hiện tại và đợi redirect
+            } else {
+                // Nếu không có kỳ học nào, có thể chuyển hướng đến trang thông báo
+                // hoặc hiển thị thông báo "chưa có kỳ học nào" trên dashboard
+                // Hiện tại, tôi sẽ forward đến một JSP thông báo hoặc một trang dashboard trống
+                request.setAttribute("errorMessage", "Bạn chưa có kỳ học nào. Vui lòng thêm kỳ học mới.");
+                request.getRequestDispatcher("/components/subject/no-semester-found.jsp").forward(request, response);
+                return;
+            }
+        } else {
+            // Có semesterId trên URL, parse và tiếp tục xử lý
+            semesterId = Integer.parseInt(semesterIdStr);
         }
 
-        // Có semesterId → chuyển sang load subject
-        int semesterId = Integer.parseInt(semesterIdStr);
         int page = (pageStr != null && !pageStr.isEmpty()) ? Integer.parseInt(pageStr) : 1;
         int pageSize = 10;
         int offset = (page - 1) * pageSize;
@@ -121,7 +134,7 @@ public class SubjectsController extends HttpServlet {
         request.setAttribute("subjects", subjects);
         request.setAttribute("totalPages", totalPages);
         request.setAttribute("currentPage", page);
-        request.setAttribute("semesterId", semesterId);
+        // request.setAttribute("semesterId", semesterId); // Đã đặt ở trên
         System.out.println("subjects: " + subjects);
         request.getRequestDispatcher("/components/subject/subject-dashboard.jsp").forward(request, response);
     }
@@ -130,18 +143,9 @@ public class SubjectsController extends HttpServlet {
             throws ServletException, IOException {
         Map<String, String> errors = new HashMap<>();
 
-        int semesterId = Integer.parseInt(request.getParameter("semesterId"));
-        String name = request.getParameter("name");
-        String code = request.getParameter("code");
-        String description = request.getParameter("description");
-        String creditsStr = request.getParameter("credits");
-        String teacherName = request.getParameter("teacherName");
-        String prerequisites = request.getParameter("prerequisites");
-        String isActiveStr = request.getParameter("isActive");
-
-       
+        int semesterId = 0; // Khởi tạo với giá trị mặc định
+        String semesterIdStr = request.getParameter("semesterId"); // Lấy từ request
         try {
-            String semesterIdStr = request.getParameter("semesterId");
             semesterId = Integer.parseInt(semesterIdStr);
             if (semesterId <= 0) {
                 errors.put("semesterId", "Vui lòng chọn học kỳ hợp lệ");
@@ -149,6 +153,15 @@ public class SubjectsController extends HttpServlet {
         } catch (NumberFormatException e) {
             errors.put("semesterId", "Học kỳ không hợp lệ");
         }
+        
+        // --- Giữ nguyên các phần validate và logic thêm môn học khác ---
+        String name = request.getParameter("name");
+        String code = request.getParameter("code");
+        String description = request.getParameter("description");
+        String creditsStr = request.getParameter("credits");
+        String teacherName = request.getParameter("teacherName");
+        String prerequisites = request.getParameter("prerequisites");
+        String isActiveStr = request.getParameter("isActive");
 
         // Validate dữ liệu
         boolean isActive = true;
@@ -160,7 +173,7 @@ public class SubjectsController extends HttpServlet {
         }
         if (code == null || code.trim().isEmpty()) {
             errors.put("code", "Mã môn học không được để trống");
-        } else if (subjectDao.isCodeExists(code)) {
+        } else if (subjectDao.isCodeExists(code)) { // isCodeExists cần kiểm tra thêm userId hoặc semesterId nếu muốn mã môn là duy nhất trong phạm vi đó
             errors.put("code", "Mã môn học đã tồn tại");
         }
         int credits = 0;
@@ -174,8 +187,17 @@ public class SubjectsController extends HttpServlet {
         }
 
         if (!errors.isEmpty()) {
-            // Trả lỗi về jsp
             request.setAttribute("errors", errors);
+            // Giữ lại các giá trị form đã nhập để người dùng không phải nhập lại
+            request.setAttribute("formName", name);
+            request.setAttribute("formCode", code);
+            request.setAttribute("formDescription", description);
+            request.setAttribute("formCredits", creditsStr);
+            request.setAttribute("formTeacherName", teacherName);
+            request.setAttribute("formPrerequisites", prerequisites);
+            request.setAttribute("formIsActive", isActiveStr);
+            request.setAttribute("semesterId", semesterId); // Rất quan trọng để add.jsp biết semesterId hiện tại
+
             request.getRequestDispatcher("/components/subject/subject-add.jsp").forward(request, response);
             return;
         }
@@ -187,9 +209,19 @@ public class SubjectsController extends HttpServlet {
         if (!success) {
             errors.put("general", "Có lỗi xảy ra khi thêm môn học");
             request.setAttribute("errors", errors);
+             // Giữ lại các giá trị form đã nhập nếu có lỗi
+            request.setAttribute("formName", name);
+            request.setAttribute("formCode", code);
+            request.setAttribute("formDescription", description);
+            request.setAttribute("formCredits", creditsStr);
+            request.setAttribute("formTeacherName", teacherName);
+            request.setAttribute("formPrerequisites", prerequisites);
+            request.setAttribute("formIsActive", isActiveStr);
+            request.setAttribute("semesterId", semesterId);
+
             request.getRequestDispatcher("/components/subject/subject-add.jsp").forward(request, response);
         } else {
-            response.sendRedirect("subjects?semesterId=" + semesterId);
+            response.sendRedirect(request.getContextPath() + "/subjects?semesterId=" + semesterId);
         }
     }
 
@@ -212,7 +244,6 @@ public class SubjectsController extends HttpServlet {
         if (isActiveStr != null && !isActiveStr.trim().isEmpty()) {
             isActive = Boolean.parseBoolean(isActiveStr);
         }
-        // Validate dữ liệu
         if (name == null || name.trim().isEmpty()) {
             errors.put("name", "Tên môn học không được để trống");
         }
@@ -233,9 +264,20 @@ public class SubjectsController extends HttpServlet {
 
         if (!errors.isEmpty()) {
             // Trả lỗi về jsp
-            Subject subject = subjectDao.getSubjectById(id);
-            request.setAttribute("subject", subject);
+            Subject subject = subjectDao.getSubjectById(id); // Lấy lại subject gốc
+            request.setAttribute("subject", subject); // Để giữ lại các thông tin khác của subject
             request.setAttribute("errors", errors);
+
+            // Giữ lại các giá trị form đã nhập để người dùng không phải nhập lại
+            request.setAttribute("formName", name);
+            request.setAttribute("formCode", code);
+            request.setAttribute("formDescription", description);
+            request.setAttribute("formCredits", creditsStr);
+            request.setAttribute("formTeacherName", teacherName);
+            request.setAttribute("formPrerequisites", prerequisites);
+            request.setAttribute("formIsActive", isActiveStr);
+            request.setAttribute("semesterId", semesterId); // Quan trọng
+
             request.getRequestDispatcher("/components/subject/subject-edit.jsp").forward(request, response);
             return;
         }
@@ -247,9 +289,21 @@ public class SubjectsController extends HttpServlet {
         if (!success) {
             errors.put("general", "Có lỗi xảy ra khi cập nhật môn học");
             request.setAttribute("errors", errors);
+            // Giữ lại các giá trị form đã nhập nếu có lỗi
+            Subject existingSubject = subjectDao.getSubjectById(id);
+            request.setAttribute("subject", existingSubject);
+            request.setAttribute("formName", name);
+            request.setAttribute("formCode", code);
+            request.setAttribute("formDescription", description);
+            request.setAttribute("formCredits", creditsStr);
+            request.setAttribute("formTeacherName", teacherName);
+            request.setAttribute("formPrerequisites", prerequisites);
+            request.setAttribute("formIsActive", isActiveStr);
+            request.setAttribute("semesterId", semesterId);
+
             request.getRequestDispatcher("/components/subject/subject-edit.jsp").forward(request, response);
         } else {
-            response.sendRedirect("subjects?semesterId=" + semesterId);
+            response.sendRedirect(request.getContextPath() + "/subjects?semesterId=" + semesterId);
         }
     }
 }
