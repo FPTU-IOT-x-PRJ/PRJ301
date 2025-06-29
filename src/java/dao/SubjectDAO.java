@@ -26,9 +26,9 @@ public class SubjectDAO extends DBContext {
 
     private static final Logger LOGGER = Logger.getLogger(SubjectDAO.class.getName());
 
-    private static final String SELECT_ALL_SUBJECTS_SQL = "SELECT * FROM Subjects WHERE semester_id = ?";
-    private static final String INSERT_SUBJECT_SQL = "INSERT INTO Subjects (semester_id, name, code, description, credits, teacher_name, is_active, prerequisites, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, GETDATE(), GETDATE())";
-    private static final String UPDATE_SUBJECT_SQL = "UPDATE Subjects SET semester_id = ?, name = ?, code = ?, description = ?, credits = ?, teacher_name = ?, is_active = ?, prerequisites = ?, updated_at = GETDATE() WHERE id = ?";
+    private static final String SELECT_ALL_SUBJECTS_SQL = "SELECT * FROM Subjects WHERE semesterId = ?";
+    private static final String INSERT_SUBJECT_SQL = "INSERT INTO Subjects (semesterId, name, code, description, credits, teacherName, isActive, prerequisites, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, GETDATE(), GETDATE())";
+    private static final String UPDATE_SUBJECT_SQL = "UPDATE Subjects SET semesterId = ?, name = ?, code = ?, description = ?, credits = ?, teacherName = ?, isActive = ?, prerequisites = ?, updatedAt = GETDATE() WHERE id = ?";
     private static final String DELETE_SUBJECT_SQL = "DELETE FROM Subjects WHERE id = ?";
     private static final String SELECT_SUBJECT_BY_ID_SQL = "SELECT * FROM Subjects WHERE id = ?";
 
@@ -54,16 +54,24 @@ public class SubjectDAO extends DBContext {
      * Lấy tổng số môn học theo điều kiện tìm kiếm (ví dụ: theo tên, code). Bạn
      * có thể mở rộng thêm các tham số lọc nếu cần.
      */
-    public int getTotalSubjectCount(String search, int semesterId) {
-        StringBuilder sqlBuilder = new StringBuilder("SELECT COUNT(id) FROM Subjects WHERE semester_id = ?");
+    public int getTotalSubjectCount(String search, Integer semesterId, String teacherName) {
+        StringBuilder sqlBuilder = new StringBuilder("SELECT COUNT(s.id) FROM Subjects s WHERE 1=1"); // Bỏ JOIN
         List<Object> params = new ArrayList<>();
-        params.add(semesterId);
 
+        if (semesterId != null) {
+            sqlBuilder.append(" AND s.semesterId = ?");
+            params.add(semesterId);
+        }
         if (search != null && !search.trim().isEmpty()) {
-            sqlBuilder.append(" AND (name LIKE ? OR code LIKE ?)");
+            sqlBuilder.append(" AND (s.name LIKE ? OR s.code LIKE ?)");
             String searchTerm = "%" + search + "%";
             params.add(searchTerm);
             params.add(searchTerm);
+        }
+        // Lọc trực tiếp trên s.teacherName
+        if (teacherName != null && !teacherName.trim().isEmpty()) {
+            sqlBuilder.append(" AND s.teacherName LIKE ?");
+            params.add("%" + teacherName + "%");
         }
 
         try (PreparedStatement ps = connection.prepareStatement(sqlBuilder.toString())) {
@@ -161,24 +169,25 @@ public class SubjectDAO extends DBContext {
      */
     private Subject extractSubjectFromResultSet(ResultSet rs) throws SQLException {
         int id = rs.getInt("id");
-        int semesterId = rs.getInt("semester_id");
+        int semesterId = rs.getInt("semesterId");
         String name = rs.getString("name");
         String code = rs.getString("code");
         String description = rs.getString("description");
         int credits = rs.getInt("credits");
-        String teacherName = rs.getString("teacher_name");
-        boolean isActive = rs.getBoolean("is_active");
+        String teacherName = rs.getString("teacherName");
+        boolean isActive = rs.getBoolean("isActive");
         String prerequisites = rs.getString("prerequisites");
-        LocalDateTime createdAt = rs.getTimestamp("created_at").toLocalDateTime();
-        LocalDateTime updatedAt = rs.getTimestamp("updated_at").toLocalDateTime();
+        LocalDateTime createdAt = rs.getTimestamp("createdAt").toLocalDateTime();
+        LocalDateTime updatedAt = rs.getTimestamp("updatedAt").toLocalDateTime();
 
         return new Subject(id, semesterId, name, code, description, credits, teacherName, isActive, prerequisites, createdAt, updatedAt);
     }
 
-    public boolean isCodeExists(String code) {
-        String sql = "SELECT COUNT(*) FROM Subjects WHERE code = ?";
+    public boolean isCodeExists(String code, int semesterId) {
+        String sql = "SELECT COUNT(*) FROM Subjects WHERE code = ? AND semesterId = ?";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setString(1, code);
+            ps.setInt(2, semesterId);
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
                     return rs.getInt(1) > 0;
@@ -190,11 +199,12 @@ public class SubjectDAO extends DBContext {
         return false;
     }
 
-    public boolean isCodeExistsExceptId(String code, int id) {
-        String sql = "SELECT COUNT(*) FROM Subjects WHERE code = ? AND id <> ?";
+    public boolean isCodeExistsExceptId(String code, int semesterId, int id) {
+        String sql = "SELECT COUNT(*) FROM Subjects WHERE code = ? AND semesterId = ? AND id <> ?";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setString(1, code);
-            ps.setInt(2, id);
+            ps.setInt(2, semesterId);
+            ps.setInt(3, id);
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
                     return rs.getInt(1) > 0;
@@ -227,36 +237,39 @@ public class SubjectDAO extends DBContext {
 
     public List<Subject> getFilteredAndPaginatedSubjects(
             String search, Integer semesterId, Boolean isActive,
-            int offset, int limit, Integer userId
+            int offset, int limit, String teacherName // Tham số teacherName vẫn giữ nguyên
     ) {
         List<Subject> subjects = new ArrayList<>();
-        StringBuilder sqlBuilder = new StringBuilder("SELECT * FROM Subjects WHERE 1=1");
+        // Sửa câu lệnh SELECT để lấy teacherName trực tiếp từ bảng Subjects (giả sử có cột teacherName)
+        StringBuilder sqlBuilder = new StringBuilder("SELECT s.id, s.name, s.code, s.credits, s.description, s. prerequisites, s.isActive, s.semesterId, s.createdAt, s.updatedAt, s.teacherName ");
+        sqlBuilder.append("FROM Subjects s ");
+        sqlBuilder.append("WHERE 1=1"); // Bỏ JOIN Teachers
+
         List<Object> params = new ArrayList<>();
 
-        // Nếu có userId (nếu bạn lưu userId ở bảng Subjects)
-//        if (userId != null) {
-//            sqlBuilder.append(" AND userId = ?");
-//            params.add(userId);
-//        }
-
         if (semesterId != null) {
-            sqlBuilder.append(" AND semester_id = ?");
+            sqlBuilder.append(" AND s.semesterId = ?");
             params.add(semesterId);
         }
 
         if (search != null && !search.trim().isEmpty()) {
-            sqlBuilder.append(" AND (name LIKE ? OR code LIKE ?)");
+            sqlBuilder.append(" AND (s.name LIKE ? OR s.code LIKE ?) ");
             String searchTerm = "%" + search + "%";
             params.add(searchTerm);
             params.add(searchTerm);
         }
 
+        if (teacherName != null && !teacherName.trim().isEmpty()) {
+            sqlBuilder.append(" AND s.teacherName LIKE ? ");
+            params.add("%" + teacherName + "%");
+        }
+
         if (isActive != null) {
-            sqlBuilder.append(" AND is_active = ?");
+            sqlBuilder.append(" AND s.isActive = ?");
             params.add(isActive);
         }
 
-        sqlBuilder.append(" ORDER BY created_at DESC");
+        sqlBuilder.append(" ORDER BY s.createdAt DESC");
         sqlBuilder.append(" OFFSET ? ROWS FETCH NEXT ? ROWS ONLY");
         params.add(offset);
         params.add(limit);

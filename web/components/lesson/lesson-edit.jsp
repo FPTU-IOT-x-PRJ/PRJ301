@@ -1,91 +1,118 @@
-<%@page contentType="text/html" pageEncoding="UTF-8"%>
-<%@taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core"%>
-<%@taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
+<%@ page contentType="text/html;charset=UTF-8" language="java" %>
+<%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
 <!DOCTYPE html>
-<html>
-    <head>
-        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-        <title>Chỉnh Sửa Buổi Học: ${requestScope.lesson.name}</title>
-        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-        <style>
-            .container {
-                margin-top: 20px;
-            }
-            .form-group {
-                margin-bottom: 15px;
-            }
-        </style>
-    </head>
-    <body>
-        <div class="container">
-            <h1 class="mb-4">Chỉnh Sửa Buổi Học: <span class="text-primary">${requestScope.lesson.name}</span></h1>
-            <h5 class="mb-4 text-muted">Môn: ${requestScope.subject.name}</h5>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chỉnh Sửa Buổi Học - EduPlan</title>
+    <link href="${pageContext.request.contextPath}/css/common.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+<jsp:include page="../navigation/navigation.jsp" />
 
-            <c:if test="${not empty requestScope.errors.general}">
-                <div class="alert alert-danger" role="alert">
-                    ${requestScope.errors.general}
-                </div>
-            </c:if>
-
-            <form action="${pageContext.request.contextPath}/lessons/edit" method="post">
-                <input type="hidden" name="id" value="${requestScope.lesson.id}">
-                <input type="hidden" name="subjectId" value="${requestScope.subject.id}">
-
-                <div class="mb-3">
-                    <label for="name" class="form-label">Tên Buổi Học <span class="text-danger">*</span></label>
-                    <input type="text" class="form-control ${not empty requestScope.errors.name ? 'is-invalid' : ''}" id="name" name="name"
-                           value="${not empty requestScope.formName ? requestScope.formName : requestScope.lesson.name}" required>
-                    <c:if test="${not empty requestScope.errors.name}">
-                        <div class="invalid-feedback">
-                            ${requestScope.errors.name}
-                        </div>
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8 col-md-10">
+            <div class="card shadow-lg">
+                <div class="card-header bg-warning text-white">
+                    <h4 class="mb-0"><i class="fas fa-edit me-2"></i>Chỉnh sửa buổi học</h4>
+                    <c:if test="${not empty currentSubject}">
+                        <p class="mb-0">
+                            <small>Cho môn: <strong><c:out value="${currentSubject.name}"/></strong></small>
+                        </p>
                     </c:if>
                 </div>
+                <div class="card-body">
 
-                <div class="mb-3">
-                    <label for="lessonDate" class="form-label">Ngày Học <span class="text-danger">*</span></label>
-                    <fmt:formatDate value="${requestScope.lesson.lessonDate}" pattern="yyyy-MM-dd" var="formattedLessonDate"/>
-                    <input type="date" class="form-control ${not empty requestScope.errors.lessonDate ? 'is-invalid' : ''}" id="lessonDate" name="lessonDate"
-                           value="${not empty requestScope.formLessonDate ? requestScope.formLessonDate : formattedLessonDate}" required>
-                    <c:if test="${not empty requestScope.errors.lessonDate}">
-                        <div class="invalid-feedback">
-                            ${requestScope.errors.lessonDate}
+                    <c:if test="${not empty errorMessage}">
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            <c:forEach var="entry" items="${errorMessage}">
+                                <p class="mb-0">${entry.value}</p>
+                            </c:forEach>
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                         </div>
                     </c:if>
-                </div>
 
-                <div class="mb-3">
-                    <label for="description" class="form-label">Mô Tả <span class="text-danger">*</span></label>
-                    <textarea class="form-control ${not empty requestScope.errors.description ? 'is-invalid' : ''}" id="description" name="description" rows="3" required>
-                        ${not empty requestScope.formDescription ? requestScope.formDescription : requestScope.lesson.description}
-                    </textarea>
-                    <c:if test="${not empty requestScope.errors.description}">
-                        <div class="invalid-feedback">
-                            ${requestScope.errors.description}
+                    <c:if test="${empty lesson}">
+                        <div class="alert alert-warning text-center">
+                            <i class="fas fa-info-circle me-2"></i>Không tìm thấy buổi học.
+                            <br>
+                            <a href="${pageContext.request.contextPath}/lessons?subjectId=${subjectId}" class="btn btn-outline-secondary mt-3">Quay lại danh sách</a>
                         </div>
                     </c:if>
-                </div>
 
-                <div class="mb-3">
-                    <label for="status" class="form-label">Trạng Thái <span class="text-danger">*</span></label>
-                    <select class="form-select ${not empty requestScope.errors.status ? 'is-invalid' : ''}" id="status" name="status" required>
-                        <option value="">-- Chọn trạng thái --</option>
-                        <option value="Planned" ${ (not empty requestScope.formStatus ? requestScope.formStatus : requestScope.lesson.status) == 'Planned' ? 'selected' : ''}>Kế hoạch</option>
-                        <option value="Completed" ${ (not empty requestScope.formStatus ? requestScope.formStatus : requestScope.lesson.status) == 'Completed' ? 'selected' : ''}>Hoàn thành</option>
-                        <option value="Cancelled" ${ (not empty requestScope.formStatus ? requestScope.formStatus : requestScope.lesson.status) == 'Cancelled' ? 'selected' : ''}>Hủy bỏ</option>
-                    </select>
-                    <c:if test="${not empty requestScope.errors.status}">
-                        <div class="invalid-feedback">
-                            ${requestScope.errors.status}
-                        </div>
+                    <c:if test="${not empty lesson}">
+                        <form action="${pageContext.request.contextPath}/lessons/edit" method="POST" class="needs-validation" novalidate>
+                            <input type="hidden" name="id" value="${lesson.id}" />
+                            <input type="hidden" name="subjectId" value="${lesson.subjectId}" />
+                            
+                            <div class="mb-3">
+                                <label for="name" class="form-label">Tên buổi học <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="name" name="name" 
+                                       value="${not empty formName ? formName : lesson.name}" required maxlength="100">
+                                <div class="invalid-feedback">Vui lòng nhập tên buổi học.</div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="lessonDate" class="form-label">Ngày học <span class="text-danger">*</span></label>
+                                <fmt:formatDate value="${lesson.lessonDate}" pattern="yyyy-MM-dd" var="formattedLessonDate"/>
+                                <input type="date" class="form-control" id="lessonDate" name="lessonDate" 
+                                       value="${not empty formLessonDate ? formLessonDate : formattedLessonDate}" required>
+                                <div class="invalid-feedback">Vui lòng chọn ngày học.</div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="description" class="form-label">Mô tả</label>
+                                <textarea class="form-control" id="description" name="description" rows="4" maxlength="300">${not empty formDescription ? formDescription : lesson.description}</textarea>
+                                <div class="form-text">Tối đa 300 ký tự.</div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="status" class="form-label">Trạng thái <span class="text-danger">*</span></label>
+                                <select class="form-select" id="status" name="status" required>
+                                    <option value="" <c:if test="${empty formStatus && empty lesson.status}">selected</c:if>>-- Chọn trạng thái --</option>
+                                    <option value="Active" ${ (not empty formStatus ? formStatus : lesson.status) == 'Active' ? 'selected' : ''}>Chưa học</option>
+                                    <option value="Completed" ${ (not empty formStatus ? formStatus : lesson.status) == 'Completed' ? 'selected' : ''}>Hoàn thành</option>
+                                    <option value="Inactive" ${ (not empty formStatus ? formStatus : lesson.status) == 'Inactive' ? 'selected' : ''}>Vắng</option>
+                                </select>
+                                <div class="invalid-feedback">Vui lòng chọn trạng thái.</div>
+                            </div>
+
+                            <div class="d-flex justify-content-end">
+                                <a href="${pageContext.request.contextPath}/lessons?subjectId=${lesson.subjectId}" class="btn btn-secondary me-2">
+                                    <i class="fas fa-times me-2"></i>Hủy
+                                </a>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save me-2"></i>Lưu thay đổi
+                                </button>
+                            </div>
+                        </form>
                     </c:if>
                 </div>
-
-                <button type="submit" class="btn btn-primary me-2">Cập Nhật Buổi Học</button>
-                <a href="${pageContext.request.contextPath}/lessons?subjectId=${requestScope.subject.id}" class="btn btn-secondary">Hủy</a>
-            </form>
+            </div>
         </div>
+    </div>
+</div>
 
-        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    </body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
+<script>
+    (() => {
+        'use strict';
+        const form = document.querySelector('.needs-validation');
+        if (form) {
+            form.addEventListener('submit', function (event) {
+                if (!form.checkValidity()) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                }
+                form.classList.add('was-validated');
+            }, false);
+        }
+    })();
+</script>
+</body>
 </html>

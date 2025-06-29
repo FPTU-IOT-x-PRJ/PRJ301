@@ -1,4 +1,4 @@
-<%-- 
+<%--
     Document   : subject-edit
     Created on : Jun 21, 2025, 10:23:32 AM
     Author     : Dung Ann
@@ -25,12 +25,20 @@
             <div class="card shadow-lg">
                 <div class="card-header bg-warning text-white">
                     <h4 class="mb-0"><i class="fas fa-edit me-2"></i>Chỉnh sửa môn học</h4>
+                    <%-- THAY ĐỔI Ở ĐÂY: Dùng "currentSemester" thay vì "subjectSemester" --%>
+                    <c:if test="${not empty currentSemester}">
+                        <p class="mb-0">
+                            <small>Cho Kỳ: <strong><c:out value="${currentSemester.name}"/></strong></small>
+                        </p>
+                    </c:if>
                 </div>
                 <div class="card-body">
 
                     <c:if test="${not empty errorMessage}">
                         <div class="alert alert-danger" role="alert">
-                            <i class="fas fa-exclamation-circle me-2"></i>${errorMessage}
+                            <c:forEach var="entry" items="${errorMessage}">
+                                <p class="mb-0">${entry.value}</p>
+                            </c:forEach>
                         </div>
                     </c:if>
 
@@ -46,7 +54,7 @@
                         <form action="${pageContext.request.contextPath}/subjects/edit" method="POST" class="needs-validation" novalidate>
                             <input type="hidden" name="id" value="${subject.id}" />
                             <input type="hidden" name="semesterId" value="${subject.semesterId}" />
-                            
+                           
                             <div class="mb-3">
                                 <label for="name" class="form-label">Tên môn học <span class="text-danger">*</span></label>
                                 <input type="text" class="form-control" id="name" name="name" value="${subject.name}" required maxlength="255">
@@ -84,13 +92,13 @@
                             <div class="mb-3">
                                 <label for="isActive" class="form-label">Trạng thái</label>
                                 <select class="form-select" id="isActive" name="isActive">
-                                    <option value="true" <c:if test="${subject.isActive}">selected</c:if>>Đang mở</option>
-                                    <option value="false" <c:if test="${!subject.isActive}">selected</c:if>>Tạm ẩn</option>
+                                    <option value="true" <c:if test="${subject.isActive}">selected</c:if>>Đang học</option>
+                                    <option value="false" <c:if test="${!subject.isActive}">selected</c:if>>Đã hoàn thành</option>
                                 </select>
                             </div>
 
                             <div class="d-flex justify-content-end">
-                                <a href="${pageContext.request.contextPath}/subjects" class="btn btn-secondary me-2">
+                                <a href="${pageContext.request.contextPath}/subjects?semesterId=${subject.semesterId}" class="btn btn-secondary me-2">
                                     <i class="fas fa-times me-2"></i>Hủy
                                 </a>
                                 <button type="submit" class="btn btn-primary">
