@@ -122,19 +122,23 @@ public class SubjectDAO extends DBContext {
         return false;
     }
 
-    /**
-     * Xóa môn học theo id.
+     /**
+     * Xóa một môn học khỏi cơ sở dữ liệu.
+     *
+     * @param subjectId ID của môn học cần xóa.
+     * @return true nếu xóa thành công, false nếu không thành công.
      */
-    public boolean deleteSubject(int id) {
-        try (PreparedStatement ps = connection.prepareStatement(DELETE_SUBJECT_SQL)) {
-            ps.setInt(1, id);
-            return ps.executeUpdate() > 0;
-        } catch (SQLException e) {
-            printSQLException(e);
+    public boolean deleteSubject(int subjectId) {
+        boolean rowDeleted = false;
+        try (PreparedStatement statement = connection.prepareStatement(DELETE_SUBJECT_SQL)) {
+            statement.setInt(1, subjectId);
+            rowDeleted = statement.executeUpdate() > 0;
+        } catch (SQLException ex) {
+            LOGGER.log(Level.SEVERE, "Error deleting subject with ID: " + subjectId, ex);
+            printSQLException(ex);
         }
-        return false;
+        return rowDeleted;
     }
-
     /**
      * Lấy môn học theo id.
      */

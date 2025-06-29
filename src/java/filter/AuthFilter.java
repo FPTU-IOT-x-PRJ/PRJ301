@@ -20,22 +20,24 @@ import java.util.logging.Logger;
 public class AuthFilter implements Filter {
 
     private static final Logger LOGGER = Logger.getLogger(AuthFilter.class.getName());
-    
+
     // Danh sách các đường dẫn cụ thể chỉ cần đăng nhập (không cần Admin)
     private static final List<String> USER_ENDPOINTS = Collections.unmodifiableList(Arrays.asList(
-        "/user/profile",
-        "/user/profile-edit"
+            "/user/profile",
+            "/user/profile-edit"
     ));
-    
+
     // Danh sách các prefix pattern chỉ cần đăng nhập (không cần Admin)
     private static final List<String> USER_ENDPOINT_PREFIXES = Collections.unmodifiableList(Arrays.asList(
-        "/semesters"
+            "/semesters",
+            "/subjects",
+            "/lessons"
     ));
 
     @Override
     public void init(FilterConfig filterConfig) throws ServletException {
-        LOGGER.log(Level.INFO, "AuthFilter initialized. User endpoints: {0}, User prefixes: {1}", 
-                  new Object[]{USER_ENDPOINTS, USER_ENDPOINT_PREFIXES});
+        LOGGER.log(Level.INFO, "AuthFilter initialized. User endpoints: {0}, User prefixes: {1}",
+                new Object[]{USER_ENDPOINTS, USER_ENDPOINT_PREFIXES});
     }
 
     @Override
@@ -47,7 +49,7 @@ public class AuthFilter implements Filter {
 
         String path = httpRequest.getRequestURI();
         String contextPath = httpRequest.getContextPath();
-        String relativePath = path.substring(contextPath.length()); 
+        String relativePath = path.substring(contextPath.length());
 
         LOGGER.log(Level.INFO, "Filtering request for path: {0}, relativePath: {1}", new Object[]{path, relativePath});
 
@@ -63,7 +65,7 @@ public class AuthFilter implements Filter {
             // Các trang chỉ yêu cầu đã đăng nhập (không cần Admin)
             if (!loggedIn) {
                 LOGGER.log(Level.WARNING, "Unauthorized access attempt to user endpoint {0}. Redirecting to login.", path);
-                httpResponse.sendRedirect(contextPath + "/auth/login?from=" + path); 
+                httpResponse.sendRedirect(contextPath + "/auth/login?from=" + path);
                 return;
             }
             // Đã đăng nhập -> cho phép truy cập
@@ -71,7 +73,7 @@ public class AuthFilter implements Filter {
             // Các trang khác yêu cầu quyền Admin
             if (!loggedIn) {
                 LOGGER.log(Level.WARNING, "Unauthorized access attempt to admin endpoint {0}. Redirecting to login.", path);
-                httpResponse.sendRedirect(contextPath + "/auth/login?from=" + path); 
+                httpResponse.sendRedirect(contextPath + "/auth/login?from=" + path);
                 return;
             } else {
                 // Đã đăng nhập, kiểm tra vai trò Admin
@@ -84,7 +86,7 @@ public class AuthFilter implements Filter {
                 }
             }
         }
-        
+
         // Cho phép request tiếp tục
         chain.doFilter(request, response);
     }
@@ -97,14 +99,14 @@ public class AuthFilter implements Filter {
         if (USER_ENDPOINTS.contains(relativePath)) {
             return true;
         }
-        
+
         // Kiểm tra prefix match
         for (String prefix : USER_ENDPOINT_PREFIXES) {
             if (relativePath.startsWith(prefix)) {
                 return true;
             }
         }
-        
+
         return false;
     }
 

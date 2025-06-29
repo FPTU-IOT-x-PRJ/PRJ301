@@ -24,7 +24,7 @@ public class SubjectsController extends HttpServlet {
     private static final Logger LOGGER = Logger.getLogger(SubjectsController.class.getName());
     SubjectDAO subjectDao = new SubjectDAO();
     // Khai báo SemesterDAO ở đây để dùng chung
-    SemesterDAO semesterDao = new SemesterDAO(); 
+    SemesterDAO semesterDao = new SemesterDAO();
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
@@ -67,7 +67,15 @@ public class SubjectsController extends HttpServlet {
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         String action = request.getPathInfo();
+
+        HttpSession session = request.getSession(false);
+        if (session == null || session.getAttribute("loggedInUser") == null) {
+            response.sendRedirect(request.getContextPath() + "/auth/login");
+            return;
+        }
         LOGGER.log(Level.INFO, "action: {0}", action);
+
+        User user = (User) session.getAttribute("loggedInUser");
 
         switch (action != null ? action : "") {
             case "/add":
@@ -75,6 +83,9 @@ public class SubjectsController extends HttpServlet {
                 break;
             case "/edit":
                 editSubject(request, response);
+                break;
+            case "/delete": // Xử lý DELETE qua POST (ĐƯỢC KHUYẾN NGHỊ)
+                deleteSubject(request, response, user);
                 break;
             default:
                 // Xử lý POST mặc định nếu cần
@@ -153,7 +164,7 @@ public class SubjectsController extends HttpServlet {
         } catch (NumberFormatException e) {
             errors.put("semesterId", "Học kỳ không hợp lệ");
         }
-        
+
         // --- Giữ nguyên các phần validate và logic thêm môn học khác ---
         String name = request.getParameter("name");
         String code = request.getParameter("code");
@@ -209,7 +220,7 @@ public class SubjectsController extends HttpServlet {
         if (!success) {
             errors.put("general", "Có lỗi xảy ra khi thêm môn học");
             request.setAttribute("errors", errors);
-             // Giữ lại các giá trị form đã nhập nếu có lỗi
+            // Giữ lại các giá trị form đã nhập nếu có lỗi
             request.setAttribute("formName", name);
             request.setAttribute("formCode", code);
             request.setAttribute("formDescription", description);
@@ -304,6 +315,52 @@ public class SubjectsController extends HttpServlet {
             request.getRequestDispatcher("/components/subject/subject-edit.jsp").forward(request, response);
         } else {
             response.sendRedirect(request.getContextPath() + "/subjects?semesterId=" + semesterId);
+        }
+    }
+
+    private void deleteSubject(HttpServletRequest request, HttpServletResponse response, User user) throws IOException, ServletException {
+        try {
+            int deleteId = Integer.parseInt(request.getParameter("id"));
+            int semesterId = Integer.parseInt(request.getParameter("semesterId")); // Lấy semesterId để chuyển hướng về đúng trang
+
+            // Bước 1: Kiểm tra quyền của người dùng đối với kỳ học chứa môn học này
+            Semester semester = semesterDao.getSemesterById(semesterId, user.getId());
+            if (semester == null) {
+                LOGGER.log(Level.WARNING, "User {0} attempted to delete subject from non-existent or unauthorized semester ID {1}.", new Object[]{user.getUsername(), semesterId});
+                request.setAttribute("errorMessage", "Kỳ học không tồn tại hoặc bạn không có quyền xóa môn học này.");
+                displaySubjectDashboard(request, response, user); // Quay lại trang danh sách môn học với lỗi
+                return;
+            }
+
+            // Bước 2: Kiểm tra xem môn học có tồn tại và thuộc về kỳ học đã chọn không
+            Subject subjectToDelete = subjectDao.getSubjectById(deleteId);
+            if (subjectToDelete == null || subjectToDelete.getSemesterId() != semesterId) {
+                LOGGER.log(Level.WARNING, "User {0} attempted to delete non-existent subject ID {1} or subject not in semester {2}.", new Object[]{user.getUsername(), deleteId, semesterId});
+                request.setAttribute("errorMessage", "Môn học không tồn tại hoặc không thuộc kỳ học này.");
+                displaySubjectDashboard(request, response, user); // Quay lại trang danh sách môn học với lỗi
+                return;
+            }
+
+            // Bước 3: Thực hiện xóa
+            boolean success = subjectDao.deleteSubject(deleteId); // Gọi phương thức xóa từ DAO
+            if (success) {
+                LOGGER.log(Level.INFO, "Subject with ID {0} deleted successfully by user {1} from semester {2}.", new Object[]{deleteId, user.getUsername(), semesterId});
+                // Chuyển hướng về danh sách môn học của kỳ học đó sau khi xóa thành công
+                response.sendRedirect(request.getContextPath() + "/subjects?semesterId=" + semesterId);
+            } else {
+                LOGGER.log(Level.WARNING, "Failed to delete subject with ID {0} for user {1} from semester {2}.", new Object[]{deleteId, user.getUsername(), semesterId});
+                request.setAttribute("errorMessage", "Không thể xóa môn học. Có thể môn học đang được sử dụng hoặc có lỗi xảy ra.");
+                // Quay lại dashboard với thông báo lỗi
+                displaySubjectDashboard(request, response, user);
+            }
+        } catch (NumberFormatException e) {
+            LOGGER.log(Level.WARNING, "Invalid subject ID or semester ID format for delete: {0}, {1}", new Object[]{request.getParameter("id"), request.getParameter("semesterId")});
+            request.setAttribute("errorMessage", "ID môn học hoặc ID kỳ học không hợp lệ.");
+            response.sendRedirect(request.getContextPath() + "/semesters"); // Quay về trang kỳ học nếu ID không hợp lệ
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error in deleteSubject", e);
+            request.setAttribute("errorMessage", "Đã xảy ra lỗi hệ thống khi cố gắng xóa môn học.");
+            displaySubjectDashboard(request, response, user);
         }
     }
 }
