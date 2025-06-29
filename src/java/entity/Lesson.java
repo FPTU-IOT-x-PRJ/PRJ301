@@ -1,7 +1,7 @@
 package entity;
 
 import java.time.LocalDateTime;
-import java.sql.Date; // Sử dụng java.sql.Date cho các trường ngày tháng lưu trữ trong DB
+import java.sql.Date;
 
 /**
  * Entity class đại diện cho một buổi học (Lesson).

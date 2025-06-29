@@ -31,7 +31,8 @@ public class AuthFilter implements Filter {
     private static final List<String> USER_ENDPOINT_PREFIXES = Collections.unmodifiableList(Arrays.asList(
             "/semesters",
             "/subjects",
-            "/lessons"
+            "/lessons",
+            "/calendar"
     ));
 
     @Override

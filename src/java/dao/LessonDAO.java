@@ -21,12 +21,12 @@ public class LessonDAO extends DBContext {
 
     private static final Logger LOGGER = Logger.getLogger(LessonDAO.class.getName());
 
-    private static final String SELECT_LESSON_BY_ID_SQL = "SELECT id, subject_id, name, lesson_date, description, status, created_at, updated_at FROM Lessons WHERE id = ?";
-    private static final String SELECT_LESSONS_BY_SUBJECT_ID_SQL = "SELECT id, subject_id, name, lesson_date, description, status, created_at, updated_at FROM Lessons WHERE subject_id = ? ORDER BY lesson_date ASC";
-    private static final String INSERT_LESSON_SQL = "INSERT INTO Lessons (subject_id, name, lesson_date, description, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, GETDATE(), GETDATE())";
-    private static final String UPDATE_LESSON_SQL = "UPDATE Lessons SET subject_id = ?, name = ?, lesson_date = ?, description = ?, status = ?, updated_at = GETDATE() WHERE id = ?";
+    private static final String SELECT_LESSON_BY_ID_SQL = "SELECT id, subjectId, name, lessonDate, description, status, createdAt, updatedAt FROM Lessons WHERE id = ?";
+    private static final String SELECT_LESSONS_BY_SUBJECT_ID_SQL = "SELECT id, subjectId, name, lessonDate, description, status, createdAt, updatedAt FROM Lessons WHERE subjectId = ? ORDER BY lessonDate ASC";
+    private static final String INSERT_LESSON_SQL = "INSERT INTO Lessons (subjectId, name, lessonDate, description, status, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, GETDATE(), GETDATE())";
+    private static final String UPDATE_LESSON_SQL = "UPDATE Lessons SET subjectId = ?, name = ?, lessonDate = ?, description = ?, status = ?, updatedAt = GETDATE() WHERE id = ?";
     private static final String DELETE_LESSON_SQL = "DELETE FROM Lessons WHERE id = ?";
-    private static final String COUNT_LESSONS_BY_SUBJECT_ID_SQL = "SELECT COUNT(id) FROM Lessons WHERE subject_id = ?";
+    private static final String COUNT_LESSONS_BY_SUBJECT_ID_SQL = "SELECT COUNT(id) FROM Lessons WHERE subjectId = ?";
 
     /**
      * Lấy một buổi học bằng ID.
@@ -79,7 +79,7 @@ public class LessonDAO extends DBContext {
      */
     public List<Lesson> getFilteredLessonsBySubjectId(int subjectId, String search, String status, int page, int pageSize) {
         List<Lesson> lessons = new ArrayList<>();
-        StringBuilder sqlBuilder = new StringBuilder("SELECT id, subject_id, name, lesson_date, description, status, created_at, updated_at FROM Lessons WHERE subject_id = ?");
+        StringBuilder sqlBuilder = new StringBuilder("SELECT id, subjectId, name, lessonDate, description, status, createdAt, updatedAt FROM Lessons WHERE subjectId = ?");
         List<Object> params = new ArrayList<>();
         params.add(subjectId);
 
@@ -95,7 +95,7 @@ public class LessonDAO extends DBContext {
             params.add(status);
         }
 
-        sqlBuilder.append(" ORDER BY lesson_date ASC, created_at DESC");
+        sqlBuilder.append(" ORDER BY lessonDate ASC, createdAt DESC");
         sqlBuilder.append(" OFFSET ? ROWS FETCH NEXT ? ROWS ONLY");
         
         int offset = (page - 1) * pageSize;
@@ -116,6 +116,32 @@ public class LessonDAO extends DBContext {
         }
         return lessons;
     }
+
+    // --- SQL Constants ---
+    private static final String SELECT_LESSONS_FOR_SEMESTER_SQL = 
+            "SELECT l.id, l.name, l.lessonDate, l.description, l.status, l.subjectId, l.createdAt, l.updatedAt " +
+            "FROM Lessons l " +
+            "JOIN Subjects s ON l.subjectId = s.id " +
+            "JOIN Semesters sem ON s.semesterId = sem.id " +
+            "WHERE sem.id = ? AND sem.userId = ? " + // Đảm bảo đúng user sở hữu semester
+            "ORDER BY l.lessonDate, l.name"; // Sắp xếp để dễ hiển thị
+    
+    public List<Lesson> getAllLessonsForSemester(int semesterId, int userId) throws SQLException {
+        List<Lesson> lessons = new ArrayList<>();
+        try (PreparedStatement ps = connection.prepareStatement(SELECT_LESSONS_FOR_SEMESTER_SQL)) {
+            ps.setInt(1, semesterId);
+            ps.setInt(2, userId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    lessons.add(extractLessonFromResultSet(rs));
+                }
+            }
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Error fetching lessons for semester ID: " + semesterId + " and user ID: " + userId, e);
+            throw e; // Ném lại ngoại lệ để lớp gọi xử lý
+        }
+        return lessons;
+    }
     
     /**
      * Đếm tổng số buổi học dựa trên các tiêu chí lọc.
@@ -126,7 +152,7 @@ public class LessonDAO extends DBContext {
      */
     public int countLessonsBySubjectId(int subjectId, String search, String status) {
         int totalLessons = 0;
-        StringBuilder sqlBuilder = new StringBuilder("SELECT COUNT(id) FROM Lessons WHERE subject_id = ?");
+        StringBuilder sqlBuilder = new StringBuilder("SELECT COUNT(id) FROM Lessons WHERE subjectId = ?");
         List<Object> params = new ArrayList<>();
         params.add(subjectId);
 
@@ -170,7 +196,6 @@ public class LessonDAO extends DBContext {
             preparedStatement.setDate(3, lesson.getLessonDate());
             preparedStatement.setString(4, lesson.getDescription());
             preparedStatement.setString(5, lesson.getStatus());
-            // createdAt, updatedAt được DB tự động sinh GETDATE()
 
             int affectedRows = preparedStatement.executeUpdate();
             if (affectedRows > 0) {
@@ -238,13 +263,13 @@ public class LessonDAO extends DBContext {
      */
     private Lesson extractLessonFromResultSet(ResultSet rs) throws SQLException {
         int id = rs.getInt("id");
-        int subjectId = rs.getInt("subject_id");
+        int subjectId = rs.getInt("subjectId");
         String name = rs.getString("name");
-        java.sql.Date lessonDate = rs.getDate("lesson_date");
+        java.sql.Date lessonDate = rs.getDate("lessonDate");
         String description = rs.getString("description");
         String status = rs.getString("status");
-        LocalDateTime createdAt = rs.getTimestamp("created_at") != null ? rs.getTimestamp("created_at").toLocalDateTime() : null;
-        LocalDateTime updatedAt = rs.getTimestamp("updated_at") != null ? rs.getTimestamp("updated_at").toLocalDateTime() : null;
+        LocalDateTime createdAt = rs.getTimestamp("createdAt").toLocalDateTime();
+        LocalDateTime updatedAt = rs.getTimestamp("updatedAt").toLocalDateTime();
         return new Lesson(id, subjectId, name, lessonDate, description, status, createdAt, updatedAt);
     }
 
