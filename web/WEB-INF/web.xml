@@ -25,6 +25,10 @@
         <servlet-class>controller.LessonsController</servlet-class>
     </servlet>
     <servlet>
+        <servlet-name>DocumentController</servlet-name>
+        <servlet-class>controller.DocumentController</servlet-class>
+    </servlet>
+    <servlet>
         <servlet-name>CalendarController</servlet-name>
         <servlet-class>controller.CalendarController</servlet-class>
     </servlet>
@@ -53,6 +57,10 @@
         <url-pattern>/lessons/*</url-pattern>
     </servlet-mapping>
     <servlet-mapping>
+        <servlet-name>DocumentController</servlet-name>
+        <url-pattern>/documents/*</url-pattern>
+    </servlet-mapping>
+    <servlet-mapping>
         <servlet-name>CalendarController</servlet-name>
         <url-pattern>/calendar</url-pattern>
     </servlet-mapping>
@@ -71,6 +79,10 @@
     <filter-mapping>
         <filter-name>AuthFilter</filter-name>
         <url-pattern>/lessons/*</url-pattern>
+    </filter-mapping>
+    <filter-mapping>
+        <filter-name>AuthFilter</filter-name>
+        <url-pattern>/documents/*</url-pattern>
     </filter-mapping>
     <filter-mapping>
         <filter-name>AuthFilter</filter-name>

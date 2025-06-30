@@ -8,22 +8,30 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Date; // Sử dụng java.sql.Date cho cột Date trong DB
+import java.sql.Connection;
 import java.time.LocalDate;
 import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.mindrot.jbcrypt.BCrypt;
 
+/**
+ * Lớp DAO quản lý các thao tác CRUD và các truy vấn liên quan đến đối tượng
+ * User trong cơ sở dữ liệu. Author: Dung Ann
+ */
 public class UserDAO extends DBContext {
 
-    // --- SQL Constants ---
-    // Sử dụng hằng số cho tất cả các câu lệnh SQL để dễ quản lý và tránh lỗi
+    private static final Logger LOGGER = Logger.getLogger(UserDAO.class.getName());
+
+    // --- Hằng số SQL ---
     private static final String INSERT_USER_SQL = "INSERT INTO Users (username, email, password, firstName, lastName, role, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?)";
     private static final String SELECT_USER_BY_ID_SQL = "SELECT id, username, email, password, firstName, lastName, role, createdAt FROM Users WHERE id = ?";
     private static final String SELECT_ALL_USERS_SQL = "SELECT id, username, email, password, firstName, lastName, role, createdAt FROM Users";
     private static final String DELETE_USER_SQL = "DELETE FROM Users WHERE id = ?";
     private static final String UPDATE_USER_PROFILE_SQL = "UPDATE Users SET firstName = ?, lastName = ?, role = ? WHERE id = ?";
-    private static final String UPDATE_USER_PASSWORD_SQL = "UPDATE Users SET password = ? WHERE id = ?"; // Tách riêng cập nhật mật khẩu
+    private static final String UPDATE_USER_PASSWORD_SQL = "UPDATE Users SET password = ? WHERE id = ?";
     private static final String SELECT_USER_BY_USERNAME_SQL = "SELECT id, username, email, password, firstName, lastName, role, createdAt FROM Users WHERE username = ?";
     private static final String CHECK_USERNAME_EXISTS_SQL = "SELECT COUNT(*) FROM Users WHERE username = ?";
     private static final String CHECK_EMAIL_EXISTS_SQL = "SELECT COUNT(*) FROM Users WHERE email = ?";
@@ -33,79 +41,15 @@ public class UserDAO extends DBContext {
     private static final String COUNT_TOTAL_USERS_SQL = "SELECT COUNT(*) FROM Users";
 
     /**
-     * Kiểm tra xem tên đăng nhập đã tồn tại trong cơ sở dữ liệu chưa.
-     *
-     * @param username Tên đăng nhập cần kiểm tra.
-     * @return true nếu tên đăng nhập tồn tại, ngược lại là false.
-     */
-    public boolean usernameExists(String username) {
-        boolean exists = false;
-        try (PreparedStatement preparedStatement = connection.prepareStatement(CHECK_USERNAME_EXISTS_SQL)) {
-            preparedStatement.setString(1, username);
-            try (ResultSet rs = preparedStatement.executeQuery()) {
-                if (rs.next()) {
-                    exists = rs.getInt(1) > 0;
-                }
-            }
-        } catch (SQLException e) {
-            printSQLException(e); // In lỗi ra console, có thể thay bằng logging framework
-        }
-        return exists;
-    }
-    
-    public User authenticateUser(String identifier, String password) {
-        User user = null;
-        try (PreparedStatement preparedStatement = connection.prepareStatement(SELECT_USER_BY_USERNAME_OR_EMAIL_SQL)) {
-            preparedStatement.setString(1, identifier);
-            preparedStatement.setString(2, identifier);
-            try (ResultSet rs = preparedStatement.executeQuery()) {
-                if (rs.next()) {
-                    // Lấy mật khẩu đã hash từ DB
-                    String hashedPasswordFromDb = rs.getString("password");
-                    // So sánh mật khẩu thô với mật khẩu đã hash
-                    if (BCrypt.checkpw(password, hashedPasswordFromDb)) {
-                        user = extractUserFromResultSet(rs);
-                    }
-                }
-            }
-        } catch (SQLException e) {
-            printSQLException(e);
-        }
-        return user;
-    }    
-
-    /**
-     * Kiểm tra xem email đã tồn tại trong cơ sở dữ liệu chưa.
-     *
-     * @param email Email cần kiểm tra.
-     * @return true nếu email tồn tại, ngược lại là false.
-     */
-    public boolean emailExists(String email) {
-        boolean exists = false;
-        try (PreparedStatement preparedStatement = connection.prepareStatement(CHECK_EMAIL_EXISTS_SQL)) {
-            preparedStatement.setString(1, email);
-            try (ResultSet rs = preparedStatement.executeQuery()) {
-                if (rs.next()) {
-                    exists = rs.getInt(1) > 0;
-                }
-            }
-        } catch (SQLException e) {
-            printSQLException(e); // In lỗi ra console, có thể thay bằng logging framework
-        }
-        return exists;
-    }
-
-    /**
-     * Thêm một người dùng mới vào cơ sở dữ liệu.
-     * Mật khẩu của người dùng NÊN được hash trước khi gọi phương thức này.
+     * Thêm một người dùng mới vào cơ sở dữ liệu. Mật khẩu của người dùng NÊN
+     * được hash trước khi gọi phương thức này.
      *
      * @param user Đối tượng User chứa thông tin người dùng mới.
-     * @return Số lượng hàng bị ảnh hưởng (thường là 1 nếu thành công), hoặc 0 nếu không thành công.
-     * @throws SQLException Nếu có lỗi xảy ra trong quá trình truy vấn cơ sở dữ liệu.
+     * @return true nếu thêm thành công, ngược lại là false.
      */
-    public int insertUser(User user) throws SQLException {
-        int result = 0;
-        try (PreparedStatement preparedStatement = connection.prepareStatement(INSERT_USER_SQL, Statement.RETURN_GENERATED_KEYS)) {
+    public boolean addUser(User user) {
+        boolean rowInserted = false;
+        try (Connection con = getConnection(); PreparedStatement preparedStatement = con.prepareStatement(INSERT_USER_SQL, Statement.RETURN_GENERATED_KEYS)) {
             preparedStatement.setString(1, user.getUsername());
             preparedStatement.setString(2, user.getEmail());
             preparedStatement.setString(3, user.getPassword()); // Mật khẩu đã được HASH
@@ -114,18 +58,20 @@ public class UserDAO extends DBContext {
             preparedStatement.setString(6, user.getRole());
             preparedStatement.setDate(7, new java.sql.Date(System.currentTimeMillis())); // Lưu thời gian tạo
 
-            result = preparedStatement.executeUpdate();
+            int affectedRows = preparedStatement.executeUpdate();
 
-            // Lấy ID tự động tạo (nếu có)
-            if (result > 0) {
+            if (affectedRows > 0) {
                 try (ResultSet generatedKeys = preparedStatement.getGeneratedKeys()) {
                     if (generatedKeys.next()) {
-                        user.setId(generatedKeys.getInt(1));
+                        user.setId(generatedKeys.getInt(1)); // Cập nhật ID cho đối tượng User
                     }
                 }
+                rowInserted = true;
             }
-        } // try-with-resources sẽ tự động đóng preparedStatement
-        return result;
+        } catch (SQLException e) {
+            printSQLException(e);
+        }
+        return rowInserted;
     }
 
     /**
@@ -134,9 +80,9 @@ public class UserDAO extends DBContext {
      * @param id ID của người dùng.
      * @return Đối tượng User nếu tìm thấy, hoặc null nếu không tìm thấy.
      */
-    public User selectUserById(int id) {
+    public User getUserById(int id) {
         User user = null;
-        try (PreparedStatement preparedStatement = connection.prepareStatement(SELECT_USER_BY_ID_SQL)) {
+        try (Connection con = getConnection(); PreparedStatement preparedStatement = con.prepareStatement(SELECT_USER_BY_ID_SQL)) {
             preparedStatement.setInt(1, id);
             try (ResultSet rs = preparedStatement.executeQuery()) {
                 if (rs.next()) {
@@ -150,59 +96,65 @@ public class UserDAO extends DBContext {
     }
 
     /**
-     * Lấy thông tin người dùng từ cơ sở dữ liệu bằng tên đăng nhập.
-     * Thường dùng cho quá trình đăng nhập hoặc kiểm tra trùng lặp.
+     * Lấy tất cả người dùng từ cơ sở dữ liệu. Phương thức này có thể được lọc
+     * và phân trang.
      *
-     * @param username Tên đăng nhập của người dùng.
-     * @return Đối tượng User nếu tìm thấy, hoặc null nếu không tìm thấy.
-     */
-    public User selectUserByUsername(String username) {
-        User user = null;
-        try (PreparedStatement preparedStatement = connection.prepareStatement(SELECT_USER_BY_USERNAME_SQL)) {
-            preparedStatement.setString(1, username);
-            try (ResultSet rs = preparedStatement.executeQuery()) {
-                if (rs.next()) {
-                    user = extractUserFromResultSet(rs);
-                }
-            }
-        } catch (SQLException e) {
-            printSQLException(e);
-        }
-        return user;
-    }
-    
-    /**
-     * Lấy thông tin người dùng từ cơ sở dữ liệu bằng tên đăng nhập hoặc email.
-     * Thường dùng cho quá trình đăng nhập để hỗ trợ cả tên đăng nhập và email.
-     *
-     * @param identifier Tên đăng nhập hoặc email của người dùng.
-     * @return Đối tượng User nếu tìm thấy, hoặc null nếu không tìm thấy.
-     */
-    public User selectUserByUsernameOrEmail(String identifier) {
-        User user = null;
-        try (PreparedStatement preparedStatement = connection.prepareStatement(SELECT_USER_BY_USERNAME_OR_EMAIL_SQL)) {
-            preparedStatement.setString(1, identifier);
-            preparedStatement.setString(2, identifier); // Dùng cùng một giá trị cho cả username và email
-            try (ResultSet rs = preparedStatement.executeQuery()) {
-                if (rs.next()) {
-                    user = extractUserFromResultSet(rs);
-                }
-            }
-        } catch (SQLException e) {
-            printSQLException(e);
-        }
-        return user;
-    }
-
-    /**
-     * Lấy tất cả người dùng từ cơ sở dữ liệu.
-     * Cần cẩn thận khi sử dụng phương thức này vì nó có thể trả về mật khẩu (đã hash).
-     *
+     * @param search Từ khóa tìm kiếm (firstName, lastName, email, username). Có
+     * thể null hoặc rỗng.
+     * @param roleFilter Vai trò để lọc (ví dụ: "Admin", "User"). Có thể null
+     * hoặc rỗng.
+     * @param sortOrder Thứ tự sắp xếp (ví dụ: "createdAt_desc",
+     * "firstName_asc").
+     * @param offset Vị trí bắt đầu của kết quả (cho phân trang).
+     * @param limit Số lượng kết quả tối đa mỗi trang.
      * @return Danh sách các đối tượng User.
      */
-    public List<User> selectAllUsers() {
+    public List<User> getAllUsers(String search, String roleFilter, String sortOrder, int offset, int limit) {
         List<User> users = new ArrayList<>();
-        try (PreparedStatement preparedStatement = connection.prepareStatement(SELECT_ALL_USERS_SQL)) {
+        StringBuilder sqlBuilder = new StringBuilder("SELECT id, firstName, lastName, username, email, role, createdAt FROM Users WHERE 1=1");
+
+        List<Object> params = new ArrayList<>();
+
+        if (search != null && !search.trim().isEmpty()) {
+            sqlBuilder.append(" AND (firstName LIKE ? OR lastName LIKE ? OR email LIKE ? OR username LIKE ?)");
+            String searchTerm = "%" + search + "%";
+            params.add(searchTerm);
+            params.add(searchTerm);
+            params.add(searchTerm);
+            params.add(searchTerm);
+        }
+
+        if (roleFilter != null && !roleFilter.isEmpty()) {
+            sqlBuilder.append(" AND role = ?");
+            params.add(roleFilter);
+        }
+
+        switch (sortOrder) {
+            case "createdAt_desc":
+                sqlBuilder.append(" ORDER BY createdAt DESC");
+                break;
+            case "createdAt_asc":
+                sqlBuilder.append(" ORDER BY createdAt ASC");
+                break;
+            case "firstName_asc":
+                sqlBuilder.append(" ORDER BY firstName ASC");
+                break;
+            case "firstName_desc":
+                sqlBuilder.append(" ORDER BY firstName DESC");
+                break;
+            default:
+                sqlBuilder.append(" ORDER BY createdAt DESC"); // Mặc định
+                break;
+        }
+
+        sqlBuilder.append(" OFFSET ? ROWS FETCH NEXT ? ROWS ONLY");
+        params.add(offset);
+        params.add(limit);
+
+        try (Connection con = getConnection(); PreparedStatement preparedStatement = con.prepareStatement(sqlBuilder.toString())) {
+            for (int i = 0; i < params.size(); i++) {
+                preparedStatement.setObject(i + 1, params.get(i));
+            }
             try (ResultSet rs = preparedStatement.executeQuery()) {
                 while (rs.next()) {
                     users.add(extractUserFromResultSet(rs));
@@ -220,15 +172,15 @@ public class UserDAO extends DBContext {
      * @param user Đối tượng User chứa thông tin cần cập nhật (ID là bắt buộc).
      * @return true nếu cập nhật thành công, ngược lại là false.
      */
-    public boolean updateUserProfile(User user) {
+    public boolean editUser(User user) {
         boolean rowUpdated = false;
-        try (PreparedStatement statement = connection.prepareStatement(UPDATE_USER_PROFILE_SQL)) {
-            statement.setString(1, user.getFirstName());
-            statement.setString(2, user.getLastName());
-            statement.setString(3, user.getRole());
-            statement.setInt(4, user.getId());
+        try (Connection con = getConnection(); PreparedStatement preparedStatement = con.prepareStatement(UPDATE_USER_PROFILE_SQL)) {
+            preparedStatement.setString(1, user.getFirstName());
+            preparedStatement.setString(2, user.getLastName());
+            preparedStatement.setString(3, user.getRole());
+            preparedStatement.setInt(4, user.getId());
 
-            rowUpdated = statement.executeUpdate() > 0;
+            rowUpdated = preparedStatement.executeUpdate() > 0;
         } catch (SQLException e) {
             printSQLException(e);
         }
@@ -236,20 +188,20 @@ public class UserDAO extends DBContext {
     }
 
     /**
-     * Cập nhật mật khẩu của người dùng.
-     * Mật khẩu MỚI NÊN được hash trước khi gọi phương thức này.
+     * Cập nhật mật khẩu của người dùng. Mật khẩu MỚI NÊN được hash trước khi
+     * gọi phương thức này.
      *
      * @param userId ID của người dùng cần cập nhật mật khẩu.
      * @param newHashedPassword Mật khẩu mới (đã được hash).
      * @return true nếu cập nhật thành công, ngược lại là false.
      */
-    public boolean updateUserPassword(int userId, String newHashedPassword) {
+    public boolean updatePassword(int userId, String newHashedPassword) {
         boolean rowUpdated = false;
-        try (PreparedStatement statement = connection.prepareStatement(UPDATE_USER_PASSWORD_SQL)) {
-            statement.setString(1, newHashedPassword);
-            statement.setInt(2, userId);
+        try (Connection con = getConnection(); PreparedStatement preparedStatement = con.prepareStatement(UPDATE_USER_PASSWORD_SQL)) {
+            preparedStatement.setString(1, newHashedPassword);
+            preparedStatement.setInt(2, userId);
 
-            rowUpdated = statement.executeUpdate() > 0;
+            rowUpdated = preparedStatement.executeUpdate() > 0;
         } catch (SQLException e) {
             printSQLException(e);
         }
@@ -264,9 +216,9 @@ public class UserDAO extends DBContext {
      */
     public boolean deleteUser(int id) {
         boolean rowDeleted = false;
-        try (PreparedStatement statement = connection.prepareStatement(DELETE_USER_SQL)) {
-            statement.setInt(1, id);
-            rowDeleted = statement.executeUpdate() > 0;
+        try (Connection con = getConnection(); PreparedStatement preparedStatement = con.prepareStatement(DELETE_USER_SQL)) {
+            preparedStatement.setInt(1, id);
+            rowDeleted = preparedStatement.executeUpdate() > 0;
         } catch (SQLException e) {
             printSQLException(e);
         }
@@ -274,46 +226,131 @@ public class UserDAO extends DBContext {
     }
 
     /**
-     * Lấy các số liệu thống kê người dùng từ cơ sở dữ liệu.
-     * Bao gồm: số người dùng mới trong tháng này, số người dùng admin,
-     * tổng số người dùng đang hoạt động và tổng số người dùng.
+     * Kiểm tra xem tên đăng nhập đã tồn tại trong cơ sở dữ liệu chưa.
      *
-     * @return Đối tượng UserStatistics chứa các số liệu thống kê.
-     * Trả về một đối tượng UserStatistics với tất cả giá trị là 0 nếu có lỗi.
+     * @param username Tên đăng nhập cần kiểm tra.
+     * @return true nếu tên đăng nhập tồn tại, ngược lại là false.
+     */
+    public boolean isUsernameExists(String username) {
+        boolean exists = false;
+        try (Connection con = getConnection(); PreparedStatement preparedStatement = con.prepareStatement(CHECK_USERNAME_EXISTS_SQL)) {
+            preparedStatement.setString(1, username);
+            try (ResultSet rs = preparedStatement.executeQuery()) {
+                if (rs.next()) {
+                    exists = rs.getInt(1) > 0;
+                }
+            }
+        } catch (SQLException e) {
+            printSQLException(e);
+        }
+        return exists;
+    }
+
+    /**
+     * Kiểm tra xem email đã tồn tại trong cơ sở dữ liệu chưa.
+     *
+     * @param email Email cần kiểm tra.
+     * @return true nếu email tồn tại, ngược lại là false.
+     */
+    public boolean isEmailExists(String email) {
+        boolean exists = false;
+        try (Connection con = getConnection(); PreparedStatement preparedStatement = con.prepareStatement(CHECK_EMAIL_EXISTS_SQL)) {
+            preparedStatement.setString(1, email);
+            try (ResultSet rs = preparedStatement.executeQuery()) {
+                if (rs.next()) {
+                    exists = rs.getInt(1) > 0;
+                }
+            }
+        } catch (SQLException e) {
+            printSQLException(e);
+        }
+        return exists;
+    }
+
+    /**
+     * Lấy thông tin người dùng từ cơ sở dữ liệu bằng tên đăng nhập hoặc email.
+     * Thường dùng cho quá trình đăng nhập để hỗ trợ cả tên đăng nhập và email.
+     *
+     * @param identifier Tên đăng nhập hoặc email của người dùng.
+     * @return Đối tượng User nếu tìm thấy, hoặc null nếu không tìm thấy.
+     */
+    public User getUserByUsernameOrEmail(String identifier) {
+        User user = null;
+        try (Connection con = getConnection(); PreparedStatement preparedStatement = con.prepareStatement(SELECT_USER_BY_USERNAME_OR_EMAIL_SQL)) {
+            preparedStatement.setString(1, identifier);
+            preparedStatement.setString(2, identifier); // Dùng cùng một giá trị cho cả username và email
+            try (ResultSet rs = preparedStatement.executeQuery()) {
+                if (rs.next()) {
+                    user = extractUserFromResultSet(rs);
+                }
+            }
+        } catch (SQLException e) {
+            printSQLException(e);
+        }
+        return user;
+    }
+
+    /**
+     * Xác thực người dùng bằng tên đăng nhập/email và mật khẩu.
+     *
+     * @param identifier Tên đăng nhập hoặc email.
+     * @param password Mật khẩu thô.
+     * @return Đối tượng User nếu xác thực thành công, ngược lại null.
+     */
+    public User authenticateUser(String identifier, String password) {
+        User user = null;
+        try (Connection con = getConnection(); PreparedStatement preparedStatement = con.prepareStatement(SELECT_USER_BY_USERNAME_OR_EMAIL_SQL)) {
+            preparedStatement.setString(1, identifier);
+            preparedStatement.setString(2, identifier);
+            try (ResultSet rs = preparedStatement.executeQuery()) {
+                if (rs.next()) {
+                    String hashedPasswordFromDb = rs.getString("password");
+                    if (BCrypt.checkpw(password, hashedPasswordFromDb)) {
+                        user = extractUserFromResultSet(rs);
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            printSQLException(e);
+        }
+        return user;
+    }
+
+    /**
+     * Lấy các số liệu thống kê người dùng từ cơ sở dữ liệu. Bao gồm: số người
+     * dùng mới trong tháng này, số người dùng admin, tổng số người dùng đang
+     * hoạt động và tổng số người dùng.
+     *
+     * @return Đối tượng UserStatistics chứa các số liệu thống kê. Trả về một
+     * đối tượng UserStatistics với tất cả giá trị là 0 nếu có lỗi.
      */
     public UserStatistics getUserStatistics() {
         int newUsersThisMonth = 0;
         int adminUsers = 0;
-        int activeUsers = 0; // Giả sử activeUsers = totalUsers nếu không có cột trạng thái
+        int activeUsers = 0;
         int totalUsers = 0;
 
-        // Lấy ngày đầu tiên của tháng hiện tại
         LocalDate firstDayOfCurrentMonth = LocalDate.now().with(TemporalAdjusters.firstDayOfMonth());
         java.sql.Date sqlDateFirstDayOfMonth = java.sql.Date.valueOf(firstDayOfCurrentMonth);
 
         try {
-            // 1. Get total users
-            try (PreparedStatement ps = connection.prepareStatement(COUNT_TOTAL_USERS_SQL);
-                 ResultSet rs = ps.executeQuery()) {
+            try (Connection con = getConnection(); PreparedStatement preparedStatement = con.prepareStatement(COUNT_TOTAL_USERS_SQL); ResultSet rs = preparedStatement.executeQuery()) {
                 if (rs.next()) {
                     totalUsers = rs.getInt(1);
                 }
             }
             activeUsers = totalUsers; // Giả sử activeUsers là tổng số người dùng nếu không có điều kiện khác
 
-            // 2. Get new users this month
-            try (PreparedStatement ps = connection.prepareStatement(COUNT_NEW_USERS_THIS_MONTH_SQL)) {
-                ps.setDate(1, sqlDateFirstDayOfMonth);
-                try (ResultSet rs = ps.executeQuery()) {
+            try (Connection con = getConnection(); PreparedStatement preparedStatement = con.prepareStatement(COUNT_NEW_USERS_THIS_MONTH_SQL)) {
+                preparedStatement.setDate(1, sqlDateFirstDayOfMonth);
+                try (ResultSet rs = preparedStatement.executeQuery()) {
                     if (rs.next()) {
                         newUsersThisMonth = rs.getInt(1);
                     }
                 }
             }
 
-            // 3. Get admin users
-            try (PreparedStatement ps = connection.prepareStatement(COUNT_ADMIN_USERS_SQL);
-                 ResultSet rs = ps.executeQuery()) {
+            try (Connection con = getConnection(); PreparedStatement preparedStatement = con.prepareStatement(COUNT_ADMIN_USERS_SQL); ResultSet rs = preparedStatement.executeQuery()) {
                 if (rs.next()) {
                     adminUsers = rs.getInt(1);
                 }
@@ -321,80 +358,22 @@ public class UserDAO extends DBContext {
 
         } catch (SQLException e) {
             printSQLException(e);
-            // Có thể log lỗi và trả về UserStatistics mặc định hoặc ném ngoại lệ tùy logic ứng dụng
         }
         return new UserStatistics(newUsersThisMonth, adminUsers, activeUsers, totalUsers);
     }
-    
-    public List<User> getFilteredAndPaginatedUsers(String search, String roleFilter, String sortOrder, int offset, int limit) {
-        List<User> users = new ArrayList<>();
-        StringBuilder sqlBuilder = new StringBuilder("SELECT id, firstName, lastName, username, email, role, createdAt FROM Users WHERE 1=1");
 
-        List<Object> params = new ArrayList<>();
-
-        // Thêm điều kiện tìm kiếm
-        if (search != null && !search.trim().isEmpty()) {
-            sqlBuilder.append(" AND (firstName LIKE ? OR lastName LIKE ? OR email LIKE ? OR username LIKE ?)");
-            String searchTerm = "%" + search + "%";
-            params.add(searchTerm);
-            params.add(searchTerm);
-            params.add(searchTerm);
-            params.add(searchTerm);
-        }
-
-        // Thêm điều kiện lọc theo vai trò
-        if (roleFilter != null && !roleFilter.isEmpty()) {
-            sqlBuilder.append(" AND role = ?");
-            params.add(roleFilter);
-        }
-
-        // Thêm sắp xếp
-        switch (sortOrder) {
-            case "createdAt_desc":
-                sqlBuilder.append(" ORDER BY createdAt DESC");
-                break;
-            case "createdAt_asc":
-                sqlBuilder.append(" ORDER BY createdAt ASC");
-                break;
-            case "firstName_asc":
-                sqlBuilder.append(" ORDER BY firstName ASC");
-                break;
-            case "firstName_desc":
-                sqlBuilder.append(" ORDER BY firstName DESC");
-                break;
-            default:
-                sqlBuilder.append(" ORDER BY createdAt DESC"); // Mặc định sắp xếp theo ngày tạo giảm dần
-                break;
-        }
-
-        // Thêm phân trang (cho SQL Server, sử dụng OFFSET-FETCH)
-        sqlBuilder.append(" OFFSET ? ROWS FETCH NEXT ? ROWS ONLY");
-        params.add(offset);
-        params.add(limit);
-
-        try (PreparedStatement preparedStatement = connection.prepareStatement(sqlBuilder.toString())) {
-            // Gán các tham số
-            for (int i = 0; i < params.size(); i++) {
-                preparedStatement.setObject(i + 1, params.get(i));
-            }
-
-            try (ResultSet rs = preparedStatement.executeQuery()) {
-                while (rs.next()) {
-                    users.add(extractUserFromResultSet(rs));
-                }
-            }
-        } catch (SQLException e) {
-            printSQLException(e);
-        }
-        return users;
-    }
-
-    // Phương thức để lấy tổng số người dùng (để tính tổng số trang)
-    public int getTotalUserCount(String search, String roleFilter) {
+    /**
+     * Đếm tổng số người dùng dựa trên các tiêu chí lọc.
+     *
+     * @param search Từ khóa tìm kiếm (firstName, lastName, email, username). Có
+     * thể null hoặc rỗng.
+     * @param roleFilter Vai trò để lọc. Có thể null hoặc rỗng.
+     * @return Tổng số người dùng thỏa mãn điều kiện.
+     */
+    public int countUsers(String search, String roleFilter) {
         StringBuilder sqlBuilder = new StringBuilder("SELECT COUNT(id) FROM Users WHERE 1=1");
         List<Object> params = new ArrayList<>();
 
-        // Thêm điều kiện tìm kiếm
         if (search != null && !search.trim().isEmpty()) {
             sqlBuilder.append(" AND (firstName LIKE ? OR lastName LIKE ? OR email LIKE ? OR username LIKE ?)");
             String searchTerm = "%" + search + "%";
@@ -404,13 +383,12 @@ public class UserDAO extends DBContext {
             params.add(searchTerm);
         }
 
-        // Thêm điều kiện lọc theo vai trò
         if (roleFilter != null && !roleFilter.isEmpty()) {
             sqlBuilder.append(" AND role = ?");
             params.add(roleFilter);
         }
 
-        try (PreparedStatement preparedStatement = connection.prepareStatement(sqlBuilder.toString())) {
+        try (Connection con = getConnection(); PreparedStatement preparedStatement = con.prepareStatement(sqlBuilder.toString())) {
             for (int i = 0; i < params.size(); i++) {
                 preparedStatement.setObject(i + 1, params.get(i));
             }
@@ -424,12 +402,9 @@ public class UserDAO extends DBContext {
         }
         return 0;
     }
-    
-    // --- Helper Methods ---
 
     /**
      * Trích xuất thông tin người dùng từ một ResultSet và tạo đối tượng User.
-     * Giúp tránh trùng lặp code khi đọc dữ liệu từ ResultSet.
      *
      * @param rs ResultSet chứa dữ liệu người dùng.
      * @return Đối tượng User đã được tạo.
@@ -439,7 +414,8 @@ public class UserDAO extends DBContext {
         int id = rs.getInt("id");
         String username = rs.getString("username");
         String email = rs.getString("email");
-        //String password = rs.getString("password");
+        // Mật khẩu không được trích xuất trực tiếp để tránh lộ thông tin
+        // String password = rs.getString("password");
         String firstName = rs.getString("firstName");
         String lastName = rs.getString("lastName");
         String role = rs.getString("role");
@@ -448,21 +424,19 @@ public class UserDAO extends DBContext {
     }
 
     /**
-     * Hàm tiện ích để in chi tiết lỗi SQL ra System.err.
-     * Trong ứng dụng thực tế, nên sử dụng một logging framework (ví dụ: Log4j, SLF4J).
+     * Hàm tiện ích để ghi chi tiết lỗi SQL vào logger.
      *
-     * @param ex Ngoại lệ SQLException cần in.
+     * @param ex Ngoại lệ SQLException cần ghi.
      */
     private void printSQLException(SQLException ex) {
         for (Throwable e : ex) {
             if (e instanceof SQLException) {
-                e.printStackTrace(System.err);
-                System.err.println("SQLState: " + ((SQLException) e).getSQLState());
-                System.err.println("Error Code: " + ((SQLException) e).getErrorCode());
-                System.err.println("Message: " + e.getMessage());
-                Throwable t = ex.getCause();
+                LOGGER.log(Level.SEVERE, "SQLState: " + ((SQLException) e).getSQLState());
+                LOGGER.log(Level.SEVERE, "Error Code: " + ((SQLException) e).getErrorCode());
+                LOGGER.log(Level.SEVERE, "Message: " + e.getMessage());
+                Throwable t = e.getCause();
                 while (t != null) {
-                    System.err.println("Cause: " + t);
+                    LOGGER.log(Level.SEVERE, "Cause: " + t.getMessage(), t);
                     t = t.getCause();
                 }
             }

@@ -191,8 +191,8 @@ public class LessonsController extends HttpServlet {
                 LOGGER.log(Level.WARNING, "Invalid page number format: {0}", request.getParameter("page"));
             }
 
-            List<Lesson> lessons = lessonDao.getFilteredLessonsBySubjectId(subjectId, search, statusFilter, page, pageSize);
-            int totalLessons = lessonDao.countLessonsBySubjectId(subjectId, search, statusFilter);
+            List<Lesson> lessons = lessonDao.getAllLessonsBySubjectId(subjectId, search, statusFilter, page, pageSize);
+            int totalLessons = lessonDao.countLessons(subjectId, search, statusFilter);
             int totalPages = (int) Math.ceil((double) totalLessons / pageSize);
 
             request.setAttribute("subject", subject); // Để hiển thị tên môn học
@@ -463,7 +463,7 @@ public class LessonsController extends HttpServlet {
             
             Lesson updatedLesson = new Lesson(lessonId, subjectId, name, lessonDate, description, status, createdAt, LocalDateTime.now());
 
-            boolean success = lessonDao.updateLesson(updatedLesson);
+            boolean success = lessonDao.editLesson(updatedLesson);
 
             if (success) {
                 LOGGER.log(Level.INFO, "Lesson with ID {0} updated successfully.", new Object[]{lessonId});

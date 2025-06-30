@@ -59,7 +59,7 @@ public class SubjectsController extends HttpServlet {
                 displayDeleteSubjectConfirm(request, response);
                 break;
             default:
-                displaySubjectDashboard(request, response, user);
+                displaySubjects(request, response, user);
                 break;
         }
     }
@@ -114,7 +114,7 @@ public class SubjectsController extends HttpServlet {
         }
     }
     
-    private void displaySubjectDashboard(HttpServletRequest request, HttpServletResponse response, User user)
+    private void displaySubjects(HttpServletRequest request, HttpServletResponse response, User user)
             throws ServletException, IOException {
         String search = request.getParameter("search");
         String pageStr = request.getParameter("page");
@@ -143,13 +143,13 @@ public class SubjectsController extends HttpServlet {
         Boolean isActive = (isActiveStr != null && !isActiveStr.isEmpty()) ? Boolean.parseBoolean(isActiveStr) : null;
 
         // Truyền teacherName vào phương thức DAO (không thay đổi)
-        List<Subject> subjects = subjectDao.getFilteredAndPaginatedSubjects(search, semesterId, isActive, offset, pageSize, teacherName);
+        List<Subject> subjects = subjectDao.getAllSubjects(search, semesterId, isActive, offset, pageSize, teacherName);
         // Truyền teacherName vào phương thức getTotalSubjectCount (không thay đổi)
-        int totalSubjects = subjectDao.getTotalSubjectCount(search, semesterId, teacherName); 
+        int totalSubjects = subjectDao.countSubjects(search, semesterId, teacherName); 
         int totalPages = (int) Math.ceil((double) totalSubjects / pageSize);
 
         Semester currentSemester = semesterDao.getSemesterById(semesterId, user.getId());
-        List<Semester> allSemesters = semesterDao.selectAllSemesters(user.getId());
+        List<Semester> allSemesters = semesterDao.getAllSemesters(null, null, null, null, 0, Integer.MAX_VALUE, user.getId());
 
         request.setAttribute("currentSemester", currentSemester);
         request.setAttribute("allSemesters", allSemesters);
@@ -229,7 +229,7 @@ public class SubjectsController extends HttpServlet {
 
         Subject subject = new Subject(semesterId, name, code, description, credits, teacherName, isActive, prerequisites,
                 LocalDateTime.now(), LocalDateTime.now());
-        boolean success = subjectDao.insertSubject(subject);
+        boolean success = subjectDao.addSubject(subject);
 
         if (!success) {
             errors.put("general", "Có lỗi xảy ra khi thêm môn học");
@@ -309,7 +309,7 @@ public class SubjectsController extends HttpServlet {
 
         Subject subject = new Subject(id, semesterId, name, code, description, credits, teacherName, isActive, prerequisites,
                 LocalDateTime.now(), LocalDateTime.now());
-        boolean success = subjectDao.updateSubject(subject);
+        boolean success = subjectDao.editSubject(subject);
 
         if (!success) {
             errors.put("general", "Có lỗi xảy ra khi cập nhật môn học");
@@ -342,7 +342,7 @@ public class SubjectsController extends HttpServlet {
             if (semester == null) {
                 LOGGER.log(Level.WARNING, "User {0} attempted to delete subject from non-existent or unauthorized semester ID {1}.", new Object[]{user.getUsername(), semesterId});
                 request.setAttribute("errorMessage", "Kỳ học không tồn tại hoặc bạn không có quyền xóa môn học này.");
-                displaySubjectDashboard(request, response, user); // Quay lại trang danh sách môn học với lỗi
+                displaySubjects(request, response, user); // Quay lại trang danh sách môn học với lỗi
                 return;
             }
 
@@ -351,7 +351,7 @@ public class SubjectsController extends HttpServlet {
             if (subjectToDelete == null || subjectToDelete.getSemesterId() != semesterId) {
                 LOGGER.log(Level.WARNING, "User {0} attempted to delete non-existent subject ID {1} or subject not in semester {2}.", new Object[]{user.getUsername(), deleteId, semesterId});
                 request.setAttribute("errorMessage", "Môn học không tồn tại hoặc không thuộc kỳ học này.");
-                displaySubjectDashboard(request, response, user); // Quay lại trang danh sách môn học với lỗi
+                displaySubjects(request, response, user); // Quay lại trang danh sách môn học với lỗi
                 return;
             }
 
@@ -365,7 +365,7 @@ public class SubjectsController extends HttpServlet {
                 LOGGER.log(Level.WARNING, "Failed to delete subject with ID {0} for user {1} from semester {2}.", new Object[]{deleteId, user.getUsername(), semesterId});
                 request.setAttribute("errorMessage", "Không thể xóa môn học. Có thể môn học đang được sử dụng hoặc có lỗi xảy ra.");
                 // Quay lại dashboard với thông báo lỗi
-                displaySubjectDashboard(request, response, user);
+                displaySubjects(request, response, user);
             }
         } catch (NumberFormatException e) {
             LOGGER.log(Level.WARNING, "Invalid subject ID or semester ID format for delete: {0}, {1}", new Object[]{request.getParameter("id"), request.getParameter("semesterId")});
@@ -374,7 +374,7 @@ public class SubjectsController extends HttpServlet {
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error in deleteSubject", e);
             request.setAttribute("errorMessage", "Đã xảy ra lỗi hệ thống khi cố gắng xóa môn học.");
-            displaySubjectDashboard(request, response, user);
+            displaySubjects(request, response, user);
         }
     }
 }
