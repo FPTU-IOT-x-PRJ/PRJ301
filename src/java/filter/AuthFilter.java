@@ -32,6 +32,7 @@ public class AuthFilter implements Filter {
             "/semesters",
             "/subjects",
             "/lessons",
+            "/documents",
             "/calendar"
     ));
 

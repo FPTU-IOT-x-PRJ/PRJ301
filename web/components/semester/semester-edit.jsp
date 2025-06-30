@@ -59,7 +59,7 @@
                         
                         <%-- Hiển thị form chỉ khi có semester object --%>
                         <c:if test="${not empty semester}">
-                            <form id="editSemesterForm" action="${pageContext.request.contextPath}/semesters/update" method="POST" class="needs-validation" novalidate>
+                            <form id="editSemesterForm" action="${pageContext.request.contextPath}/semesters/edit" method="POST" class="needs-validation" novalidate>
                                 <input type="hidden" id="id" name="id" value="${semester.id}">
                                 <div class="row g-3">
                                     <div class="col-md-12">

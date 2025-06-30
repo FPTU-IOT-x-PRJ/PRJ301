@@ -13,6 +13,9 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.mindrot.jbcrypt.BCrypt;
 
+/**
+ * Controller xử lý các tác vụ liên quan đến xác thực người dùng: Đăng ký, Đăng nhập, Đăng xuất.
+ */
 public class AuthController extends HttpServlet {
     UserDAO userDAO = new UserDAO();
     private static final Logger LOGGER = Logger.getLogger(AuthController.class.getName());
@@ -21,27 +24,20 @@ public class AuthController extends HttpServlet {
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         String action = request.getPathInfo();
-        LOGGER.log(Level.INFO, "action: {0}", action);
+        LOGGER.log(Level.INFO, "Action received in AuthController (GET): {0}", action);
         switch (action != null ? action : "") {
             case "/register":
-                displayRegister(request, response);
+                displayRegisterForm(request, response);
                 break;
             case "/login":
-                displayLogin(request, response);
+                displayLoginForm(request, response);
                 break;
             case "/logout":
-            {
-                HttpSession session = request.getSession(false); // Không tạo session mới
-                if (session != null) {
-                    String username = (session.getAttribute("loggedInUser") != null) ?
-                                      ((User) session.getAttribute("loggedInUser")).getUsername() : "Unknown User";
-                    session.invalidate(); // Hủy session
-                    LOGGER.log(Level.INFO, "User {0} logged out.", username);
-                }
-                response.sendRedirect(request.getContextPath() + "/auth/login?logout=true"); // Chuyển hướng về trang đăng nhập
-            }
+                logoutUser(request, response);
                 break;
             default:
+                // Nếu không có action cụ thể, chuyển hướng về trang đăng nhập
+                response.sendRedirect(request.getContextPath() + "/auth/login");
                 break;
         }
     }
@@ -50,34 +46,45 @@ public class AuthController extends HttpServlet {
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         String action = request.getPathInfo();
-        LOGGER.log(Level.INFO, "action: {0}", action);
+        LOGGER.log(Level.INFO, "Action received in AuthController (POST): {0}", action);
+        request.setCharacterEncoding("UTF-8"); // Đảm bảo nhận tiếng Việt
+        response.setCharacterEncoding("UTF-8"); // Đảm bảo gửi tiếng Việt
+
         switch (action != null ? action : "") {
             case "/register":
-            {
-                try {
-                    register(request, response);
-                } catch (SQLException ex) {
-                    Logger.getLogger(AuthController.class.getName()).log(Level.SEVERE, null, ex);
-                }
-            }
+                addRegisterUser(request, response);
                 break;
             case "/login":
-                login(request, response);
+                authenticateUser(request, response);
                 break;
             default:
+                // Nếu POST đến URL không xác định, có thể chuyển hướng về trang đăng nhập hoặc báo lỗi
+                response.sendError(HttpServletResponse.SC_NOT_FOUND, "Action không hợp lệ");
                 break;
         }
     }
 
-    private void displayRegister(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+    /**
+     * Hiển thị form đăng ký.
+     * @param request HttpServletRequest
+     * @param response HttpServletResponse
+     * @throws ServletException
+     * @throws IOException
+     */
+    private void displayRegisterForm(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         request.getRequestDispatcher("/components/auth/register.jsp").forward(request, response);
     }
 
-    private void displayLogin(HttpServletRequest request, HttpServletResponse response) throws IOException, ServletException {
-        // Kiểm tra xem người dùng đã đăng nhập chưa
+    /**
+     * Hiển thị form đăng nhập. Kiểm tra nếu đã đăng nhập thì chuyển hướng.
+     * @param request HttpServletRequest
+     * @param response HttpServletResponse
+     * @throws IOException
+     * @throws ServletException
+     */
+    private void displayLoginForm(HttpServletRequest request, HttpServletResponse response) throws IOException, ServletException {
         HttpSession session = request.getSession(false); // false để không tạo session mới nếu chưa có
         if (session != null && session.getAttribute("loggedInUser") != null) {
-            // Đã đăng nhập, chuyển hướng về trang chủ hoặc dashboard tùy role
             User user = (User) session.getAttribute("loggedInUser");
             if ("Admin".equalsIgnoreCase(user.getRole())) {
                 response.sendRedirect(request.getContextPath() + "/user/dashboard");
@@ -87,14 +94,20 @@ public class AuthController extends HttpServlet {
             return;
         }
 
-        // Hiển thị trang đăng nhập
         if (request.getParameter("registerSuccess") != null) {
             request.setAttribute("successMessage", "Đăng ký thành công! Vui lòng đăng nhập.");
         }
         request.getRequestDispatcher("/components/auth/login.jsp").forward(request, response);
     }
     
-    private void register(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException, SQLException {
+    /**
+     * Xử lý logic đăng ký người dùng mới.
+     * @param request HttpServletRequest
+     * @param response HttpServletResponse
+     * @throws ServletException
+     * @throws IOException
+     */
+    private void addRegisterUser(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         String firstName = request.getParameter("firstName");
         String lastName = request.getParameter("lastName");
         String username = request.getParameter("username");
@@ -110,46 +123,54 @@ public class AuthController extends HttpServlet {
             password == null || password.trim().isEmpty() ||
             confirmPassword == null || confirmPassword.trim().isEmpty()) {
             request.setAttribute("errorMessage", "Vui lòng điền đầy đủ tất cả các trường.");
-            forwardToRegisterPage(request, response, firstName, lastName, username, email);
+            forwardToRegisterPageWithInput(request, response, firstName, lastName, username, email);
             return;
         }
 
         if (!password.equals(confirmPassword)) {
             request.setAttribute("errorMessage", "Mật khẩu xác nhận không khớp.");
-            forwardToRegisterPage(request, response, firstName, lastName, username, email);
+            forwardToRegisterPageWithInput(request, response, firstName, lastName, username, email);
             return;
         }
 
-        // Kiểm tra username và email đã tồn tại chưa
-        if (userDAO.usernameExists(username)) {
+        // Kiểm tra username và email đã tồn tại chưa bằng các phương thức mới trong DAO
+        if (userDAO.isUsernameExists(username)) {
             request.setAttribute("errorMessage", "Tên đăng nhập đã tồn tại.");
-            forwardToRegisterPage(request, response, firstName, lastName, username, email);
+            forwardToRegisterPageWithInput(request, response, firstName, lastName, username, email);
             return;
         }
-        if (userDAO.emailExists(email)) {
+        if (userDAO.isEmailExists(email)) {
             request.setAttribute("errorMessage", "Email đã tồn tại.");
-            forwardToRegisterPage(request, response, firstName, lastName, username, email);
+            forwardToRegisterPageWithInput(request, response, firstName, lastName, username, email);
             return;
         }
 
         try {
-            // Hash mật khẩu trước khi lưu vào DB
             String hashedPassword = BCrypt.hashpw(password, BCrypt.gensalt());
-
-            // Mặc định role là "User" cho người dùng mới đăng ký
-            User newUser = new User(username, email, hashedPassword, firstName, lastName, "User");
-            userDAO.insertUser(newUser);
+            User newUser = new User(username, email, hashedPassword, firstName, lastName, "User"); // Mặc định role là "User"
+            userDAO.addUser(newUser); // Sử dụng phương thức addUsers
 
             request.setAttribute("successMessage", "Đăng ký thành công! Vui lòng đăng nhập.");
-            response.sendRedirect(request.getContextPath() + "/auth/login?registerSuccess=true"); // Chuyển hướng đến trang Login
-        } catch (SQLException e) {
+            response.sendRedirect(request.getContextPath() + "/auth/login?registerSuccess=true");
+        } catch (Exception e) { // Bắt Exception chung để xử lý lỗi DAO hoặc bất ngờ
             LOGGER.log(Level.SEVERE, "Lỗi khi đăng ký người dùng: " + e.getMessage(), e);
             request.setAttribute("errorMessage", "Đã xảy ra lỗi trong quá trình đăng ký. Vui lòng thử lại.");
-            forwardToRegisterPage(request, response, firstName, lastName, username, email);
+            forwardToRegisterPageWithInput(request, response, firstName, lastName, username, email);
         }        
     }
 
-    private void forwardToRegisterPage(HttpServletRequest request, HttpServletResponse response,
+    /**
+     * Chuyển tiếp đến trang đăng ký, giữ lại các giá trị đã nhập trên form.
+     * @param request HttpServletRequest
+     * @param response HttpServletResponse
+     * @param firstName
+     * @param lastName
+     * @param username
+     * @param email
+     * @throws ServletException
+     * @throws IOException
+     */
+    private void forwardToRegisterPageWithInput(HttpServletRequest request, HttpServletResponse response,
                                        String firstName, String lastName, String username, String email)
             throws ServletException, IOException {
         request.setAttribute("formFirstName", firstName);
@@ -159,8 +180,15 @@ public class AuthController extends HttpServlet {
         request.getRequestDispatcher("/components/auth/register.jsp").forward(request, response);
     }    
     
-    private void login(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-        String identifier = request.getParameter("identifier"); // Có thể là username hoặc email
+    /**
+     * Xử lý logic xác thực người dùng khi đăng nhập.
+     * @param request HttpServletRequest
+     * @param response HttpServletResponse
+     * @throws ServletException
+     * @throws IOException
+     */
+    private void authenticateUser(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+        String identifier = request.getParameter("identifier");
         String password = request.getParameter("password");
 
         if (identifier == null || identifier.trim().isEmpty() ||
@@ -170,27 +198,41 @@ public class AuthController extends HttpServlet {
             return;
         }
 
-        User user = userDAO.authenticateUser(identifier, password);
+        User user = userDAO.authenticateUser(identifier, password); // Sử dụng phương thức authenticateUser
 
         if (user != null) {
-            // Đăng nhập thành công, tạo session
-            HttpSession session = request.getSession(); // true by default, will create if not exists
-            session.setAttribute("loggedInUser", user); // Lưu đối tượng User vào session
-            session.setMaxInactiveInterval(60 * 60); // Session timeout sau 60 phút
+            HttpSession session = request.getSession();
+            session.setAttribute("loggedInUser", user);
+            session.setMaxInactiveInterval(60 * 60);
 
             LOGGER.log(Level.INFO, "User logged in: {0} with role {1}", new Object[]{user.getUsername(), user.getRole()});
 
-            // Chuyển hướng người dùng dựa trên vai trò
             if ("Admin".equalsIgnoreCase(user.getRole())) {
                 response.sendRedirect(request.getContextPath() + "/user/dashboard");
             } else {
                 response.sendRedirect(request.getContextPath() + "/");
             }
         } else {
-            // Đăng nhập thất bại
             request.setAttribute("errorMessage", "Tên đăng nhập/email hoặc mật khẩu không chính xác.");
-            request.setAttribute("formIdentifier", identifier); // Giữ lại giá trị đã nhập
+            request.setAttribute("formIdentifier", identifier);
             request.getRequestDispatcher("/components/auth/login.jsp").forward(request, response);
         }        
+    }
+
+    /**
+     * Xử lý đăng xuất người dùng.
+     * @param request HttpServletRequest
+     * @param response HttpServletResponse
+     * @throws IOException
+     */
+    private void logoutUser(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        HttpSession session = request.getSession(false);
+        if (session != null) {
+            String username = (session.getAttribute("loggedInUser") != null) ?
+                                      ((User) session.getAttribute("loggedInUser")).getUsername() : "Unknown User";
+            session.invalidate();
+            LOGGER.log(Level.INFO, "User {0} logged out.", username);
+        }
+        response.sendRedirect(request.getContextPath() + "/auth/login?logout=true");
     }
 }

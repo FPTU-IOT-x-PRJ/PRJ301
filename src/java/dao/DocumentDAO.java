@@ -1,0 +1,271 @@
+package dao;
+
+import dal.DBContext;
+import entity.Document;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+/**
+ * Lớp DAO quản lý các thao tác CRUD và các truy vấn liên quan đến đối tượng Document trong cơ sở dữ liệu.
+ * Author: Dung Ann
+ */
+public class DocumentDAO extends DBContext {
+
+    private static final Logger LOGGER = Logger.getLogger(DocumentDAO.class.getName());
+
+    // --- Hằng số SQL ---
+    private static final String INSERT_DOCUMENT_SQL = 
+        "INSERT INTO Documents (fileName, storedFileName, filePath, fileType, fileSize, uploadedBy, description, subject_id, lesson_id) " +
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+    
+    private static final String SELECT_ALL_DOCUMENTS_BY_USER_SQL = 
+        "SELECT id, fileName, storedFileName, filePath, fileType, fileSize, uploadedBy, uploadDate, description, subject_id, lesson_id FROM Documents WHERE uploadedBy = ? ORDER BY uploadDate DESC";
+    
+    private static final String SELECT_DOCUMENT_BY_ID_AND_USER_SQL = 
+        "SELECT id, fileName, storedFileName, filePath, fileType, fileSize, uploadedBy, uploadDate, description, subject_id, lesson_id FROM Documents WHERE id = ? AND uploadedBy = ?";
+    
+    private static final String UPDATE_DOCUMENT_SQL = 
+        "UPDATE Documents SET fileName = ?, storedFileName = ?, filePath = ?, fileType = ?, fileSize = ?, description = ?, uploadDate = GETDATE(), subject_id = ?, lesson_id = ? " + 
+        "WHERE id = ? AND uploadedBy = ?";
+    
+    private static final String DELETE_DOCUMENT_SQL = "DELETE FROM Documents WHERE id = ? AND uploadedBy = ?";
+
+    private static final String SELECT_DOCUMENTS_BY_SUBJECT_ID_SQL = 
+        "SELECT id, fileName, storedFileName, filePath, fileType, fileSize, uploadedBy, uploadDate, description, subject_id, lesson_id FROM Documents WHERE subject_id = ? AND uploadedBy = ? ORDER BY uploadDate DESC";
+
+    private static final String SELECT_DOCUMENTS_BY_LESSON_ID_SQL = 
+        "SELECT id, fileName, storedFileName, filePath, fileType, fileSize, uploadedBy, uploadDate, description, subject_id, lesson_id FROM Documents WHERE lesson_id = ? AND uploadedBy = ? ORDER BY uploadDate DESC";
+
+    /**
+     * Thêm một tài liệu mới vào cơ sở dữ liệu.
+     *
+     * @param doc Đối tượng Document cần thêm.
+     * @return true nếu thêm thành công, ngược lại là false.
+     */
+    public boolean addDocument(Document doc) {
+        boolean rowInserted = false;
+        try (PreparedStatement ps = connection.prepareStatement(INSERT_DOCUMENT_SQL)) {
+            ps.setString(1, doc.getFileName());
+            ps.setString(2, doc.getStoredFileName());
+            ps.setString(3, doc.getFilePath());
+            ps.setString(4, doc.getFileType());
+            ps.setLong(5, doc.getFileSize());
+            ps.setInt(6, doc.getUploadedBy());
+            ps.setString(7, doc.getDescription());
+            
+            if (doc.getSubjectId() != null) {
+                ps.setInt(8, doc.getSubjectId());
+            } else {
+                ps.setNull(8, java.sql.Types.INTEGER);
+            }
+            
+            if (doc.getLessonId() != null) {
+                ps.setInt(9, doc.getLessonId());
+            } else {
+                ps.setNull(9, java.sql.Types.INTEGER);
+            }
+
+            rowInserted = ps.executeUpdate() > 0;
+        } catch (SQLException ex) {
+            printSQLException(ex);
+        }
+        return rowInserted;
+    }
+
+    /**
+     * Lấy một tài liệu bằng ID và userId của người tải lên.
+     *
+     * @param id ID của tài liệu.
+     * @param userId ID của người dùng đã tải tài liệu lên.
+     * @return Đối tượng Document nếu tìm thấy, ngược lại trả về null.
+     */
+    public Document getDocumentById(int id, int userId) {
+        Document document = null;
+        try (PreparedStatement ps = connection.prepareStatement(SELECT_DOCUMENT_BY_ID_AND_USER_SQL)) {
+            ps.setInt(1, id);
+            ps.setInt(2, userId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    document = extractDocumentFromResultSet(rs);
+                }
+            }
+        } catch (SQLException ex) {
+            printSQLException(ex);
+        }
+        return document;
+    }
+
+    /**
+     * Lấy tất cả tài liệu được tải lên bởi một người dùng cụ thể.
+     *
+     * @param userId ID của người dùng.
+     * @return Danh sách các đối tượng Document.
+     */
+    public List<Document> getAllDocumentsByUserId(int userId) {
+        List<Document> documents = new ArrayList<>();
+        try (PreparedStatement ps = connection.prepareStatement(SELECT_ALL_DOCUMENTS_BY_USER_SQL)) {
+            ps.setInt(1, userId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    documents.add(extractDocumentFromResultSet(rs));
+                }
+            }
+        } catch (SQLException ex) {
+            printSQLException(ex);
+        }
+        return documents;
+    }
+
+    /**
+     * Lấy tất cả tài liệu liên quan đến một môn học cụ thể, được tải lên bởi một người dùng.
+     *
+     * @param subjectId ID của môn học.
+     * @param userId ID của người dùng đã tải tài liệu lên.
+     * @return Danh sách các đối tượng Document.
+     */
+    public List<Document> getDocumentsBySubjectId(int subjectId, int userId) {
+        List<Document> documents = new ArrayList<>();
+        try (PreparedStatement ps = connection.prepareStatement(SELECT_DOCUMENTS_BY_SUBJECT_ID_SQL)) {
+            ps.setInt(1, subjectId);
+            ps.setInt(2, userId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    documents.add(extractDocumentFromResultSet(rs));
+                }
+            }
+        } catch (SQLException ex) {
+            printSQLException(ex);
+        }
+        return documents;
+    }
+
+    /**
+     * Lấy tất cả tài liệu liên quan đến một buổi học cụ thể, được tải lên bởi một người dùng.
+     *
+     * @param lessonId ID của buổi học.
+     * @param userId ID của người dùng đã tải tài liệu lên.
+     * @return Danh sách các đối tượng Document.
+     */
+    public List<Document> getDocumentsByLessonId(int lessonId, int userId) {
+        List<Document> documents = new ArrayList<>();
+        try (PreparedStatement ps = connection.prepareStatement(SELECT_DOCUMENTS_BY_LESSON_ID_SQL)) {
+            ps.setInt(1, lessonId);
+            ps.setInt(2, userId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    documents.add(extractDocumentFromResultSet(rs));
+                }
+            }
+        } catch (SQLException ex) {
+            printSQLException(ex);
+        }
+        return documents;
+    }
+
+    /**
+     * Cập nhật thông tin một tài liệu trong cơ sở dữ liệu.
+     *
+     * @param doc Đối tượng Document chứa thông tin cần cập nhật (ID và uploadedBy để xác định bản ghi).
+     * @return true nếu cập nhật thành công, ngược lại là false.
+     */
+    public boolean editDocument(Document doc) {
+        boolean rowUpdated = false;
+        try (PreparedStatement ps = connection.prepareStatement(UPDATE_DOCUMENT_SQL)) {
+            ps.setString(1, doc.getFileName());
+            ps.setString(2, doc.getStoredFileName());
+            ps.setString(3, doc.getFilePath());
+            ps.setString(4, doc.getFileType());
+            ps.setLong(5, doc.getFileSize());
+            ps.setString(6, doc.getDescription());
+            
+            if (doc.getSubjectId() != null) {
+                ps.setInt(7, doc.getSubjectId());
+            } else {
+                ps.setNull(7, java.sql.Types.INTEGER);
+            }
+            
+            if (doc.getLessonId() != null) {
+                ps.setInt(8, doc.getLessonId());
+            } else {
+                ps.setNull(8, java.sql.Types.INTEGER);
+            }
+            
+            ps.setInt(9, doc.getId());
+            ps.setInt(10, doc.getUploadedBy());
+
+            rowUpdated = ps.executeUpdate() > 0;
+        } catch (SQLException ex) {
+            printSQLException(ex);
+        }
+        return rowUpdated;
+    }
+
+    /**
+     * Xóa một tài liệu khỏi cơ sở dữ liệu.
+     *
+     * @param id ID của tài liệu cần xóa.
+     * @param userId ID của người dùng đã tải tài liệu lên (để đảm bảo quyền).
+     * @return true nếu xóa thành công, ngược lại là false.
+     */
+    public boolean deleteDocument(int id, int userId) {
+        boolean rowDeleted = false;
+        try (PreparedStatement ps = connection.prepareStatement(DELETE_DOCUMENT_SQL)) {
+            ps.setInt(1, id);
+            ps.setInt(2, userId);
+            rowDeleted = ps.executeUpdate() > 0;
+        } catch (SQLException ex) {
+            printSQLException(ex);
+        }
+        return rowDeleted;
+    }
+
+    /**
+     * Phương thức trợ giúp để trích xuất dữ liệu từ ResultSet thành đối tượng Document.
+     *
+     * @param rs ResultSet chứa dữ liệu tài liệu.
+     * @return Đối tượng Document.
+     * @throws SQLException Nếu có lỗi khi truy cập dữ liệu từ ResultSet.
+     */
+    private Document extractDocumentFromResultSet(ResultSet rs) throws SQLException {
+        int id = rs.getInt("id");
+        String fileName = rs.getString("fileName");
+        String storedFileName = rs.getString("storedFileName");
+        String filePath = rs.getString("filePath");
+        String fileType = rs.getString("fileType");
+        long fileSize = rs.getLong("fileSize");
+        int uploadedBy = rs.getInt("uploadedBy");
+        LocalDateTime uploadDate = rs.getTimestamp("uploadDate") != null ? rs.getTimestamp("uploadDate").toLocalDateTime() : null;
+        String description = rs.getString("description");
+        
+        Integer subjectId = rs.getObject("subject_id", Integer.class);
+        Integer lessonId = rs.getObject("lesson_id", Integer.class);
+        
+        return new Document(id, fileName, storedFileName, filePath, fileType, fileSize, uploadedBy, uploadDate, description, subjectId, lessonId);
+    }
+    
+    /**
+     * Hàm tiện ích để ghi chi tiết lỗi SQL vào logger.
+     *
+     * @param ex Ngoại lệ SQLException cần ghi.
+     */
+    private void printSQLException(SQLException ex) {
+        for (Throwable e : ex) {
+            if (e instanceof SQLException) {
+                LOGGER.log(Level.SEVERE, "SQLState: " + ((SQLException) e).getSQLState());
+                LOGGER.log(Level.SEVERE, "Error Code: " + ((SQLException) e).getErrorCode());
+                LOGGER.log(Level.SEVERE, "Message: " + e.getMessage());
+                Throwable t = e.getCause();
+                while (t != null) {
+                    LOGGER.log(Level.SEVERE, "Cause: " + t.getMessage(), t);
+                    t = t.getCause();
+                }
+            }
+        }
+    }
+}
