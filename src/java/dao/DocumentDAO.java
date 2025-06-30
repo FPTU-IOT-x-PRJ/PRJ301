@@ -20,27 +20,28 @@ public class DocumentDAO extends DBContext {
     private static final Logger LOGGER = Logger.getLogger(DocumentDAO.class.getName());
 
     // --- Hằng số SQL ---
+    // Đã sửa đổi tên cột trong SQL từ snake_case sang camelCase (subjectId, lessonId)
     private static final String INSERT_DOCUMENT_SQL = 
-        "INSERT INTO Documents (fileName, storedFileName, filePath, fileType, fileSize, uploadedBy, description, subject_id, lesson_id) " +
+        "INSERT INTO Documents (fileName, storedFileName, filePath, fileType, fileSize, uploadedBy, description, subjectId, lessonId) " +
         "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
     
     private static final String SELECT_ALL_DOCUMENTS_BY_USER_SQL = 
-        "SELECT id, fileName, storedFileName, filePath, fileType, fileSize, uploadedBy, uploadDate, description, subject_id, lesson_id FROM Documents WHERE uploadedBy = ? ORDER BY uploadDate DESC";
+        "SELECT id, fileName, storedFileName, filePath, fileType, fileSize, uploadedBy, uploadDate, description, subjectId, lessonId FROM Documents WHERE uploadedBy = ? ORDER BY uploadDate DESC";
     
     private static final String SELECT_DOCUMENT_BY_ID_AND_USER_SQL = 
-        "SELECT id, fileName, storedFileName, filePath, fileType, fileSize, uploadedBy, uploadDate, description, subject_id, lesson_id FROM Documents WHERE id = ? AND uploadedBy = ?";
+        "SELECT id, fileName, storedFileName, filePath, fileType, fileSize, uploadedBy, uploadDate, description, subjectId, lessonId FROM Documents WHERE id = ? AND uploadedBy = ?";
     
     private static final String UPDATE_DOCUMENT_SQL = 
-        "UPDATE Documents SET fileName = ?, storedFileName = ?, filePath = ?, fileType = ?, fileSize = ?, description = ?, uploadDate = GETDATE(), subject_id = ?, lesson_id = ? " + 
+        "UPDATE Documents SET fileName = ?, storedFileName = ?, filePath = ?, fileType = ?, fileSize = ?, description = ?, uploadDate = GETDATE(), subjectId = ?, lessonId = ? " + 
         "WHERE id = ? AND uploadedBy = ?";
     
     private static final String DELETE_DOCUMENT_SQL = "DELETE FROM Documents WHERE id = ? AND uploadedBy = ?";
 
     private static final String SELECT_DOCUMENTS_BY_SUBJECT_ID_SQL = 
-        "SELECT id, fileName, storedFileName, filePath, fileType, fileSize, uploadedBy, uploadDate, description, subject_id, lesson_id FROM Documents WHERE subject_id = ? AND uploadedBy = ? ORDER BY uploadDate DESC";
+        "SELECT id, fileName, storedFileName, filePath, fileType, fileSize, uploadedBy, uploadDate, description, subjectId, lessonId FROM Documents WHERE subjectId = ? AND uploadedBy = ? ORDER BY uploadDate DESC";
 
     private static final String SELECT_DOCUMENTS_BY_LESSON_ID_SQL = 
-        "SELECT id, fileName, storedFileName, filePath, fileType, fileSize, uploadedBy, uploadDate, description, subject_id, lesson_id FROM Documents WHERE lesson_id = ? AND uploadedBy = ? ORDER BY uploadDate DESC";
+        "SELECT id, fileName, storedFileName, filePath, fileType, fileSize, uploadedBy, uploadDate, description, subjectId, lessonId FROM Documents WHERE lessonId = ? AND uploadedBy = ? ORDER BY uploadDate DESC";
 
     /**
      * Thêm một tài liệu mới vào cơ sở dữ liệu.
@@ -121,6 +122,49 @@ public class DocumentDAO extends DBContext {
         }
         return documents;
     }
+    
+    /**
+     * Lấy danh sách tài liệu dựa trên các tiêu chí lọc.
+     * Có thể lọc theo subjectId và/hoặc lessonId.
+     *
+     * @param userId ID của người dùng.
+     * @param subjectId ID của môn học (có thể null nếu không lọc theo môn học).
+     * @param lessonId ID của buổi học (có thể null nếu không lọc theo buổi học).
+     * @return Danh sách các đối tượng Document thỏa mãn điều kiện.
+     */
+    public List<Document> getFilteredDocuments(int userId, Integer subjectId, Integer lessonId) {
+        List<Document> documents = new ArrayList<>();
+        StringBuilder sqlBuilder = new StringBuilder("SELECT id, fileName, storedFileName, filePath, fileType, fileSize, uploadedBy, uploadDate, description, subjectId, lessonId FROM Documents WHERE uploadedBy = ?");
+        List<Object> params = new ArrayList<>();
+        params.add(userId);
+
+        if (subjectId != null) {
+            sqlBuilder.append(" AND subjectId = ?"); // Đã sửa từ subject_id sang subjectId
+            params.add(subjectId);
+        }
+
+        if (lessonId != null) {
+            sqlBuilder.append(" AND lessonId = ?"); // Đã sửa từ lesson_id sang lessonId
+            params.add(lessonId);
+        }
+
+        sqlBuilder.append(" ORDER BY uploadDate DESC");
+
+        try (PreparedStatement ps = connection.prepareStatement(sqlBuilder.toString())) {
+            for (int i = 0; i < params.size(); i++) {
+                ps.setObject(i + 1, params.get(i));
+            }
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    documents.add(extractDocumentFromResultSet(rs));
+                }
+            }
+        } catch (SQLException ex) {
+            printSQLException(ex);
+        }
+        return documents;
+    }
+
 
     /**
      * Lấy tất cả tài liệu liên quan đến một môn học cụ thể, được tải lên bởi một người dùng.
@@ -243,8 +287,9 @@ public class DocumentDAO extends DBContext {
         LocalDateTime uploadDate = rs.getTimestamp("uploadDate") != null ? rs.getTimestamp("uploadDate").toLocalDateTime() : null;
         String description = rs.getString("description");
         
-        Integer subjectId = rs.getObject("subject_id", Integer.class);
-        Integer lessonId = rs.getObject("lesson_id", Integer.class);
+        // Đã sửa tên cột từ snake_case sang camelCase khi đọc từ ResultSet
+        Integer subjectId = rs.getObject("subjectId", Integer.class);
+        Integer lessonId = rs.getObject("lessonId", Integer.class);
         
         return new Document(id, fileName, storedFileName, filePath, fileType, fileSize, uploadedBy, uploadDate, description, subjectId, lessonId);
     }
