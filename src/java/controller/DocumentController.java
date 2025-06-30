@@ -69,6 +69,15 @@ public class DocumentController extends HttpServlet {
         HttpSession session = request.getSession(false);
         User user = (session != null) ? (User) session.getAttribute("loggedInUser") : null;
 
+         // --- Debug Logging ---
+        if (user != null) {
+            LOGGER.log(Level.INFO, "User logged in with ID: {0}", user.getId());
+        } else {
+            LOGGER.log(Level.INFO, "No user logged in. Redirecting to login page.");
+        }
+        // --- End Debug Logging ---
+
+        
         if (user == null) {
             response.sendRedirect(request.getContextPath() + "/auth/login");
             return;
@@ -175,6 +184,13 @@ public class DocumentController extends HttpServlet {
         
         // Lấy danh sách tài liệu đã lọc
         List<Document> listDocuments = documentDao.getFilteredDocuments(userId, filterSubjectId, filterLessonId);
+        
+//         // --- Debug Logging ---
+//        LOGGER.log(Level.INFO, "Fetching documents for userId: {0}", userId);
+//        LOGGER.log(Level.INFO, "Filter Subject ID: {0}, Filter Lesson ID: {1}", new Object[]{filterSubjectId, filterLessonId});
+//        LOGGER.log(Level.INFO, "Number of documents returned by DAO: {0}", listDocuments.size());
+//        // --- End Debug Logging ---
+
 
         // Lấy danh sách Subjects để hiển thị trong bộ lọc và bảng
         List<Subject> allSubjects = subjectDao.getAllSubjects(null, null, null, 0, Integer.MAX_VALUE, null); // Giả định này nếu không có user filter cho subjects
