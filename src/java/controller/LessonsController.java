@@ -45,16 +45,23 @@ public class LessonsController extends HttpServlet {
         }
 
         User user = (User) session.getAttribute("loggedInUser");
-
+        Subject currentSubject = null;
         try {
             if (action == null || action.equals("/")) {
-                displayLessons(request, response, user);
+                displayLessons(request, response);
             } else if (action.equals("/add")) {
-                showAddForm(request, response, user);
+                String subjectId = request.getParameter("subjectId");
+                currentSubject = subjectDao.getSubjectById(Integer.parseInt(subjectId));
+                request.setAttribute("subjectId", subjectId);
+                request.setAttribute("currentSubject", currentSubject);
+                showAddForm(request, response);
             } else if (action.equals("/edit")) {
-                showEditForm(request, response, user);
-            } else if (action.equals("/delete")) {
-                deleteLesson(request, response, user);
+                showEditForm(request, response);
+            } else if (action.equals("detail")) {
+                displayLessonDetail(request, response);
+            }
+            else if (action.equals("/delete-confirm")) {
+                displayDeleteLessonConfirm(request, response);
             } else {
                 response.sendError(HttpServletResponse.SC_NOT_FOUND, "Action Not Found");
             }
@@ -81,24 +88,87 @@ public class LessonsController extends HttpServlet {
 
         try {
             if (action == null || action.equals("/") || action.equals("/add")) { // Gửi form add
-                addLesson(request, response, user);
+                addLesson(request, response);
             } else if (action.equals("/edit")) {
-                updateLesson(request, response, user);
-            } else {
+                updateLesson(request, response);
+            } else if (action.equals("/delete")) {
+                deleteLesson(request, response);
+            }
+            else {
                 response.sendError(HttpServletResponse.SC_NOT_FOUND, "Action Not Found");
             }
-        } catch (ServletException | IOException e) {
+        } catch (IOException e) {
             LOGGER.log(Level.SEVERE, "Error in LessonsController doPost: " + action, e);
             request.setAttribute("errorMessage", "Đã xảy ra lỗi hệ thống.");
             request.getRequestDispatcher("/error.jsp").forward(request, response);
         }
     }
 
-    /**
-     * Hiển thị danh sách các buổi học cho một môn học cụ thể.
-     * Yêu cầu tham số `subjectId`.
-     */
-    private void displayLessons(HttpServletRequest request, HttpServletResponse response, User user)
+    private void displayLessonDetail(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        try {
+            int lessonId = Integer.parseInt(request.getParameter("id"));
+            Lesson lesson = lessonDao.getLessonById(lessonId); // Cần phương thức này trong LessonDAO
+
+            if (lesson != null) {
+                request.setAttribute("lesson", lesson);
+                request.getRequestDispatcher("/components/lesson/lesson-detail.jsp").forward(request, response);
+            } else {
+                request.setAttribute("errorMessage", "Không tìm thấy buổi học bạn muốn xem chi tiết.");
+                // Chuyển hướng về trang danh sách buổi học của môn học (nếu có subjectId) hoặc trang lỗi chung
+                int subjectId = -1;
+                try {
+                    // Lấy subjectId từ request hoặc từ lesson nếu lesson không null (nhưng đã là null rồi)
+                    // Nếu lessonId không hợp lệ, ta không biết subjectId, có thể chuyển hướng về dashboard hoặc trang lỗi chung.
+                    subjectId = Integer.parseInt(request.getParameter("subjectId")); // Cố gắng lấy nếu có
+                } catch (NumberFormatException e) {
+                    // ignore, subjectId remains -1
+                }
+                
+                if (subjectId != -1) {
+                    response.sendRedirect(request.getContextPath() + "/lessons?subjectId=" + subjectId + "&errorMessage=" + java.net.URLEncoder.encode("Không tìm thấy buổi học bạn muốn xem chi tiết.", "UTF-8"));
+                } else {
+                    response.sendRedirect(request.getContextPath() + "/lessons"); // Hoặc một trang dashboard chung
+                }
+            }
+        } catch (NumberFormatException e) {
+            LOGGER.log(Level.WARNING, "Invalid lesson ID for detail view", e);
+            response.sendError(HttpServletResponse.SC_BAD_REQUEST, "ID buổi học không hợp lệ.");
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "An unexpected error occurred while displaying lesson detail", e);
+            response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Đã xảy ra lỗi không mong muốn.");
+        }
+    }
+    
+    private void displayDeleteLessonConfirm(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        try {
+            int id = Integer.parseInt(request.getParameter("id"));
+            Lesson lesson = lessonDao.getLessonById(id);
+            if (lesson != null) {
+                request.setAttribute("lessonToDelete", lesson);
+                request.getRequestDispatcher("/components/lesson/lesson-delete-confirm.jsp").forward(request, response);
+            } else {
+                int subjectId = -1;
+                try {
+                    subjectId = Integer.parseInt(request.getParameter("subjectId"));
+                } catch (NumberFormatException e) {
+                    LOGGER.log(Level.WARNING, "Subject ID not found or invalid in delete-confirm request", e);
+                }
+                
+                request.setAttribute("errorMessage", "Không tìm thấy buổi học bạn muốn xóa.");
+                response.sendRedirect(request.getContextPath() + "/lessons?subjectId=" + subjectId); 
+            }
+        } catch (NumberFormatException e) {
+            LOGGER.log(Level.WARNING, "Invalid lesson ID for delete confirmation", e);
+            response.sendError(HttpServletResponse.SC_BAD_REQUEST, "ID buổi học không hợp lệ.");
+        } catch (Exception e) { // Bắt các lỗi khác có thể xảy ra trong DAO
+            LOGGER.log(Level.SEVERE, "Error fetching lesson for delete confirmation", e);
+            response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Có lỗi xảy ra khi lấy thông tin buổi học.");
+        }
+    }
+    
+    private void displayLessons(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         String subjectIdStr = request.getParameter("subjectId");
         if (subjectIdStr == null || subjectIdStr.isEmpty()) {
@@ -113,7 +183,7 @@ public class LessonsController extends HttpServlet {
             Subject subject = subjectDao.getSubjectById(subjectId);
 
             if (subject == null) {
-                LOGGER.log(Level.WARNING, "Subject with ID {0} not found for user {1}.", new Object[]{subjectId, user.getId()});
+                LOGGER.log(Level.WARNING, "Subject with ID {0} not found.", new Object[]{subjectId});
                 request.setAttribute("errorMessage", "Môn học không tồn tại.");
                 request.getRequestDispatcher("/error.jsp").forward(request, response);
                 return;
@@ -144,7 +214,7 @@ public class LessonsController extends HttpServlet {
             request.setAttribute("search", search);
             request.setAttribute("statusFilter", statusFilter); // Giữ lại giá trị filter
 
-            request.getRequestDispatcher("/components/lesson/lesson-list.jsp").forward(request, response);
+            request.getRequestDispatcher("/components/lesson/lesson-dashboard.jsp").forward(request, response);
 
         } catch (NumberFormatException e) {
             LOGGER.log(Level.WARNING, "Invalid subject ID format: {0}", subjectIdStr);
@@ -157,7 +227,7 @@ public class LessonsController extends HttpServlet {
      * Hiển thị form thêm buổi học mới.
      * Yêu cầu tham số `subjectId`.
      */
-    private void showAddForm(HttpServletRequest request, HttpServletResponse response, User user)
+    private void showAddForm(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         String subjectIdStr = request.getParameter("subjectId");
         if (subjectIdStr == null || subjectIdStr.isEmpty()) {
@@ -187,7 +257,7 @@ public class LessonsController extends HttpServlet {
     /**
      * Xử lý yêu cầu thêm buổi học mới.
      */
-    private void addLesson(HttpServletRequest request, HttpServletResponse response, User user)
+    private void addLesson(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         Map<String, String> errors = new HashMap<>();
         int subjectId = 0; // Khởi tạo để dùng trong phần catch và redirect
@@ -224,9 +294,6 @@ public class LessonsController extends HttpServlet {
                     errors.put("lessonDate", "Định dạng ngày không hợp lệ. Vui lòng sử dụng YYYY-MM-DD.");
                 }
             }
-            if (description == null || description.trim().isEmpty()) {
-                errors.put("description", "Mô tả không được để trống.");
-            }
             if (status == null || status.trim().isEmpty()) {
                 errors.put("status", "Trạng thái không được để trống.");
             }
@@ -247,7 +314,7 @@ public class LessonsController extends HttpServlet {
             boolean success = lessonDao.addLesson(newLesson);
 
             if (success) {
-                LOGGER.log(Level.INFO, "Lesson '{0}' added successfully for subject ID {1} by user {2}.", new Object[]{name, subjectId, user.getId()});
+                LOGGER.log(Level.INFO, "Lesson '{0}' added successfully for subject ID {1}.", new Object[]{name, subjectId});
                 response.sendRedirect(request.getContextPath() + "/lessons?subjectId=" + subjectId + "&message=addSuccess");
             } else {
                 errors.put("general", "Có lỗi xảy ra khi thêm buổi học.");
@@ -296,7 +363,7 @@ public class LessonsController extends HttpServlet {
      * Hiển thị form chỉnh sửa buổi học.
      * Yêu cầu tham số `id` (lessonId) và `subjectId`.
      */
-    private void showEditForm(HttpServletRequest request, HttpServletResponse response, User user)
+    private void showEditForm(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         String lessonIdStr = request.getParameter("id");
         String subjectIdStr = request.getParameter("subjectId");
@@ -344,7 +411,7 @@ public class LessonsController extends HttpServlet {
     /**
      * Xử lý yêu cầu cập nhật buổi học.
      */
-    private void updateLesson(HttpServletRequest request, HttpServletResponse response, User user)
+    private void updateLesson(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         Map<String, String> errors = new HashMap<>();
         int lessonId = 0;
@@ -394,9 +461,7 @@ public class LessonsController extends HttpServlet {
                     errors.put("lessonDate", "Định dạng ngày không hợp lệ. Vui lòng sử dụng YYYY-MM-DD.");
                 }
             }
-            if (description == null || description.trim().isEmpty()) {
-                errors.put("description", "Mô tả không được để trống.");
-            }
+
             if (status == null || status.trim().isEmpty()) {
                 errors.put("status", "Trạng thái không được để trống.");
             }
@@ -423,7 +488,7 @@ public class LessonsController extends HttpServlet {
             boolean success = lessonDao.updateLesson(updatedLesson);
 
             if (success) {
-                LOGGER.log(Level.INFO, "Lesson with ID {0} updated successfully by user {1}.", new Object[]{lessonId, user.getId()});
+                LOGGER.log(Level.INFO, "Lesson with ID {0} updated successfully.", new Object[]{lessonId});
                 response.sendRedirect(request.getContextPath() + "/lessons?subjectId=" + subjectId + "&message=editSuccess");
             } else {
                 errors.put("general", "Có lỗi xảy ra khi cập nhật buổi học.");
@@ -470,7 +535,7 @@ public class LessonsController extends HttpServlet {
     /**
      * Xử lý yêu cầu xóa buổi học.
      */
-    private void deleteLesson(HttpServletRequest request, HttpServletResponse response, User user)
+    private void deleteLesson(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         String lessonIdStr = request.getParameter("id");
         String subjectIdStr = request.getParameter("subjectId");
@@ -478,7 +543,7 @@ public class LessonsController extends HttpServlet {
         if (lessonIdStr == null || lessonIdStr.isEmpty() || subjectIdStr == null || subjectIdStr.isEmpty()) {
             LOGGER.log(Level.WARNING, "Missing lessonId or subjectId parameter for deleting lesson.");
             request.setAttribute("errorMessage", "Thông tin buổi học hoặc môn học không đầy đủ để xóa.");
-            displayLessons(request, response, user); // Quay lại trang danh sách với lỗi
+            displayLessons(request, response); // Quay lại trang danh sách với lỗi
             return;
         }
 
@@ -489,21 +554,21 @@ public class LessonsController extends HttpServlet {
             boolean success = lessonDao.deleteLesson(deleteId);
 
             if (success) {
-                LOGGER.log(Level.INFO, "Lesson with ID {0} deleted successfully by user {1}.", new Object[]{deleteId, user.getId()});
+                LOGGER.log(Level.INFO, "Lesson with ID {0} deleted successfully.", new Object[]{deleteId});
                 response.sendRedirect(request.getContextPath() + "/lessons?subjectId=" + subjectId + "&message=deleteSuccess");
             } else {
-                LOGGER.log(Level.WARNING, "Failed to delete lesson with ID {0} for user {1}. It might not exist or be linked to other data.", new Object[]{deleteId, user.getId()});
+                LOGGER.log(Level.WARNING, "Failed to delete lesson with ID {0}. It might not exist or be linked to other data.", new Object[]{deleteId});
                 request.setAttribute("errorMessage", "Không thể xóa buổi học. Có thể buổi học không tồn tại hoặc có dữ liệu liên quan.");
-                displayLessons(request, response, user); // Quay lại trang danh sách với lỗi
+                displayLessons(request, response); // Quay lại trang danh sách với lỗi
             }
         } catch (NumberFormatException e) {
             LOGGER.log(Level.WARNING, "Invalid lesson ID ({0}) or subject ID ({1}) format for delete.", new Object[]{lessonIdStr, subjectIdStr});
             request.setAttribute("errorMessage", "ID buổi học hoặc ID môn học không hợp lệ.");
-            displayLessons(request, response, user); // Quay lại trang danh sách với lỗi
+            displayLessons(request, response); // Quay lại trang danh sách với lỗi
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error deleting lesson.", e);
             request.setAttribute("errorMessage", "Đã xảy ra lỗi không mong muốn khi xóa buổi học.");
-            displayLessons(request, response, user); // Quay lại trang danh sách với lỗi
+            displayLessons(request, response); // Quay lại trang danh sách với lỗi
         }
     }
 }

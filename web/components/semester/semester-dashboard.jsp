@@ -173,7 +173,7 @@
                             
                             <div class="col-md-1 d-grid">
                                 <button type="submit" class="btn btn-primary" title="Áp dụng bộ lọc">
-                                    <i class="fas fa-filter"></i>
+                                    <i class="fas fa-filter"></i> Lọc
                                 </button>
                             </div>
                         </div>
@@ -192,11 +192,11 @@
                             <thead class="table-light">
                                 <tr>
                                     <th class="text-center">#</th>
-                                    <th><i class="fas fa-graduation-cap me-2"></i>Tên kỳ học</th>
-                                    <th class="text-center"><i class="fas fa-calendar-plus me-2"></i>Ngày bắt đầu</th>
-                                    <th class="text-center"><i class="fas fa-calendar-minus me-2"></i>Ngày kết thúc</th>
-                                    <th class="text-center"><i class="fas fa-info-circle me-2"></i>Trạng thái</th>
-                                    <th class="text-center"><i class="fas fa-cogs me-2"></i>Hành động</th>
+                                    <th>Tên kỳ học</th>
+                                    <th class="text-center">Ngày bắt đầu</th>
+                                    <th class="text-center">Ngày kết thúc</th>
+                                    <th class="text-center">Trạng thái</th>
+                                    <th class="text-center">Hành động</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -225,17 +225,17 @@
                                                 <c:choose>
                                                     <c:when test="${semester.status == 'Active'}">
                                                         <span class="badge bg-success badge-fixed-width">
-                                                            <i class="fas fa-play me-1"></i>Đang diễn ra
+                                                            Đang diễn ra
                                                         </span>
                                                     </c:when>
                                                     <c:when test="${semester.status == 'Inactive'}">
                                                         <span class="badge bg-warning badge-fixed-width">
-                                                            <i class="fas fa-pause me-1"></i>Bảo lưu
+                                                            Bảo lưu
                                                         </span>
                                                     </c:when>
                                                     <c:when test="${semester.status == 'Completed'}">
                                                         <span class="badge bg-primary badge-fixed-width">
-                                                            <i class="fas fa-check me-1"></i>Hoàn thành
+                                                            Hoàn thành
                                                         </span>
                                                     </c:when>
                                                 </c:choose>
@@ -254,11 +254,10 @@
                                                            data-bs-toggle="tooltip">
                                                             <i class="fas fa-edit"></i>
                                                         </a>
-                                                        <a href="${pageContext.request.contextPath}/semesters/delete?id=${semester.id}" 
+                                                        <a href="${pageContext.request.contextPath}/semesters/delete-confirm?id=${semester.id}" 
                                                            class="btn btn-sm btn-outline-danger"
                                                            title="Xóa"
-                                                           data-bs-toggle="tooltip"
-                                                           onclick="return confirm('Bạn có chắc chắn muốn xóa kỳ học này?');">
+                                                           data-bs-toggle="tooltip">
                                                             <i class="fas fa-trash"></i>
                                                         </a>
                                                     </div>

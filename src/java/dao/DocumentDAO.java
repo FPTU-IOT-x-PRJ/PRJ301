@@ -2,39 +2,52 @@ package dao;
 
 import dal.DBContext;
 import entity.Document;
-import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+/**
+ * Lớp DAO quản lý các thao tác CRUD và các truy vấn liên quan đến đối tượng Document trong cơ sở dữ liệu.
+ * Author: Dung Ann
+ */
 public class DocumentDAO extends DBContext {
 
     private static final Logger LOGGER = Logger.getLogger(DocumentDAO.class.getName());
 
-    // Cập nhật INSERT_DOCUMENT_SQL để bao gồm subject_id và lesson_id
+    // --- Hằng số SQL ---
     private static final String INSERT_DOCUMENT_SQL = 
         "INSERT INTO Documents (fileName, storedFileName, filePath, fileType, fileSize, uploadedBy, description, subject_id, lesson_id) " +
         "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
     
-    // Cập nhật SELECT_ALL_DOCUMENTS_SQL để lấy thêm subject_id và lesson_id
-    private static final String SELECT_ALL_DOCUMENTS_SQL = "SELECT id, fileName, storedFileName, filePath, fileType, fileSize, uploadedBy, uploadDate, description, subject_id, lesson_id FROM Documents WHERE uploadedBy = ? ORDER BY uploadDate DESC";
+    private static final String SELECT_ALL_DOCUMENTS_BY_USER_SQL = 
+        "SELECT id, fileName, storedFileName, filePath, fileType, fileSize, uploadedBy, uploadDate, description, subject_id, lesson_id FROM Documents WHERE uploadedBy = ? ORDER BY uploadDate DESC";
     
-    // Cập nhật SELECT_DOCUMENT_BY_ID_SQL để lấy thêm subject_id và lesson_id
-    private static final String SELECT_DOCUMENT_BY_ID_SQL = "SELECT id, fileName, storedFileName, filePath, fileType, fileSize, uploadedBy, uploadDate, description, subject_id, lesson_id FROM Documents WHERE id = ? AND uploadedBy = ?";
+    private static final String SELECT_DOCUMENT_BY_ID_AND_USER_SQL = 
+        "SELECT id, fileName, storedFileName, filePath, fileType, fileSize, uploadedBy, uploadDate, description, subject_id, lesson_id FROM Documents WHERE id = ? AND uploadedBy = ?";
     
-    // Cập nhật UPDATE_DOCUMENT_SQL để bao gồm subject_id và lesson_id
     private static final String UPDATE_DOCUMENT_SQL = 
         "UPDATE Documents SET fileName = ?, storedFileName = ?, filePath = ?, fileType = ?, fileSize = ?, description = ?, uploadDate = GETDATE(), subject_id = ?, lesson_id = ? " + 
         "WHERE id = ? AND uploadedBy = ?";
     
     private static final String DELETE_DOCUMENT_SQL = "DELETE FROM Documents WHERE id = ? AND uploadedBy = ?";
 
+    private static final String SELECT_DOCUMENTS_BY_SUBJECT_ID_SQL = 
+        "SELECT id, fileName, storedFileName, filePath, fileType, fileSize, uploadedBy, uploadDate, description, subject_id, lesson_id FROM Documents WHERE subject_id = ? AND uploadedBy = ? ORDER BY uploadDate DESC";
+
+    private static final String SELECT_DOCUMENTS_BY_LESSON_ID_SQL = 
+        "SELECT id, fileName, storedFileName, filePath, fileType, fileSize, uploadedBy, uploadDate, description, subject_id, lesson_id FROM Documents WHERE lesson_id = ? AND uploadedBy = ? ORDER BY uploadDate DESC";
+
+    /**
+     * Thêm một tài liệu mới vào cơ sở dữ liệu.
+     *
+     * @param doc Đối tượng Document cần thêm.
+     * @return true nếu thêm thành công, ngược lại là false.
+     */
     public boolean addDocument(Document doc) {
         boolean rowInserted = false;
         try (PreparedStatement ps = connection.prepareStatement(INSERT_DOCUMENT_SQL)) {
@@ -46,14 +59,12 @@ public class DocumentDAO extends DBContext {
             ps.setInt(6, doc.getUploadedBy());
             ps.setString(7, doc.getDescription());
             
-            // Đặt subject_id. Sử dụng setObject để xử lý Integer có thể null
             if (doc.getSubjectId() != null) {
                 ps.setInt(8, doc.getSubjectId());
             } else {
                 ps.setNull(8, java.sql.Types.INTEGER);
             }
             
-            // Đặt lesson_id. Sử dụng setObject để xử lý Integer có thể null
             if (doc.getLessonId() != null) {
                 ps.setInt(9, doc.getLessonId());
             } else {
@@ -67,24 +78,16 @@ public class DocumentDAO extends DBContext {
         return rowInserted;
     }
 
-    public List<Document> getAllDocuments(int userId) {
-        List<Document> documents = new ArrayList<>();
-        try (PreparedStatement ps = connection.prepareStatement(SELECT_ALL_DOCUMENTS_SQL)) {
-            ps.setInt(1, userId);
-            try (ResultSet rs = ps.executeQuery()) {
-                while (rs.next()) {
-                    documents.add(extractDocumentFromResultSet(rs));
-                }
-            }
-        } catch (SQLException ex) {
-            printSQLException(ex);
-        }
-        return documents;
-    }
-
+    /**
+     * Lấy một tài liệu bằng ID và userId của người tải lên.
+     *
+     * @param id ID của tài liệu.
+     * @param userId ID của người dùng đã tải tài liệu lên.
+     * @return Đối tượng Document nếu tìm thấy, ngược lại trả về null.
+     */
     public Document getDocumentById(int id, int userId) {
         Document document = null;
-        try (PreparedStatement ps = connection.prepareStatement(SELECT_DOCUMENT_BY_ID_SQL)) {
+        try (PreparedStatement ps = connection.prepareStatement(SELECT_DOCUMENT_BY_ID_AND_USER_SQL)) {
             ps.setInt(1, id);
             ps.setInt(2, userId);
             try (ResultSet rs = ps.executeQuery()) {
@@ -98,7 +101,80 @@ public class DocumentDAO extends DBContext {
         return document;
     }
 
-    public boolean updateDocument(Document doc) {
+    /**
+     * Lấy tất cả tài liệu được tải lên bởi một người dùng cụ thể.
+     *
+     * @param userId ID của người dùng.
+     * @return Danh sách các đối tượng Document.
+     */
+    public List<Document> getAllDocumentsByUserId(int userId) {
+        List<Document> documents = new ArrayList<>();
+        try (PreparedStatement ps = connection.prepareStatement(SELECT_ALL_DOCUMENTS_BY_USER_SQL)) {
+            ps.setInt(1, userId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    documents.add(extractDocumentFromResultSet(rs));
+                }
+            }
+        } catch (SQLException ex) {
+            printSQLException(ex);
+        }
+        return documents;
+    }
+
+    /**
+     * Lấy tất cả tài liệu liên quan đến một môn học cụ thể, được tải lên bởi một người dùng.
+     *
+     * @param subjectId ID của môn học.
+     * @param userId ID của người dùng đã tải tài liệu lên.
+     * @return Danh sách các đối tượng Document.
+     */
+    public List<Document> getDocumentsBySubjectId(int subjectId, int userId) {
+        List<Document> documents = new ArrayList<>();
+        try (PreparedStatement ps = connection.prepareStatement(SELECT_DOCUMENTS_BY_SUBJECT_ID_SQL)) {
+            ps.setInt(1, subjectId);
+            ps.setInt(2, userId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    documents.add(extractDocumentFromResultSet(rs));
+                }
+            }
+        } catch (SQLException ex) {
+            printSQLException(ex);
+        }
+        return documents;
+    }
+
+    /**
+     * Lấy tất cả tài liệu liên quan đến một buổi học cụ thể, được tải lên bởi một người dùng.
+     *
+     * @param lessonId ID của buổi học.
+     * @param userId ID của người dùng đã tải tài liệu lên.
+     * @return Danh sách các đối tượng Document.
+     */
+    public List<Document> getDocumentsByLessonId(int lessonId, int userId) {
+        List<Document> documents = new ArrayList<>();
+        try (PreparedStatement ps = connection.prepareStatement(SELECT_DOCUMENTS_BY_LESSON_ID_SQL)) {
+            ps.setInt(1, lessonId);
+            ps.setInt(2, userId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    documents.add(extractDocumentFromResultSet(rs));
+                }
+            }
+        } catch (SQLException ex) {
+            printSQLException(ex);
+        }
+        return documents;
+    }
+
+    /**
+     * Cập nhật thông tin một tài liệu trong cơ sở dữ liệu.
+     *
+     * @param doc Đối tượng Document chứa thông tin cần cập nhật (ID và uploadedBy để xác định bản ghi).
+     * @return true nếu cập nhật thành công, ngược lại là false.
+     */
+    public boolean editDocument(Document doc) {
         boolean rowUpdated = false;
         try (PreparedStatement ps = connection.prepareStatement(UPDATE_DOCUMENT_SQL)) {
             ps.setString(1, doc.getFileName());
@@ -108,14 +184,12 @@ public class DocumentDAO extends DBContext {
             ps.setLong(5, doc.getFileSize());
             ps.setString(6, doc.getDescription());
             
-            // Đặt subject_id. Sử dụng setObject để xử lý Integer có thể null
             if (doc.getSubjectId() != null) {
                 ps.setInt(7, doc.getSubjectId());
             } else {
                 ps.setNull(7, java.sql.Types.INTEGER);
             }
             
-            // Đặt lesson_id. Sử dụng setObject để xử lý Integer có thể null
             if (doc.getLessonId() != null) {
                 ps.setInt(8, doc.getLessonId());
             } else {
@@ -132,6 +206,13 @@ public class DocumentDAO extends DBContext {
         return rowUpdated;
     }
 
+    /**
+     * Xóa một tài liệu khỏi cơ sở dữ liệu.
+     *
+     * @param id ID của tài liệu cần xóa.
+     * @param userId ID của người dùng đã tải tài liệu lên (để đảm bảo quyền).
+     * @return true nếu xóa thành công, ngược lại là false.
+     */
     public boolean deleteDocument(int id, int userId) {
         boolean rowDeleted = false;
         try (PreparedStatement ps = connection.prepareStatement(DELETE_DOCUMENT_SQL)) {
@@ -144,6 +225,13 @@ public class DocumentDAO extends DBContext {
         return rowDeleted;
     }
 
+    /**
+     * Phương thức trợ giúp để trích xuất dữ liệu từ ResultSet thành đối tượng Document.
+     *
+     * @param rs ResultSet chứa dữ liệu tài liệu.
+     * @return Đối tượng Document.
+     * @throws SQLException Nếu có lỗi khi truy cập dữ liệu từ ResultSet.
+     */
     private Document extractDocumentFromResultSet(ResultSet rs) throws SQLException {
         int id = rs.getInt("id");
         String fileName = rs.getString("fileName");
@@ -155,7 +243,6 @@ public class DocumentDAO extends DBContext {
         LocalDateTime uploadDate = rs.getTimestamp("uploadDate") != null ? rs.getTimestamp("uploadDate").toLocalDateTime() : null;
         String description = rs.getString("description");
         
-        // Lấy subject_id và lesson_id (có thể null từ DB)
         Integer subjectId = rs.getObject("subject_id", Integer.class);
         Integer lessonId = rs.getObject("lesson_id", Integer.class);
         
@@ -163,23 +250,19 @@ public class DocumentDAO extends DBContext {
     }
     
     /**
-     * Hàm tiện ích để ghi chi tiết lỗi SQL vào logger, thay vì System.err.
-     * Cải thiện việc quản lý log và gỡ lỗi trong ứng dụng thực tế.
+     * Hàm tiện ích để ghi chi tiết lỗi SQL vào logger.
      *
      * @param ex Ngoại lệ SQLException cần ghi.
      */
     private void printSQLException(SQLException ex) {
         for (Throwable e : ex) {
             if (e instanceof SQLException) {
-                // Sử dụng LOGGER thay vì System.err
                 LOGGER.log(Level.SEVERE, "SQLState: " + ((SQLException) e).getSQLState());
                 LOGGER.log(Level.SEVERE, "Error Code: " + ((SQLException) e).getErrorCode());
                 LOGGER.log(Level.SEVERE, "Message: " + e.getMessage());
-                
-                // Cải thiện để in stack trace của nguyên nhân gây ra lỗi
-                Throwable t = e.getCause(); // Lấy nguyên nhân của SQLException hiện tại
+                Throwable t = e.getCause();
                 while (t != null) {
-                    LOGGER.log(Level.SEVERE, "Cause: " + t.getMessage(), t); // Ghi log nguyên nhân và stack trace của nó
+                    LOGGER.log(Level.SEVERE, "Cause: " + t.getMessage(), t);
                     t = t.getCause();
                 }
             }

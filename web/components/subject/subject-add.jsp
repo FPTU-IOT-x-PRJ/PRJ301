@@ -18,12 +18,20 @@
             <div class="card shadow-sm">
                 <div class="card-header bg-primary text-white">
                     <h4 class="mb-0"><i class="fas fa-book me-2"></i>Thêm môn học mới</h4>
+                    <%-- THÊM PHẦN NÀY ĐỂ HIỂN THỊ TÊN KỲ HỌC --%>
+                    <c:if test="${not empty currentSemester}">
+                        <p class="mb-0">
+                            <small>Cho Kỳ: <strong><c:out value="${currentSemester.name}"/></strong></small>
+                        </p>
+                    </c:if>
                 </div>
                 <div class="card-body">
 
                     <c:if test="${not empty errorMessage}">
                         <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                            <i class="fas fa-exclamation-triangle me-2"></i>${errorMessage}
+                            <c:forEach var="entry" items="${errorMessage}">
+                                <p class="mb-0">${entry.value}</p>
+                            </c:forEach>
                             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                         </div>
                     </c:if>
@@ -69,8 +77,8 @@
                             <div class="col-md-12">
                                 <label class="form-label">Trạng thái <span class="text-danger">*</span></label>
                                 <select class="form-select" name="isActive" required>
-                                    <option value="true" <c:if test="${formIsActive eq true}">selected</c:if>>Hoạt động</option>
-                                    <option value="false" <c:if test="${formIsActive eq false}">selected</c:if>>Ngưng hoạt động</option>
+                                    <option value="true" <c:if test="${formIsActive eq true}">selected</c:if>>Đang học</option>
+                                    <option value="false" <c:if test="${formIsActive eq false}">selected</c:if>>Đã hoàn thành</option>
                                 </select>
                                 <div class="invalid-feedback">Vui lòng chọn trạng thái.</div>
                             </div>

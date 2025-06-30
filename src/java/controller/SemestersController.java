@@ -37,9 +37,8 @@ public class SemestersController extends HttpServlet {
         
         HttpSession session = request.getSession(false);
         if (session == null || session.getAttribute("loggedInUser") == null) {
-            // Nếu không có session hoặc người dùng chưa đăng nhập, chuyển hướng về trang login
             response.sendRedirect(request.getContextPath() + "/auth/login");
-            return; // Dừng xử lý request
+            return;
         }
         
         User user = (User) session.getAttribute("loggedInUser");
@@ -49,10 +48,10 @@ public class SemestersController extends HttpServlet {
                 request.getRequestDispatcher("/components/semester/semester-add.jsp").forward(request, response);
                 break;
             case "/edit":
-                displayEditSemester(request, response, user); // Gọi phương thức hiển thị form chỉnh sửa
+                displayEditSemester(request, response, user);
                 break;
-            case "/delete":
-                deleteSemester(request, response, user); // Gọi phương thức xóa
+            case "/delete-confirm":
+                displayDeleteSemesterConfirm(request, response, user);
                 break;
             default:
                 displayDashboard(request, response, user);
@@ -65,23 +64,50 @@ public class SemestersController extends HttpServlet {
             throws ServletException, IOException {
         String action = request.getPathInfo();
         LOGGER.log(Level.INFO, "action: {0}", action);
-        switch (action != null ? action : "") {
+
+        HttpSession session = request.getSession(false);
+        if (session == null || session.getAttribute("loggedInUser") == null) {
+            response.sendRedirect(request.getContextPath() + "/auth/login");
+            return;
+        }
+        User user = (User) session.getAttribute("loggedInUser"); // Lấy user từ session cho doPost
+
+        switch (action == null ? "" : action) {
             case "/add":
                 addSemester(request, response);
                 break;
-            case "/update": // Sửa từ /edit sang /update theo action của form JSP
+            case "/update":
                 editSemester(request, response);
                 break;
             case "/delete":
-                // Xử lý delete qua POST (nếu muốn, nhưng GET thường dùng cho delete đơn giản)
-                // deleteSemester(request, response, (User) request.getSession().getAttribute("loggedInUser"));
+                deleteSemester(request, response, user); // Gọi phương thức xóa
                 break;
             default:
-                // Xử lý mặc định hoặc thông báo lỗi nếu action không hợp lệ
                 response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Invalid action");
                 break;
         }
+    }
 
+    private void displayDeleteSemesterConfirm(HttpServletRequest request, HttpServletResponse response, User user)
+            throws ServletException, IOException {
+        try {
+            int id = Integer.parseInt(request.getParameter("id"));
+            Semester semester = semesterDao.getSemesterById(id, user.getId()); // Cần method getSemesterById(id, userId)
+            if (semester != null) {
+                request.setAttribute("semesterToDelete", semester);
+                request.getRequestDispatcher("/components/semester/semester-delete-confirm.jsp").forward(request, response);
+            } else {
+                // Xử lý nếu không tìm thấy kỳ học, có thể chuyển hướng về dashboard hoặc hiển thị lỗi
+                request.setAttribute("errorMessage", "Không tìm thấy kỳ học bạn muốn xóa.");
+                response.sendRedirect(request.getContextPath() + "/semesters"); // Hoặc forward đến trang lỗi
+            }
+        } catch (NumberFormatException e) {
+            LOGGER.log(Level.WARNING, "Invalid semester ID for delete confirmation", e);
+            response.sendError(HttpServletResponse.SC_BAD_REQUEST, "ID kỳ học không hợp lệ.");
+        } catch (Exception e) { // Bắt các lỗi khác có thể xảy ra trong DAO
+            LOGGER.log(Level.SEVERE, "Error fetching semester for delete confirmation", e);
+            response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Có lỗi xảy ra khi lấy thông tin kỳ học.");
+        }
     }
 
     private void displayDashboard(HttpServletRequest request, HttpServletResponse response, User user) throws ServletException, IOException {

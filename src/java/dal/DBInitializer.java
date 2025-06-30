@@ -52,6 +52,8 @@ public class DBInitializer {
         }
     }
 
+// Trong lớp DBContext hoặc lớp tương tự nơi bạn định nghĩa các hàm tạo bảng
+
     /**
      * Tạo bảng Users nếu nó chưa tồn tại.
      * @param conn Đối tượng Connection.
@@ -77,6 +79,7 @@ public class DBInitializer {
     
     /**
      * Tạo bảng Semesters nếu nó chưa tồn tại.
+     * Khi một Users bị xóa, các Semesters thuộc về User đó cũng sẽ bị xóa.
      * @param conn Đối tượng Connection.
      */
     private void createSemestersTable(Connection conn) { 
@@ -90,7 +93,7 @@ public class DBInitializer {
                      "    createdAt DATETIME DEFAULT GETDATE(),\n" +
                      "    updatedAt DATETIME DEFAULT GETDATE(),\n" +
                      "    userId INT,\n" +
-                     "    FOREIGN KEY (userId) REFERENCES Users(id)\n" + 
+                     "    FOREIGN KEY (userId) REFERENCES Users(id) ON DELETE CASCADE\n" + // THAY ĐỔI Ở ĐÂY
                      ");";
         try (Statement stmt = conn.createStatement()) {
             stmt.execute(sql);
@@ -102,6 +105,7 @@ public class DBInitializer {
 
     /**
      * Tạo bảng Subjects nếu nó chưa tồn tại.
+     * Khi một Semesters bị xóa, các Subjects thuộc về Semester đó cũng sẽ bị xóa.
      * @param conn Đối tượng Connection.
      */
     private void createSubjectsTable(Connection conn) { 
@@ -109,7 +113,7 @@ public class DBInitializer {
                      "    id INT PRIMARY KEY IDENTITY(1,1),\n" +
                      "    semesterId INT NOT NULL,\n" +
                      "    name NVARCHAR(255) NOT NULL,\n" +
-                     "    code VARCHAR(50) NOT NULL UNIQUE,\n" +
+                     "    code VARCHAR(50) NOT NULL,\n" +
                      "    description NVARCHAR(MAX),\n" +
                      "    credits INT NOT NULL,\n" +
                      "    teacherName NVARCHAR(100),\n" +
@@ -117,7 +121,7 @@ public class DBInitializer {
                      "    prerequisites NVARCHAR(MAX),\n" +
                      "    createdAt DATETIME DEFAULT GETDATE(),\n" +
                      "    updatedAt DATETIME DEFAULT GETDATE(),\n" +
-                     "    FOREIGN KEY (semesterId) REFERENCES Semesters(id)\n" + 
+                     "    FOREIGN KEY (semesterId) REFERENCES Semesters(id) ON DELETE CASCADE\n" + // THAY ĐỔI Ở ĐÂY
                      ");";
         try (Statement stmt = conn.createStatement()) {
             stmt.execute(sql);
@@ -129,6 +133,7 @@ public class DBInitializer {
 
     /**
      * Tạo bảng Lessons nếu nó chưa tồn tại.
+     * Khi một Subjects bị xóa, các Lessons thuộc về Subject đó cũng sẽ bị xóa.
      * @param conn Đối tượng Connection.
      */
     private void createLessonsTable(Connection conn) { 
@@ -141,7 +146,7 @@ public class DBInitializer {
                      "    status VARCHAR(50) NOT NULL,\n" +
                      "    createdAt DATETIME DEFAULT GETDATE(),\n" +
                      "    updatedAt DATETIME DEFAULT GETDATE(),\n" +
-                     "    FOREIGN KEY (subjectId) REFERENCES Subjects(id)\n" + 
+                     "    FOREIGN KEY (subjectId) REFERENCES Subjects(id) ON DELETE CASCADE\n" + // THAY ĐỔI Ở ĐÂY
                      ");";
         try (Statement stmt = conn.createStatement()) {
             stmt.execute(sql);
@@ -226,7 +231,7 @@ public class DBInitializer {
                     ps.setDate(2, Date.valueOf(LocalDate.of(2025, 1, 15)));
                     ps.setDate(3, Date.valueOf(LocalDate.of(2025, 5, 30)));
                     ps.setString(4, "Kỳ học mùa xuân 2025.");
-                    ps.setString(5, "Active");
+                    ps.setString(5, "Completed");
                     ps.setInt(6, adminUserId);
                     ps.executeUpdate();
                     int spring2025Id = getGeneratedId(ps);
@@ -236,7 +241,7 @@ public class DBInitializer {
                     ps.setDate(2, Date.valueOf(LocalDate.of(2025, 6, 15)));
                     ps.setDate(3, Date.valueOf(LocalDate.of(2025, 8, 30)));
                     ps.setString(4, "Kỳ học mùa hè 2025. Sắp diễn ra.");
-                    ps.setString(5, "Upcoming");
+                    ps.setString(5, "Inactive");
                     ps.setInt(6, adminUserId);
                     ps.executeUpdate();
                     int summer2025Id = getGeneratedId(ps);
@@ -291,7 +296,7 @@ public class DBInitializer {
                             psSubject.setString(4, "Giới thiệu về các khái niệm và thuật toán AI cơ bản.");
                             psSubject.setInt(5, 3);
                             psSubject.setString(6, "Pham Thi D");
-                            psSubject.setBoolean(7, true);
+                            psSubject.setBoolean(7, false);
                             psSubject.setString(8, "Mathematics, Algorithms");
                             psSubject.executeUpdate();
                             int ai201Id = getGeneratedId(psSubject);
@@ -303,7 +308,7 @@ public class DBInitializer {
                             psSubject.setString(4, "Xây dựng ứng dụng cho thiết bị di động (Android/iOS).");
                             psSubject.setInt(5, 4);
                             psSubject.setString(6, "Nguyen Thi E");
-                            psSubject.setBoolean(7, true);
+                            psSubject.setBoolean(7, false);
                             psSubject.setString(8, "Java Programming");
                             psSubject.executeUpdate();
                             int mob401Id = getGeneratedId(psSubject);
@@ -336,7 +341,7 @@ public class DBInitializer {
                                     psLesson.setString(2, "Filters and Listeners");
                                     psLesson.setDate(3, Date.valueOf(LocalDate.of(2024, 9, 19)));
                                     psLesson.setString(4, "Khám phá Filters và Listeners trong Java Web.");
-                                    psLesson.setString(5, "Planned");
+                                    psLesson.setString(5, "Active");
                                     psLesson.executeUpdate();
 
                                     // Lessons for CSD201 (fall2024Id)
@@ -351,7 +356,7 @@ public class DBInitializer {
                                     psLesson.setString(2, "Indexing and Optimization");
                                     psLesson.setDate(3, Date.valueOf(LocalDate.of(2024, 9, 17)));
                                     psLesson.setString(4, "Tối ưu hóa hiệu suất truy vấn CSDL.");
-                                    psLesson.setString(5, "Planned");
+                                    psLesson.setString(5, "Active");
                                     psLesson.executeUpdate();
 
                                     // Lessons for SWP391 (spring2025Id)
@@ -359,7 +364,7 @@ public class DBInitializer {
                                     psLesson.setString(2, "Yêu cầu phần mềm");
                                     psLesson.setDate(3, Date.valueOf(LocalDate.of(2025, 1, 20)));
                                     psLesson.setString(4, "Cách thu thập và phân tích yêu cầu từ khách hàng.");
-                                    psLesson.setString(5, "Planned");
+                                    psLesson.setString(5, "Active");
                                     psLesson.executeUpdate();
                                     
                                     // Lessons for AI201 (spring2025Id)
@@ -367,7 +372,7 @@ public class DBInitializer {
                                     psLesson.setString(2, "Giới thiệu học máy");
                                     psLesson.setDate(3, Date.valueOf(LocalDate.of(2025, 2, 10)));
                                     psLesson.setString(4, "Khái niệm cơ bản về Machine Learning.");
-                                    psLesson.setString(5, "Planned");
+                                    psLesson.setString(5, "Active");
                                     psLesson.executeUpdate();
                                     
                                     // Lessons for MOB401 (summer2025Id)
@@ -375,7 +380,7 @@ public class DBInitializer {
                                     psLesson.setString(2, "Giới thiệu Android Studio");
                                     psLesson.setDate(3, Date.valueOf(LocalDate.of(2025, 6, 20)));
                                     psLesson.setString(4, "Cài đặt và làm quen môi trường phát triển Android.");
-                                    psLesson.setString(5, "Upcoming");
+                                    psLesson.setString(5, "Inactive");
                                     psLesson.executeUpdate();
 
                                     LOGGER.log(Level.INFO, "Fake Lessons inserted successfully.");

@@ -38,7 +38,6 @@
                         
                         <%-- Hiển thị form chỉ khi có user object --%>
                         <c:if test="${not empty user}">
-                            Role: ${user.role}
                             <form id="editUserForm" action="${pageContext.request.contextPath}/user/edit" method="POST" class="needs-validation" novalidate>
                                 <input type="hidden" id="id" name="id" value="${user.id}">
                                 <div class="row g-3">
