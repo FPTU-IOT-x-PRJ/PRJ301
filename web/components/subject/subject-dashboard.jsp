@@ -28,6 +28,7 @@
 
                             <form method="get" action="${pageContext.request.contextPath}/subjects" class="d-flex align-items-center">
                                 <input type="hidden" name="page" value="1" />
+<!--                                <input type="hidden" name="semesterId" value="${semesterId}"/>-->
                                 <label for="semesterId" class="me-2 mb-0 fw-bold text-muted">Chuyển kỳ:</label>
                                 <select name="semesterId" id="semesterId" class="form-select form-select-sm" onchange="this.form.submit()">
                                     <c:forEach var="s" items="${allSemesters}">
