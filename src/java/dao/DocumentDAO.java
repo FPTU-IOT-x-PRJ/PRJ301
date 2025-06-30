@@ -17,19 +17,27 @@ public class DocumentDAO extends DBContext {
 
     private static final Logger LOGGER = Logger.getLogger(DocumentDAO.class.getName());
 
+    // Cập nhật INSERT_DOCUMENT_SQL để bao gồm subject_id và lesson_id
     private static final String INSERT_DOCUMENT_SQL = 
-        "INSERT INTO Documents (fileName, storedFileName, filePath, fileType, fileSize, uploadedBy, description) " +
-        "VALUES (?, ?, ?, ?, ?, ?, ?)";
-    private static final String SELECT_ALL_DOCUMENTS_SQL = "SELECT * FROM Documents WHERE uploadedBy = ? ORDER BY uploadDate DESC";
-    private static final String SELECT_DOCUMENT_BY_ID_SQL = "SELECT * FROM Documents WHERE id = ? AND uploadedBy = ?";
+        "INSERT INTO Documents (fileName, storedFileName, filePath, fileType, fileSize, uploadedBy, description, subject_id, lesson_id) " +
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+    
+    // Cập nhật SELECT_ALL_DOCUMENTS_SQL để lấy thêm subject_id và lesson_id
+    private static final String SELECT_ALL_DOCUMENTS_SQL = "SELECT id, fileName, storedFileName, filePath, fileType, fileSize, uploadedBy, uploadDate, description, subject_id, lesson_id FROM Documents WHERE uploadedBy = ? ORDER BY uploadDate DESC";
+    
+    // Cập nhật SELECT_DOCUMENT_BY_ID_SQL để lấy thêm subject_id và lesson_id
+    private static final String SELECT_DOCUMENT_BY_ID_SQL = "SELECT id, fileName, storedFileName, filePath, fileType, fileSize, uploadedBy, uploadDate, description, subject_id, lesson_id FROM Documents WHERE id = ? AND uploadedBy = ?";
+    
+    // Cập nhật UPDATE_DOCUMENT_SQL để bao gồm subject_id và lesson_id
     private static final String UPDATE_DOCUMENT_SQL = 
-        "UPDATE Documents SET fileName = ?, storedFileName = ?, filePath = ?, fileType = ?, fileSize = ?, description = ?, uploadDate = GETDATE() " + // Cập nhật cả uploadDate khi sửa metadata
+        "UPDATE Documents SET fileName = ?, storedFileName = ?, filePath = ?, fileType = ?, fileSize = ?, description = ?, uploadDate = GETDATE(), subject_id = ?, lesson_id = ? " + 
         "WHERE id = ? AND uploadedBy = ?";
+    
     private static final String DELETE_DOCUMENT_SQL = "DELETE FROM Documents WHERE id = ? AND uploadedBy = ?";
 
     public boolean addDocument(Document doc) {
         boolean rowInserted = false;
-        try (PreparedStatement ps = connection.prepareStatement(INSERT_DOCUMENT_SQL, Statement.RETURN_GENERATED_KEYS)) {
+        try (PreparedStatement ps = connection.prepareStatement(INSERT_DOCUMENT_SQL)) {
             ps.setString(1, doc.getFileName());
             ps.setString(2, doc.getStoredFileName());
             ps.setString(3, doc.getFilePath());
@@ -38,23 +46,28 @@ public class DocumentDAO extends DBContext {
             ps.setInt(6, doc.getUploadedBy());
             ps.setString(7, doc.getDescription());
             
-            rowInserted = ps.executeUpdate() > 0;
-            
-            if (rowInserted) {
-                try (ResultSet rs = ps.getGeneratedKeys()) {
-                    if (rs.next()) {
-                        doc.setId(rs.getInt(1)); 
-                    }
-                }
+            // Đặt subject_id. Sử dụng setObject để xử lý Integer có thể null
+            if (doc.getSubjectId() != null) {
+                ps.setInt(8, doc.getSubjectId());
+            } else {
+                ps.setNull(8, java.sql.Types.INTEGER);
             }
-        } catch (SQLException e) {
-            LOGGER.log(Level.SEVERE, "Error adding document: " + doc.getFileName(), e);
-            printSQLException(e);
+            
+            // Đặt lesson_id. Sử dụng setObject để xử lý Integer có thể null
+            if (doc.getLessonId() != null) {
+                ps.setInt(9, doc.getLessonId());
+            } else {
+                ps.setNull(9, java.sql.Types.INTEGER);
+            }
+
+            rowInserted = ps.executeUpdate() > 0;
+        } catch (SQLException ex) {
+            printSQLException(ex);
         }
         return rowInserted;
     }
 
-    public List<Document> getAllDocumentsByUser(int userId) {
+    public List<Document> getAllDocuments(int userId) {
         List<Document> documents = new ArrayList<>();
         try (PreparedStatement ps = connection.prepareStatement(SELECT_ALL_DOCUMENTS_SQL)) {
             ps.setInt(1, userId);
@@ -63,62 +76,70 @@ public class DocumentDAO extends DBContext {
                     documents.add(extractDocumentFromResultSet(rs));
                 }
             }
-        } catch (SQLException e) {
-            LOGGER.log(Level.SEVERE, "Error retrieving all documents for user ID: " + userId, e);
-            printSQLException(e);
+        } catch (SQLException ex) {
+            printSQLException(ex);
         }
         return documents;
     }
 
     public Document getDocumentById(int id, int userId) {
-        Document doc = null;
-        try (Connection conn = getConnection();
-             PreparedStatement ps = conn.prepareStatement(SELECT_DOCUMENT_BY_ID_SQL)) {
+        Document document = null;
+        try (PreparedStatement ps = connection.prepareStatement(SELECT_DOCUMENT_BY_ID_SQL)) {
             ps.setInt(1, id);
             ps.setInt(2, userId);
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
-                    doc = extractDocumentFromResultSet(rs);
+                    document = extractDocumentFromResultSet(rs);
                 }
             }
-        } catch (SQLException e) {
-            LOGGER.log(Level.SEVERE, "Error retrieving document by ID: " + id + " for user ID: " + userId, e);
-            printSQLException(e);
+        } catch (SQLException ex) {
+            printSQLException(ex);
         }
-        return doc;
+        return document;
     }
-    
-    // NEW: Update Document Metadata
+
     public boolean updateDocument(Document doc) {
         boolean rowUpdated = false;
-        try (Connection conn = getConnection();
-             PreparedStatement ps = conn.prepareStatement(UPDATE_DOCUMENT_SQL)) {
+        try (PreparedStatement ps = connection.prepareStatement(UPDATE_DOCUMENT_SQL)) {
             ps.setString(1, doc.getFileName());
             ps.setString(2, doc.getStoredFileName());
             ps.setString(3, doc.getFilePath());
             ps.setString(4, doc.getFileType());
             ps.setLong(5, doc.getFileSize());
             ps.setString(6, doc.getDescription());
-            ps.setInt(7, doc.getId());
-            ps.setInt(8, doc.getUploadedBy());
             
+            // Đặt subject_id. Sử dụng setObject để xử lý Integer có thể null
+            if (doc.getSubjectId() != null) {
+                ps.setInt(7, doc.getSubjectId());
+            } else {
+                ps.setNull(7, java.sql.Types.INTEGER);
+            }
+            
+            // Đặt lesson_id. Sử dụng setObject để xử lý Integer có thể null
+            if (doc.getLessonId() != null) {
+                ps.setInt(8, doc.getLessonId());
+            } else {
+                ps.setNull(8, java.sql.Types.INTEGER);
+            }
+            
+            ps.setInt(9, doc.getId());
+            ps.setInt(10, doc.getUploadedBy());
+
             rowUpdated = ps.executeUpdate() > 0;
-        } catch (SQLException e) {
-            LOGGER.log(Level.SEVERE, "Error updating document: " + doc.getId(), e);
-            printSQLException(e);
+        } catch (SQLException ex) {
+            printSQLException(ex);
         }
         return rowUpdated;
     }
-    
+
     public boolean deleteDocument(int id, int userId) {
         boolean rowDeleted = false;
         try (PreparedStatement ps = connection.prepareStatement(DELETE_DOCUMENT_SQL)) {
             ps.setInt(1, id);
             ps.setInt(2, userId);
             rowDeleted = ps.executeUpdate() > 0;
-        } catch (SQLException e) {
-            LOGGER.log(Level.SEVERE, "Error deleting document with ID: " + id + " for user ID: " + userId, e);
-            printSQLException(e);
+        } catch (SQLException ex) {
+            printSQLException(ex);
         }
         return rowDeleted;
     }
@@ -134,7 +155,11 @@ public class DocumentDAO extends DBContext {
         LocalDateTime uploadDate = rs.getTimestamp("uploadDate") != null ? rs.getTimestamp("uploadDate").toLocalDateTime() : null;
         String description = rs.getString("description");
         
-        return new Document(id, fileName, storedFileName, filePath, fileType, fileSize, uploadedBy, uploadDate, description);
+        // Lấy subject_id và lesson_id (có thể null từ DB)
+        Integer subjectId = rs.getObject("subject_id", Integer.class);
+        Integer lessonId = rs.getObject("lesson_id", Integer.class);
+        
+        return new Document(id, fileName, storedFileName, filePath, fileType, fileSize, uploadedBy, uploadDate, description, subjectId, lessonId);
     }
     
     /**

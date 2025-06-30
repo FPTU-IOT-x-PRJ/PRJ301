@@ -1,7 +1,11 @@
 package controller;
 
 import dao.DocumentDAO;
+import dao.LessonDAO; // Thêm import
+import dao.SubjectDAO; // Thêm import
 import entity.Document;
+import entity.Lesson; // Thêm import
+import entity.Subject; // Thêm import
 import entity.User;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.MultipartConfig;
@@ -34,22 +38,21 @@ public class DocumentController extends HttpServlet {
 
     private static final Logger LOGGER = Logger.getLogger(DocumentController.class.getName());
     private DocumentDAO documentDao;
+    private SubjectDAO subjectDao; // Khởi tạo SubjectDAO
+    private LessonDAO lessonDao;   // Khởi tạo LessonDAO
     private Cloudinary cloudinary;
 
     @Override
     public void init() throws ServletException {
         super.init();
         documentDao = new DocumentDAO();
+        subjectDao = new SubjectDAO(); // Khởi tạo
+        lessonDao = new LessonDAO();   // Khởi tạo
 
         Map<String, String> config = new HashMap<>();
-        config.put("cloud_name", ConfigManager.getInstance().getProperty("CLOUDINARY_CLOUD_NAME"));
-        config.put("api_key", ConfigManager.getInstance().getProperty("CLOUDINARY_API_KEY"));
-        config.put("api_secret", ConfigManager.getInstance().getProperty("CLOUDINARY_API_SECRET"));
-
-        LOGGER.log(Level.INFO, "Cloudinary config: cloud_name={0}, api_key={1}, api_secret={2}",
-                new Object[]{config.get("cloud_name"), config.get("api_key"),
-                    (config.get("api_secret") != null && !config.get("api_secret").isEmpty()) ? "******" : "null/empty"});
-
+        config.put("cloud_name", ConfigManager.getCloudinaryCloudName());
+        config.put("api_key", ConfigManager.getCloudinaryApiKey());
+        config.put("api_secret", ConfigManager.getCloudinaryApiSecret());
         cloudinary = new Cloudinary(config);
     }
 
@@ -57,47 +60,37 @@ public class DocumentController extends HttpServlet {
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         String action = request.getPathInfo();
-        if (action == null) {
-            action = "/"; // Mặc định về list
-        }
-
         HttpSession session = request.getSession(false);
-        User currentUser = null;
+        User user = (session != null) ? (User) session.getAttribute("loggedInUser") : null;
 
-        if (session != null) {
-            currentUser = (User) session.getAttribute("loggedInUser");
-        }
-
-        if (currentUser == null) {
-            LOGGER.log(Level.WARNING, "Unauthorized access attempt. Redirecting to login.");
+        if (user == null) {
             response.sendRedirect(request.getContextPath() + "/auth/login");
             return;
         }
 
         try {
-            switch (action) {
+            switch (action != null ? action : "/list") {
                 case "/new":
-                    showNewForm(request, response);
+                    showNewForm(request, response, user.getId());
                     break;
                 case "/list":
-                case "/": // Mặc định khi truy cập /documents/
-                    listDocuments(request, response, currentUser.getId());
-                    break;
-                case "/delete":
-                    deleteDocument(request, response, currentUser.getId());
+                    listDocuments(request, response, user.getId());
                     break;
                 case "/edit":
-                    showEditForm(request, response, currentUser.getId());
+                    showEditForm(request, response, user.getId());
                     break;
                 case "/detail":
-                    showDocumentDetail(request, response, currentUser.getId());
+                    showDocumentDetail(request, response, user.getId());
+                    break;
+                case "/delete":
+                    deleteDocument(request, response, user.getId());
                     break;
                 default:
-                    response.sendError(HttpServletResponse.SC_NOT_FOUND, "Action Not Found");
+                    response.sendError(HttpServletResponse.SC_NOT_FOUND);
                     break;
             }
         } catch (SQLException ex) {
-            LOGGER.log(Level.SEVERE, "Database error in DocumentController", ex);
+            LOGGER.log(Level.SEVERE, "Database error in DocumentController.doGet", ex);
             throw new ServletException(ex);
         }
     }
@@ -106,227 +99,309 @@ public class DocumentController extends HttpServlet {
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         String action = request.getPathInfo();
-        if (action == null) {
-            action = "/";
-        }
-
         HttpSession session = request.getSession(false);
-        User currentUser = null;
+        User user = (session != null) ? (User) session.getAttribute("loggedInUser") : null;
 
-        if (session != null) {
-            currentUser = (User) session.getAttribute("loggedInUser");
-        }
-
-        if (currentUser == null) {
-            LOGGER.log(Level.WARNING, "Unauthorized access attempt. Redirecting to login.");
+        if (user == null) {
             response.sendRedirect(request.getContextPath() + "/auth/login");
             return;
         }
 
         try {
-            switch (action) {
-                case "/upload": 
-                    uploadDocument(request, response, currentUser);
+            switch (action != null ? action : "") {
+                case "/upload":
+                    uploadDocument(request, response, user.getId());
                     break;
                 case "/update":
-                    updateDocument(request, response, currentUser.getId());
-                    break;
-                case "/delete": 
-                    deleteDocument(request, response, currentUser.getId());
+                    updateDocument(request, response, user.getId());
                     break;
                 default:
-                    response.sendError(HttpServletResponse.SC_NOT_FOUND, "Action Not Found");
+                    response.sendError(HttpServletResponse.SC_NOT_FOUND);
                     break;
             }
         } catch (SQLException ex) {
-            LOGGER.log(Level.SEVERE, "Database error in DocumentController", ex);
+            LOGGER.log(Level.SEVERE, "Database error in DocumentController.doPost", ex);
             throw new ServletException(ex);
         }
     }
 
-    // --- CRUD Helper Methods ---
-    // CREATE (Upload)
-    private void uploadDocument(HttpServletRequest request, HttpServletResponse response, User currentUser)
-            throws ServletException, IOException, SQLException {
-        String description = request.getParameter("description");
+    private void listDocuments(HttpServletRequest request, HttpServletResponse response, int userId)
+            throws SQLException, ServletException, IOException {
+        List<Document> listDocuments = documentDao.getAllDocuments(userId);
+        
+        // Lấy danh sách Subjects và Lessons để hiển thị tên thay vì chỉ ID
+        // (Đây là ví dụ đơn giản, trong thực tế có thể cần tối ưu hơn nếu số lượng lớn)
+        Map<Integer, String> subjectNames = new HashMap<>();
+        Map<Integer, String> lessonNames = new HashMap<>();
+        
+        List<Subject> allSubjects = subjectDao.getAllSubjects(); // Giả sử có method này
+        for (Subject s : allSubjects) {
+            subjectNames.put(s.getId(), s.getName());
+        }
+        
+        // Lấy tất cả lessons để ánh xạ, cần điều chỉnh nếu lessonDAO chỉ lấy theo subjectId
+        // Hiện tại LessonDAO có method SELECT_LESSONS_BY_SUBJECT_ID_SQL
+        // Cần một method getAllLessons() hoặc cải thiện logic để tránh N+1 query
+        // Tạm thời, để đơn giản, sẽ không fetch lesson names ở đây mà chỉ subject names.
+        // Nếu cần lesson names, cần fetch chúng từ lessonDao.
+        // Hoặc truyền lessonId và subjectId sang JSP và để JSP tự xử lý hiển thị tên nếu có các Map tương ứng.
 
+        request.setAttribute("listDocuments", listDocuments);
+        request.setAttribute("subjectNames", subjectNames); // Truyền map tên môn học
+        // Nếu muốn hiển thị tên buổi học, bạn sẽ cần một map tương tự cho lessons
+        
+        request.getRequestDispatcher("/views/documents/list.jsp").forward(request, response);
+    }
+
+    private void showNewForm(HttpServletRequest request, HttpServletResponse response, int userId)
+            throws SQLException, ServletException, IOException {
+        // Lấy danh sách các môn học để điền vào dropdown
+        List<Subject> subjects = subjectDao.getAllSubjects(); // Giả sử getAllSubjects() không cần userId
+        request.setAttribute("subjects", subjects);
+        request.getRequestDispatcher("/views/documents/new.jsp").forward(request, response);
+    }
+
+    private void showEditForm(HttpServletRequest request, HttpServletResponse response, int userId)
+            throws SQLException, ServletException, IOException {
+        int id = Integer.parseInt(request.getParameter("id"));
+        Document existingDocument = documentDao.getDocumentById(id, userId);
+        
+        if (existingDocument != null) {
+            request.setAttribute("document", existingDocument);
+            // Lấy danh sách các môn học để điền vào dropdown
+            List<Subject> subjects = subjectDao.getAllSubjects();
+            request.setAttribute("subjects", subjects);
+            
+            // Nếu tài liệu đã có subjectId, lấy danh sách lessons của subject đó
+            if (existingDocument.getSubjectId() != null) {
+                List<Lesson> lessons = lessonDao.getLessonsBySubjectId(existingDocument.getSubjectId());
+                request.setAttribute("lessonsOfSelectedSubject", lessons);
+            }
+            
+            request.getRequestDispatcher("/views/documents/edit.jsp").forward(request, response);
+        } else {
+            request.setAttribute("errorMessage", "Tài liệu không tồn tại hoặc bạn không có quyền chỉnh sửa.");
+            listDocuments(request, response, userId); // Trở lại danh sách
+        }
+    }
+
+    private void uploadDocument(HttpServletRequest request, HttpServletResponse response, int userId)
+            throws SQLException, ServletException, IOException {
         try {
-            boolean anyFileUploaded = false;
-            for (Part part : request.getParts()) {
-                // Kiểm tra xem đây có phải là một file và có tên file hợp lệ không
-                if (part.getName().equals("file") && part.getSubmittedFileName() != null && !part.getSubmittedFileName().isEmpty()) {
-                    String originalFileName = part.getSubmittedFileName();
-                    String publicId = "prj301_documents/" + UUID.randomUUID().toString(); // Thư mục/ID trên Cloudinary
+            Part filePart = request.getPart("file");
+            String fileName = getFileName(filePart);
+            String description = request.getParameter("description");
+            
+            // Lấy subjectId và lessonId từ request
+            Integer subjectId = null;
+            Integer lessonId = null;
+            String subjectIdStr = request.getParameter("subjectId");
+            String lessonIdStr = request.getParameter("lessonId");
 
-                    Map<String, Object> uploadResult = null;
-                    try (InputStream fileContent = part.getInputStream()) {
-                        Map<String, Object> options = ObjectUtils.asMap(
-                                "public_id", publicId,
-                                "resource_type", "auto",
-                                "folder", "prj301_documents"
-                        );
-
-                        uploadResult = cloudinary.uploader().upload(fileContent.readAllBytes(), options);
-                    }
-
-                    String fileUrl = (String) uploadResult.get("secure_url");
-                    String storedFileNameOnCloudinary = (String) uploadResult.get("public_id");
-                    String resourceType = (String) uploadResult.get("resource_type");
-
-                    LOGGER.log(Level.INFO, "File uploaded to Cloudinary: Original Name={0}, Stored ID={1}, URL={2}, Type={3}",
-                            new Object[]{originalFileName, storedFileNameOnCloudinary, fileUrl, resourceType});
-
-                    Document doc = new Document();
-                    doc.setFileName(originalFileName);
-                    doc.setStoredFileName(storedFileNameOnCloudinary);
-                    doc.setFilePath(fileUrl);
-                    doc.setFileType(part.getContentType());
-                    doc.setFileSize(part.getSize());
-                    doc.setUploadedBy(currentUser.getId());
-                    doc.setDescription(description);
-
-                    boolean dbSuccess = documentDao.addDocument(doc);
-                    if (dbSuccess) {
-                        request.setAttribute("message", "File '" + originalFileName + "' đã được upload lên Cloudinary và lưu thông tin thành công!");
-                        anyFileUploaded = true;
-                    } else {
-                        request.setAttribute("errorMessage", "File '" + originalFileName + "' đã upload nhưng không thể lưu thông tin vào CSDL.");
-                    }
+            if (subjectIdStr != null && !subjectIdStr.trim().isEmpty()) {
+                try {
+                    subjectId = Integer.parseInt(subjectIdStr);
+                } catch (NumberFormatException e) {
+                    LOGGER.log(Level.WARNING, "Invalid subject ID format: {0}", subjectIdStr);
+                    request.setAttribute("errorMessage", "ID môn học không hợp lệ.");
+                    showNewForm(request, response, userId);
+                    return;
                 }
             }
-            if (anyFileUploaded) {
-                response.sendRedirect(request.getContextPath() + "/documents/list?success=upload");
-            } else {
-                request.setAttribute("errorMessage", "Vui lòng chọn một file để upload.");
-                request.getRequestDispatcher("/components/document/document-upload-form.jsp").forward(request, response);
+            
+            if (lessonIdStr != null && !lessonIdStr.trim().isEmpty()) {
+                try {
+                    lessonId = Integer.parseInt(lessonIdStr);
+                } catch (NumberFormatException e) {
+                    LOGGER.log(Level.WARNING, "Invalid lesson ID format: {0}", lessonIdStr);
+                    request.setAttribute("errorMessage", "ID buổi học không hợp lệ.");
+                    showNewForm(request, response, userId);
+                    return;
+                }
             }
-        } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Error uploading file to Cloudinary.", e);
-            request.setAttribute("errorMessage", "Có lỗi xảy ra khi upload tài liệu lên Cloudinary: " + e.getMessage());
-            request.getRequestDispatcher("/components/document/document-upload-form.jsp").forward(request, response);
-        }
-    }
-
-    // READ (List)
-    private void listDocuments(HttpServletRequest request, HttpServletResponse response, int userId)
-            throws ServletException, IOException, SQLException {
-        List<Document> listDocuments = documentDao.getAllDocumentsByUser(userId);
-        request.setAttribute("listDocuments", listDocuments);
-        if (request.getParameter("success") != null && request.getParameter("success").equals("upload")) {
-            request.setAttribute("message", "Tài liệu đã được tải lên thành công!");
-        } else if (request.getParameter("success") != null && request.getParameter("success").equals("update")) {
-            request.setAttribute("message", "Tài liệu đã được cập nhật thành công!");
-        } else if (request.getParameter("success") != null && request.getParameter("success").equals("delete")) {
-            request.setAttribute("message", "Tài liệu đã được xóa thành công!");
-        }
-        request.getRequestDispatcher("/components/document/document-list.jsp").forward(request, response);
-    }
-
-    // READ (Detail)
-    private void showDocumentDetail(HttpServletRequest request, HttpServletResponse response, int userId)
-            throws ServletException, IOException, SQLException {
-        try {
-            int id = Integer.parseInt(request.getParameter("id"));
-            Document existingDocument = documentDao.getDocumentById(id, userId);
-            if (existingDocument == null) {
-                response.sendError(HttpServletResponse.SC_NOT_FOUND, "Tài liệu không tồn tại hoặc bạn không có quyền.");
-                return;
-            }
-            request.setAttribute("document", existingDocument);
-            request.getRequestDispatcher("/components/document/document-detail.jsp").forward(request, response);
-        } catch (NumberFormatException e) {
-            LOGGER.log(Level.WARNING, "Invalid document ID format for detail: {0}", request.getParameter("id"));
-            response.sendError(HttpServletResponse.SC_BAD_REQUEST, "ID tài liệu không hợp lệ.");
-        }
-    }
-
-    // UPDATE (Show form)
-    private void showNewForm(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException {
-        request.getRequestDispatcher("/components/document/document-upload-form.jsp").forward(request, response);
-    }
-
-    // UPDATE (Show form for existing document)
-    private void showEditForm(HttpServletRequest request, HttpServletResponse response, int userId)
-            throws ServletException, IOException, SQLException {
-        try {
-            int id = Integer.parseInt(request.getParameter("id"));
-            Document existingDocument = documentDao.getDocumentById(id, userId);
-            if (existingDocument == null) {
-                response.sendError(HttpServletResponse.SC_NOT_FOUND, "Tài liệu không tồn tại hoặc bạn không có quyền.");
-                return;
-            }
-            request.setAttribute("document", existingDocument);
-            request.getRequestDispatcher("/components/document/document-edit.jsp").forward(request, response);
-        } catch (NumberFormatException e) {
-            LOGGER.log(Level.WARNING, "Invalid document ID format for edit: {0}", request.getParameter("id"));
-            response.sendError(HttpServletResponse.SC_BAD_REQUEST, "ID tài liệu không hợp lệ.");
-        }
-    }
-
-    // UPDATE (Process form submission)
-    private void updateDocument(HttpServletRequest request, HttpServletResponse response, int userId)
-            throws ServletException, IOException, SQLException {
-        try {
-            int id = Integer.parseInt(request.getParameter("id"));
-            String description = request.getParameter("description"); // Chỉ cho phép update mô tả
-
-            Document existingDocument = documentDao.getDocumentById(id, userId);
-            if (existingDocument == null) {
-                response.sendError(HttpServletResponse.SC_NOT_FOUND, "Tài liệu không tồn tại hoặc bạn không có quyền.");
+            
+            // Logic: Nếu có lessonId thì subjectId phải có (vì lesson thuộc subject)
+            if (lessonId != null && subjectId == null) {
+                // Đây là một lỗi logic, nếu có lessonId thì phải có subjectId
+                request.setAttribute("errorMessage", "Một tài liệu gắn với buổi học phải có môn học tương ứng.");
+                showNewForm(request, response, userId);
                 return;
             }
 
-            // Cập nhật các trường cho phép (ở đây chỉ là description)
-            existingDocument.setDescription(description);
+            // Upload to Cloudinary
+            String storedFileName = UUID.randomUUID().toString() + "_" + fileName;
+            String filePath = null;
+            String fileType = filePart.getContentType();
+            long fileSize = filePart.getSize();
 
-            boolean success = documentDao.updateDocument(existingDocument);
+            try (InputStream fileContent = filePart.getInputStream()) {
+                Map uploadResult = cloudinary.uploader().upload(fileContent.readAllBytes(), ObjectUtils.asMap(
+                        "public_id", storedFileName // Sử dụng tên file đã xử lý làm public_id
+                ));
+                filePath = (String) uploadResult.get("secure_url");
+                LOGGER.log(Level.INFO, "Uploaded file to Cloudinary: {0}", filePath);
+            } catch (IOException e) {
+                LOGGER.log(Level.SEVERE, "Failed to upload file to Cloudinary.", e);
+                request.setAttribute("errorMessage", "Tải file lên Cloudinary thất bại: " + e.getMessage());
+                showNewForm(request, response, userId);
+                return;
+            }
+
+            Document newDocument = new Document(fileName, storedFileName, filePath, fileType, fileSize, userId, description, subjectId, lessonId);
+            boolean success = documentDao.addDocument(newDocument);
 
             if (success) {
-                LOGGER.log(Level.INFO, "Document with ID {0} updated successfully by user {1}.", new Object[]{id, userId});
-                response.sendRedirect(request.getContextPath() + "/documents/list?success=update");
+                LOGGER.log(Level.INFO, "Document {0} uploaded successfully by user {1}.", new Object[]{fileName, userId});
+                response.sendRedirect(request.getContextPath() + "/documents/list?message=uploadSuccess");
             } else {
-                request.setAttribute("errorMessage", "Có lỗi xảy ra khi cập nhật tài liệu.");
-                request.setAttribute("document", existingDocument); // Giữ lại dữ liệu cũ trên form
-                request.getRequestDispatcher("/components/document/document-edit.jsp").forward(request, response);
+                LOGGER.log(Level.WARNING, "Failed to add document {0} to DB for user {1}.", new Object[]{fileName, userId});
+                request.setAttribute("errorMessage", "Lỗi khi lưu thông tin tài liệu vào cơ sở dữ liệu.");
+                showNewForm(request, response, userId);
+            }
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error uploading document.", e);
+            request.setAttribute("errorMessage", "Đã xảy ra lỗi không mong muốn khi tải lên tài liệu: " + e.getMessage());
+            showNewForm(request, response, userId);
+        }
+    }
+
+    private void updateDocument(HttpServletRequest request, HttpServletResponse response, int userId)
+            throws SQLException, ServletException, IOException {
+        try {
+            int id = Integer.parseInt(request.getParameter("id"));
+            String fileName = request.getParameter("fileName"); // fileName không thay đổi
+            String description = request.getParameter("description");
+            
+            // Lấy subjectId và lessonId từ request
+            Integer subjectId = null;
+            Integer lessonId = null;
+            String subjectIdStr = request.getParameter("subjectId");
+            String lessonIdStr = request.getParameter("lessonId");
+
+            if (subjectIdStr != null && !subjectIdStr.trim().isEmpty()) {
+                try {
+                    subjectId = Integer.parseInt(subjectIdStr);
+                } catch (NumberFormatException e) {
+                    LOGGER.log(Level.WARNING, "Invalid subject ID format for update: {0}", subjectIdStr);
+                    request.setAttribute("errorMessage", "ID môn học không hợp lệ.");
+                    showEditForm(request, response, userId);
+                    return;
+                }
+            }
+            
+            if (lessonIdStr != null && !lessonIdStr.trim().isEmpty()) {
+                try {
+                    lessonId = Integer.parseInt(lessonIdStr);
+                } catch (NumberFormatException e) {
+                    LOGGER.log(Level.WARNING, "Invalid lesson ID format for update: {0}", lessonIdStr);
+                    request.setAttribute("errorMessage", "ID buổi học không hợp lệ.");
+                    showEditForm(request, response, userId);
+                    return;
+                }
+            }
+            
+            // Logic: Nếu có lessonId thì subjectId phải có (vì lesson thuộc subject)
+            if (lessonId != null && subjectId == null) {
+                request.setAttribute("errorMessage", "Một tài liệu gắn với buổi học phải có môn học tương ứng.");
+                showEditForm(request, response, userId);
+                return;
+            }
+
+            Document existingDocument = documentDao.getDocumentById(id, userId);
+
+            if (existingDocument != null) {
+                // Cập nhật các trường có thể thay đổi
+                existingDocument.setDescription(description);
+                existingDocument.setSubjectId(subjectId);
+                existingDocument.setLessonId(lessonId);
+
+                boolean success = documentDao.updateDocument(existingDocument);
+
+                if (success) {
+                    LOGGER.log(Level.INFO, "Document with ID {0} updated successfully by user {1}.", new Object[]{id, userId});
+                    response.sendRedirect(request.getContextPath() + "/documents/list?message=updateSuccess");
+                } else {
+                    LOGGER.log(Level.WARNING, "Failed to update document with ID {0} for user {1}.", new Object[]{id, userId});
+                    request.setAttribute("errorMessage", "Không thể cập nhật tài liệu. Vui lòng thử lại.");
+                    showEditForm(request, response, userId); // Trở lại form edit với lỗi
+                }
+            } else {
+                LOGGER.log(Level.WARNING, "Attempt to update non-existent or unauthorized document with ID {0} by user {1}.", new Object[]{id, userId});
+                request.setAttribute("errorMessage", "Tài liệu không tồn tại hoặc bạn không có quyền chỉnh sửa.");
+                listDocuments(request, response, userId); // Trở lại danh sách
             }
         } catch (NumberFormatException e) {
             LOGGER.log(Level.WARNING, "Invalid document ID format for update: {0}", request.getParameter("id"));
             request.setAttribute("errorMessage", "ID tài liệu không hợp lệ.");
-            request.getRequestDispatcher("/components/document/document-edit.jsp").forward(request, response);
+            listDocuments(request, response, userId);
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error updating document.", e);
+            request.setAttribute("errorMessage", "Đã xảy ra lỗi không mong muốn khi cập nhật tài liệu: " + e.getMessage());
+            listDocuments(request, response, userId);
         }
     }
 
-    // DELETE (Process deletion)
-    // DELETE (Process deletion)
-    private void deleteDocument(HttpServletRequest request, HttpServletResponse response, int userId)
-            throws ServletException, IOException, SQLException {
+    private void showDocumentDetail(HttpServletRequest request, HttpServletResponse response, int userId)
+            throws SQLException, ServletException, IOException {
         try {
             int id = Integer.parseInt(request.getParameter("id"));
-            
+            Document document = documentDao.getDocumentById(id, userId);
+            if (document != null) {
+                // Nếu có subjectId, lấy thông tin Subject
+                if (document.getSubjectId() != null) {
+                    Subject subject = subjectDao.getSubjectById(document.getSubjectId());
+                    request.setAttribute("associatedSubject", subject);
+                }
+                // Nếu có lessonId, lấy thông tin Lesson
+                if (document.getLessonId() != null) {
+                    Lesson lesson = lessonDao.getLessonById(document.getLessonId());
+                    request.setAttribute("associatedLesson", lesson);
+                }
+                request.setAttribute("document", document);
+                request.getRequestDispatcher("/views/documents/detail.jsp").forward(request, response);
+            } else {
+                request.setAttribute("errorMessage", "Tài liệu không tồn tại hoặc bạn không có quyền xem.");
+                listDocuments(request, response, userId);
+            }
+        } catch (NumberFormatException e) {
+            LOGGER.log(Level.WARNING, "Invalid document ID format for detail: {0}", request.getParameter("id"));
+            request.setAttribute("errorMessage", "ID tài liệu không hợp lệ.");
+            listDocuments(request, response, userId);
+        }
+    }
+
+    private void deleteDocument(HttpServletRequest request, HttpServletResponse response, int userId)
+            throws SQLException, ServletException, IOException {
+        try {
+            int id = Integer.parseInt(request.getParameter("id"));
             Document docToDelete = documentDao.getDocumentById(id, userId);
-            if (docToDelete != null) {
+
+            if (docToDelete == null) {
+                LOGGER.log(Level.WARNING, "Attempt to delete non-existent or unauthorized document with ID {0} by user {1}.", new Object[]{id, userId});
+                request.setAttribute("errorMessage", "Không thể xóa tài liệu. Tài liệu không tồn tại hoặc bạn không có quyền.");
+                listDocuments(request, response, userId);
+                return;
+            }
+
+            // Xóa file khỏi Cloudinary trước
+            if (docToDelete.getStoredFileName() != null && !docToDelete.getStoredFileName().isEmpty()) {
                 try {
-                    // Cố gắng xóa trên Cloudinary
                     cloudinary.uploader().destroy(docToDelete.getStoredFileName(), ObjectUtils.emptyMap());
                     LOGGER.log(Level.INFO, "Deleted file {0} from Cloudinary.", docToDelete.getStoredFileName());
                 } catch (Exception cloudinaryEx) {
-                    // Log lỗi nếu không xóa được trên Cloudinary nhưng vẫn tiếp tục xóa trong DB
-                    LOGGER.log(Level.WARNING, "Failed to delete file {0} from Cloudinary. Proceeding to delete from DB. Error: {1}",
+                    LOGGER.log(Level.WARNING, "Failed to delete file {0} from Cloudinary: {1}",
                             new Object[]{docToDelete.getStoredFileName(), cloudinaryEx.getMessage()});
+                    // Log lỗi nhưng vẫn tiếp tục xóa trong DB để tránh inconsistent state
                 }
-            } else {
-                LOGGER.log(Level.WARNING, "Document with ID {0} not found for user {1} or unauthorized. Cannot attempt Cloudinary deletion.", new Object[]{id, userId});
             }
 
-            // Luôn cố gắng xóa tài liệu khỏi cơ sở dữ liệu, bất kể kết quả xóa trên Cloudinary
             boolean success = documentDao.deleteDocument(id, userId);
 
             if (success) {
-                LOGGER.log(Level.INFO, "Document with ID {0} deleted successfully from DB by user {1}.", new Object[]{id, userId});
-                response.sendRedirect(request.getContextPath() + "/documents/list?success=delete");
+                LOGGER.log(Level.INFO, "Document with ID {0} deleted successfully from DB by user {1}..", new Object[]{id, userId});
+                response.sendRedirect(request.getContextPath() + "/documents/list?message=deleteSuccess");
             } else {
-                LOGGER.log(Level.WARNING, "Failed to delete document with ID {0} for user {1}. Document not found in DB or unauthorized.", new Object[]{id, userId});
+                LOGGER.log(Level.WARNING, "Failed to delete document with ID {0} for user {1}. Document not found or unauthorized.", new Object[]{id, userId});
                 request.setAttribute("errorMessage", "Không thể xóa tài liệu. Tài liệu không tồn tại hoặc bạn không có quyền.");
                 listDocuments(request, response, userId); // Trở lại danh sách với lỗi
             }
@@ -335,5 +410,14 @@ public class DocumentController extends HttpServlet {
             request.setAttribute("errorMessage", "ID tài liệu không hợp lệ.");
             listDocuments(request, response, userId);
         }
+    }
+
+    private String getFileName(final Part part) {
+        for (String content : part.getHeader("content-disposition").split(";")) {
+            if (content.trim().startsWith("filename")) {
+                return content.substring(content.indexOf('=') + 1).trim().replace("\"", "");
+            }
+        }
+        return null;
     }
 }
