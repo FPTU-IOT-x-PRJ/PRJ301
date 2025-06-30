@@ -103,16 +103,7 @@ public class SubjectsController extends HttpServlet {
                 request.setAttribute("subjectToDelete", subject);
                 request.getRequestDispatcher("/components/subject/subject-delete-confirm.jsp").forward(request, response);
             } else {
-                // Xử lý nếu không tìm thấy môn học, chuyển hướng về danh sách môn học của kỳ đó
-                int semesterId = -1; // Default value nếu không tìm thấy
-                try {
-                    semesterId = Integer.parseInt(request.getParameter("semesterId"));
-                } catch (NumberFormatException e) {
-                    LOGGER.log(Level.WARNING, "Semester ID not found or invalid in delete-confirm request", e);
-                }
-                
-                request.setAttribute("errorMessage", "Không tìm thấy môn học bạn muốn xóa.");
-                response.sendRedirect(request.getContextPath() + "/subjects?semesterId=" + semesterId); 
+                // 404
             }
         } catch (NumberFormatException e) {
             LOGGER.log(Level.WARNING, "Invalid subject ID for delete confirmation", e);
