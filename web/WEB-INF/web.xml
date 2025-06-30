@@ -85,6 +85,7 @@
         <url-pattern>/documents/*</url-pattern>
     </filter-mapping>
     <filter-mapping>
+        <filter-name>AuthFilter</filter-name>
         <url-pattern>/calendar/*</url-pattern>
     </filter-mapping>
 </web-app>

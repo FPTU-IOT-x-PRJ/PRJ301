@@ -8,7 +8,7 @@
         <title>Danh sách Tài liệu</title>
         <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" rel="stylesheet">
         <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-        <style>
+<!--        <style>
             body {
                 padding-top: 20px;
                 background-color: #f8f9fa;
@@ -23,7 +23,7 @@
                 display: flex;
                 gap: 5px;
             }
-        </style>
+        </style>-->
     </head>
     <body>
         <jsp:include page="../navigation/navigation.jsp" />
@@ -45,7 +45,7 @@
             <% } %>
 
             <div class="mb-3">
-                <a href="${pageContext.request.contextPath}/documents/new" class="btn btn-primary">Tải lên Tài liệu mới</a>
+                <a href="${pageContext.request.contextPath}/documents/add" class="btn btn-primary">Tải lên Tài liệu mới</a>
             </div>
 
             <c:if test="${empty listDocuments}">

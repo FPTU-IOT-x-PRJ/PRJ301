@@ -21,7 +21,7 @@
             </div>
         <% } %>
 
-        <form action="${pageContext.request.contextPath}/documents/upload" method="post" enctype="multipart/form-data">
+        <form action="${pageContext.request.contextPath}/documents/add" method="post" enctype="multipart/form-data">
             <div class="form-group">
                 <label for="file">Chọn tệp tài liệu:</label>
                 <input type="file" class="form-control" id="file" name="file" required>
@@ -32,7 +32,7 @@
                 <textarea class="form-control" id="description" name="description" rows="3" placeholder="Nhập mô tả tài liệu..."></textarea>
             </div>
             <button type="submit" class="btn btn-primary mt-3">Tải lên</button>
-            <a href="${pageContext.request.contextPath}/documents/list" class="btn btn-secondary mt-3">Quay lại Danh sách</a>
+            <a href="${pageContext.request.contextPath}/documents/display" class="btn btn-secondary mt-3">Quay lại Danh sách</a>
         </form>
     </div>
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.7/dist/umd/popper.min.js"></script>

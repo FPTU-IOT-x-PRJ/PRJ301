@@ -20,7 +20,7 @@
             <div class="alert alert-warning" role="alert">
                 Không tìm thấy tài liệu để chỉnh sửa hoặc bạn không có quyền.
             </div>
-            <a href="${pageContext.request.contextPath}/documents/list" class="btn btn-secondary">Quay lại Danh sách</a>
+            <a href="${pageContext.request.contextPath}/documents/display" class="btn btn-secondary">Quay lại Danh sách</a>
         </c:if>
 
         <c:if test="${document != null}">
@@ -30,7 +30,7 @@
                 </div>
             <% } %>
 
-            <form action="${pageContext.request.contextPath}/documents/update" method="post">
+            <form action="${pageContext.request.contextPath}/documents/edit" method="post">
                 <input type="hidden" name="id" value="${document.id}">
                 
                 <div class="form-group">
@@ -49,7 +49,7 @@
                 </div>
                 
                 <button type="submit" class="btn btn-primary mt-3">Lưu thay đổi</button>
-                <a href="${pageContext.request.contextPath}/documents/detail?id=${document.id}" class="btn btn-secondary mt-3">Hủy</a>
+                <a href="${pageContext.request.contextPath}/documents/display" class="btn btn-secondary mt-3">Hủy</a>
             </form>
         </c:if>
     </div>

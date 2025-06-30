@@ -170,7 +170,7 @@ public class DocumentController extends HttpServlet {
         request.setAttribute("subjectNames", subjectNames);
         // request.setAttribute("lessonNames", lessonNames); // Nếu có
 
-        request.getRequestDispatcher("/views/documents/list.jsp").forward(request, response);
+        request.getRequestDispatcher("/components/document/document-dashboard.jsp").forward(request, response);
     }
 
     /**
@@ -188,7 +188,7 @@ public class DocumentController extends HttpServlet {
         // Lấy danh sách các môn học để điền vào dropdown (cần điều chỉnh getAllSubjects để lọc theo userId nếu có)
         List<Subject> subjects = subjectDao.getAllSubjects(null, null, null, 0, Integer.MAX_VALUE, null); // Giả định
         request.setAttribute("subjects", subjects);
-        request.getRequestDispatcher("/views/documents/new.jsp").forward(request, response);
+        request.getRequestDispatcher("/components/document/document-add.jsp").forward(request, response);
     }
 
     /**
@@ -218,7 +218,7 @@ public class DocumentController extends HttpServlet {
                 request.setAttribute("lessonsOfSelectedSubject", lessons);
             }
 
-            request.getRequestDispatcher("/views/documents/edit.jsp").forward(request, response);
+            request.getRequestDispatcher("/components/document/document-edit.jsp").forward(request, response);
         } else {
             request.setAttribute("errorMessage", "Tài liệu không tồn tại hoặc bạn không có quyền chỉnh sửa.");
             displayDocuments(request, response, userId); // Trở lại danh sách
@@ -419,7 +419,7 @@ public class DocumentController extends HttpServlet {
                     request.setAttribute("associatedLesson", lesson);
                 }
                 request.setAttribute("document", document);
-                request.getRequestDispatcher("/views/documents/detail.jsp").forward(request, response);
+                request.getRequestDispatcher("/components/documents/document-detail.jsp").forward(request, response);
             } else {
                 request.setAttribute("errorMessage", "Tài liệu không tồn tại hoặc bạn không có quyền xem.");
                 displayDocuments(request, response, userId);
