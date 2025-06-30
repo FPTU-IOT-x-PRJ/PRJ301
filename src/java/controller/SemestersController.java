@@ -1,7 +1,3 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/JSP_Servlet/Servlet.java to edit this template
- */
 package controller;
 
 import dao.SemesterDAO;
@@ -22,8 +18,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- *
- * @author Dung Ann
+ * Controller xử lý các thao tác liên quan đến kỳ học (Semester).
  */
 public class SemestersController extends HttpServlet {
 
@@ -43,19 +38,28 @@ public class SemestersController extends HttpServlet {
         
         User user = (User) session.getAttribute("loggedInUser");
         
-        switch (action == null ? "" : action) {
-            case "/add":
-                request.getRequestDispatcher("/components/semester/semester-add.jsp").forward(request, response);
-                break;
-            case "/edit":
-                displayEditSemester(request, response, user);
-                break;
-            case "/delete-confirm":
-                displayDeleteSemesterConfirm(request, response, user);
-                break;
-            default:
-                displayDashboard(request, response, user);
-                break;
+        try {
+            switch (action == null ? "" : action) {
+                case "/add":
+                    displayAddForm(request, response, user.getId());
+                    break;
+                case "/edit":
+                    displayEditForm(request, response, user.getId());
+                    break;
+                case "/delete-confirm":
+                    displayDeleteConfirm(request, response, user.getId());
+                    break;
+                case "/detail": // Giả định bạn có thể muốn xem chi tiết một kỳ học
+                    displaySemesterDetail(request, response, user.getId());
+                    break;
+                default: // Mặc định là hiển thị danh sách/dashboard
+                    displaySemesters(request, response, user.getId());
+                    break;
+            }
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Lỗi trong SemestersController doGet: " + action, e);
+            request.setAttribute("errorMessage", "Đã xảy ra lỗi hệ thống.");
+            request.getRequestDispatcher("/error.jsp").forward(request, response);
         }
     }
 
@@ -63,62 +67,84 @@ public class SemestersController extends HttpServlet {
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         String action = request.getPathInfo();
-        LOGGER.log(Level.INFO, "action: {0}", action);
+        LOGGER.log(Level.INFO, "Action received in SemestersController (POST): {0}", action);
 
         HttpSession session = request.getSession(false);
         if (session == null || session.getAttribute("loggedInUser") == null) {
             response.sendRedirect(request.getContextPath() + "/auth/login");
             return;
         }
-        User user = (User) session.getAttribute("loggedInUser"); // Lấy user từ session cho doPost
+        User user = (User) session.getAttribute("loggedInUser"); 
+        request.setCharacterEncoding("UTF-8"); // Đảm bảo nhận tiếng Việt
+        response.setCharacterEncoding("UTF-8"); // Đảm bảo gửi tiếng Việt
 
-        switch (action == null ? "" : action) {
-            case "/add":
-                addSemester(request, response);
-                break;
-            case "/update":
-                editSemester(request, response);
-                break;
-            case "/delete":
-                deleteSemester(request, response, user); // Gọi phương thức xóa
-                break;
-            default:
-                response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Invalid action");
-                break;
+        try {
+            switch (action == null ? "" : action) {
+                case "/add":
+                    addSemester(request, response, user.getId());
+                    break;
+                case "/edit":
+                    editSemester(request, response, user.getId());
+                    break;
+                case "/delete":
+                    deleteSemester(request, response, user.getId()); 
+                    break;
+                default:
+                    response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Action không hợp lệ");
+                    break;
+            }
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Lỗi trong SemestersController doPost: " + action, e);
+            request.setAttribute("errorMessage", "Đã xảy ra lỗi hệ thống.");
+            request.getRequestDispatcher("/error.jsp").forward(request, response);
         }
     }
 
-    private void displayDeleteSemesterConfirm(HttpServletRequest request, HttpServletResponse response, User user)
+    /**
+     * Hiển thị form xác nhận xóa kỳ học.
+     * @param request HttpServletRequest
+     * @param response HttpServletResponse
+     * @param userId ID của người dùng.
+     * @throws ServletException
+     * @throws IOException
+     */
+    private void displayDeleteConfirm(HttpServletRequest request, HttpServletResponse response, int userId)
             throws ServletException, IOException {
         try {
             int id = Integer.parseInt(request.getParameter("id"));
-            Semester semester = semesterDao.getSemesterById(id, user.getId()); // Cần method getSemesterById(id, userId)
+            Semester semester = semesterDao.getSemesterById(id, userId); 
             if (semester != null) {
                 request.setAttribute("semesterToDelete", semester);
                 request.getRequestDispatcher("/components/semester/semester-delete-confirm.jsp").forward(request, response);
             } else {
-                // Xử lý nếu không tìm thấy kỳ học, có thể chuyển hướng về dashboard hoặc hiển thị lỗi
                 request.setAttribute("errorMessage", "Không tìm thấy kỳ học bạn muốn xóa.");
-                response.sendRedirect(request.getContextPath() + "/semesters"); // Hoặc forward đến trang lỗi
+                response.sendRedirect(request.getContextPath() + "/semesters/display"); 
             }
         } catch (NumberFormatException e) {
-            LOGGER.log(Level.WARNING, "Invalid semester ID for delete confirmation", e);
+            LOGGER.log(Level.WARNING, "ID kỳ học không hợp lệ để xác nhận xóa", e);
             response.sendError(HttpServletResponse.SC_BAD_REQUEST, "ID kỳ học không hợp lệ.");
-        } catch (Exception e) { // Bắt các lỗi khác có thể xảy ra trong DAO
-            LOGGER.log(Level.SEVERE, "Error fetching semester for delete confirmation", e);
+        } catch (Exception e) { // Đã sửa: Thay SQLException bằng Exception để bắt mọi lỗi
+            LOGGER.log(Level.SEVERE, "Lỗi khi lấy kỳ học để xác nhận xóa", e);
             response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Có lỗi xảy ra khi lấy thông tin kỳ học.");
         }
     }
 
-    private void displayDashboard(HttpServletRequest request, HttpServletResponse response, User user) throws ServletException, IOException {
-        // 1. Lấy các tham số từ request
+    /**
+     * Hiển thị danh sách các kỳ học cho người dùng hiện tại, có hỗ trợ tìm kiếm và phân trang.
+     * Tên hàm cũ: `displayDashboard`
+     * @param request HttpServletRequest
+     * @param response HttpServletResponse
+     * @param userId ID của người dùng.
+     * @throws ServletException
+     * @throws IOException
+     */
+    private void displaySemesters(HttpServletRequest request, HttpServletResponse response, int userId) throws ServletException, IOException {
         String search = request.getParameter("search");
-        String statusFilter = request.getParameter("status"); // "Active", "Inactive", "Completed"
+        String statusFilter = request.getParameter("status"); 
         String startDateStr = request.getParameter("startDate");
         String endDateStr = request.getParameter("endDate");
         String pageStr = request.getParameter("page");
 
-        // Xử lý ngày tháng
         Date startDate = null;
         Date endDate = null;
 
@@ -130,75 +156,134 @@ public class SemestersController extends HttpServlet {
                 endDate = Date.valueOf(endDateStr);
             }
         } catch (IllegalArgumentException e) {
-            // Handle invalid date format
-            LOGGER.log(Level.WARNING, "Lỗi khi convert startDate hoặc endDate: {0}", e.getMessage());
+            LOGGER.log(Level.WARNING, "Lỗi khi chuyển đổi startDate hoặc endDate: {0}", e.getMessage());
             request.setAttribute("errorMessage", "Định dạng ngày không hợp lệ.");
         }
 
-        // Thiết lập giá trị mặc định cho phân trang
         int currentPage = 1;
-        int recordsPerPage = 10; // Số kỳ học mỗi trang
+        int recordsPerPage = 10; 
 
         if (pageStr != null && !pageStr.isEmpty()) {
             try {
                 currentPage = Integer.parseInt(pageStr);
             } catch (NumberFormatException e) {
-                currentPage = 1; // Mặc định về trang 1 nếu page không hợp lệ
-                LOGGER.log(Level.WARNING, "Invalid page number format: {0}", pageStr);
+                currentPage = 1; 
+                LOGGER.log(Level.WARNING, "Định dạng số trang không hợp lệ: {0}", pageStr);
             }
         }
 
         int offset = (currentPage - 1) * recordsPerPage;
 
-        // 2. Lấy tổng số kỳ học (cho phân trang)
-        int totalSemesters = semesterDao.getTotalSemesterCount(search, statusFilter, startDate, endDate, user.getId());
+        // Sử dụng các phương thức mới trong DAO
+        int totalSemesters = semesterDao.countSemesters(search, statusFilter, startDate, endDate, userId);
+        List<Semester> semesterList = semesterDao.getAllSemesters(search, statusFilter, startDate, endDate, offset, recordsPerPage, userId);
+
         int totalPages = (int) Math.ceil((double) totalSemesters / recordsPerPage);
 
-        // 3. Lấy danh sách kỳ học đã lọc và phân trang
-        List<Semester> semesterList = semesterDao.getFilteredAndPaginatedSemesters(search, statusFilter, startDate, endDate, offset, recordsPerPage, user.getId());
-
-        // 5. Đặt các thuộc tính vào request để JSP hiển thị
         request.setAttribute("semesterList", semesterList);
         request.setAttribute("currentPage", currentPage);
         request.setAttribute("totalPages", totalPages);
-        request.setAttribute("totalSemestersCount", totalSemesters); // Tổng số kỳ học sau khi lọc
+        request.setAttribute("totalSemestersCount", totalSemesters); 
 
-        // Đặt lại các tham số lọc vào request để giữ trạng thái trên form
         Map<String, String> paginationParams = new HashMap<>();
         paginationParams.put("search", search != null ? search : "");
         paginationParams.put("status", statusFilter != null ? statusFilter : "");
         paginationParams.put("startDate", startDateStr != null ? startDateStr : "");
         paginationParams.put("endDate", endDateStr != null ? endDateStr : "");
         request.setAttribute("paginationParams", paginationParams);
-        request.setAttribute("baseUrl", request.getContextPath() + "/semesters/dashboard");
+        request.setAttribute("baseUrl", request.getContextPath() + "/semesters"); // Điều chỉnh baseUrl
 
-        // 6. Chuyển tiếp đến JSP
         request.getRequestDispatcher("/components/semester/semester-dashboard.jsp").forward(request, response);
     }
+    
+    /**
+     * Hiển thị chi tiết của một kỳ học.
+     * @param request HttpServletRequest
+     * @param response HttpServletResponse
+     * @param userId ID của người dùng.
+     * @throws ServletException
+     * @throws IOException
+     */
+    private void displaySemesterDetail(HttpServletRequest request, HttpServletResponse response, int userId)
+            throws ServletException, IOException {
+        try {
+            int id = Integer.parseInt(request.getParameter("id"));
+            Semester semester = semesterDao.getSemesterById(id, userId);
+            if (semester != null) {
+                request.setAttribute("semester", semester);
+                request.getRequestDispatcher("/components/semester/semester-detail.jsp").forward(request, response);
+            } else {
+                request.setAttribute("errorMessage", "Không tìm thấy kỳ học bạn muốn xem chi tiết hoặc bạn không có quyền truy cập.");
+                displaySemesters(request, response, userId); // Quay lại trang danh sách
+            }
+        } catch (NumberFormatException e) {
+            LOGGER.log(Level.WARNING, "ID kỳ học không hợp lệ để xem chi tiết: {0}", request.getParameter("id"));
+            request.setAttribute("errorMessage", "ID kỳ học không hợp lệ.");
+            displaySemesters(request, response, userId);
+        } catch (Exception e) { // Đã sửa: Thay SQLException bằng Exception để bắt mọi lỗi
+             LOGGER.log(Level.SEVERE, "Lỗi cơ sở dữ liệu khi hiển thị chi tiết kỳ học: {0}", e.getMessage());
+             request.setAttribute("errorMessage", "Lỗi cơ sở dữ liệu.");
+             displaySemesters(request, response, userId);
+        }
+    }
 
-    private void displayEditSemester(HttpServletRequest request, HttpServletResponse response, User user)
+    /**
+     * Hiển thị form chỉnh sửa kỳ học.
+     * Tên hàm cũ: `displayEditSemester`
+     * @param request HttpServletRequest
+     * @param response HttpServletResponse
+     * @param userId ID của người dùng.
+     * @throws ServletException
+     * @throws IOException
+     */
+    private void displayEditForm(HttpServletRequest request, HttpServletResponse response, int userId)
             throws ServletException, IOException {
         try {
             int editId = Integer.parseInt(request.getParameter("id"));
-            Semester s = semesterDao.getSemesterById(editId, user.getId());
+            Semester s = semesterDao.getSemesterById(editId, userId);
             if (s != null) {
                 request.setAttribute("semester", s);
                 request.getRequestDispatcher("/components/semester/semester-edit.jsp").forward(request, response);
             } else {
-                // Không tìm thấy kỳ học, có thể chuyển hướng hoặc hiển thị lỗi
-                LOGGER.log(Level.WARNING, "Semester with ID {0} not found for user {1}.", new Object[]{editId, user.getId()});
+                LOGGER.log(Level.WARNING, "Kỳ học với ID {0} không tìm thấy cho người dùng {1}.", new Object[]{editId, userId});
                 request.setAttribute("errorMessage", "Không tìm thấy kỳ học để chỉnh sửa.");
-                // Chuyển hướng về dashboard hoặc trang lỗi
-                request.getRequestDispatcher("/components/semester/semester-dashboard.jsp").forward(request, response);
+                displaySemesters(request, response, userId); // Quay lại dashboard
             }
         } catch (NumberFormatException e) {
-            LOGGER.log(Level.WARNING, "Invalid semester ID format: {0}", request.getParameter("id"));
+            LOGGER.log(Level.WARNING, "Định dạng ID kỳ học không hợp lệ: {0}", request.getParameter("id"));
             request.setAttribute("errorMessage", "ID kỳ học không hợp lệ.");
-            request.getRequestDispatcher("/components/semester/semester-dashboard.jsp").forward(request, response);
+            displaySemesters(request, response, userId);
+        } catch (Exception e) { // Đã sửa: Thay SQLException bằng Exception để bắt mọi lỗi
+            LOGGER.log(Level.SEVERE, "Lỗi cơ sở dữ liệu khi hiển thị form chỉnh sửa kỳ học: {0}", e.getMessage());
+            request.setAttribute("errorMessage", "Lỗi cơ sở dữ liệu.");
+            displaySemesters(request, response, userId);
         }
     }
+    
+    /**
+     * Hiển thị form để thêm kỳ học mới.
+     * @param request HttpServletRequest
+     * @param response HttpServletResponse
+     * @param userId ID của người dùng.
+     * @throws ServletException
+     * @throws IOException
+     */
+    private void displayAddForm(HttpServletRequest request, HttpServletResponse response, int userId)
+            throws ServletException, IOException {
+        // Không cần dữ liệu đặc biệt nào để hiển thị form thêm mới, chỉ cần chuyển hướng
+        request.getRequestDispatcher("/components/semester/semester-add.jsp").forward(request, response);
+    }
 
-    private void addSemester(HttpServletRequest request, HttpServletResponse response)
+    /**
+     * Xử lý logic thêm kỳ học mới.
+     * Tên hàm cũ: `addSemester`
+     * @param request HttpServletRequest
+     * @param response HttpServletResponse
+     * @param userId ID của người dùng.
+     * @throws ServletException
+     * @throws IOException
+     */
+    private void addSemester(HttpServletRequest request, HttpServletResponse response, int userId)
             throws ServletException, IOException {
         String name = request.getParameter("name");
         String startDateStr = request.getParameter("startDate");
@@ -206,17 +291,8 @@ public class SemestersController extends HttpServlet {
         String status = request.getParameter("status");
         String description = request.getParameter("description");
         
-        HttpSession session = request.getSession(false);
-        if (session == null || session.getAttribute("loggedInUser") == null) {
-            response.sendRedirect(request.getContextPath() + "/auth/login");
-            return;
-        }
-        
-        User user = (User) session.getAttribute("loggedInUser");
-        
         Map<String, String> errors = new HashMap<>();
 
-        // Server-side validation for Add Semester
         if (name == null || name.trim().isEmpty() || name.length() > 100) {
             errors.put("name", "Tên kỳ học không được để trống và không quá 100 ký tự.");
         }
@@ -251,21 +327,19 @@ public class SemestersController extends HttpServlet {
             LOGGER.log(Level.WARNING, "Lỗi định dạng ngày khi thêm kỳ học: {0}", e.getMessage());
         }
 
-
-        // Check for duplicate name for the current user
-        if (name != null && !name.trim().isEmpty() && semesterDao.getSemester(name, user.getId()) != null) {
+        // Kiểm tra tên trùng lặp cho người dùng hiện tại
+        // semesterDao.getSemesterByName đã tự xử lý SQLException
+        if (name != null && !name.trim().isEmpty() && semesterDao.getSemesterByName(name, userId) != null) {
             errors.put("name", "Tên của kỳ học đã tồn tại. Vui lòng chọn giá trị khác.");
         }
-
+        
         if (!errors.isEmpty()) {
-            // Nếu có lỗi, thiết lập các thuộc tính để hiển thị trên JSP
-            request.setAttribute("errors", errors); // Dùng Map để lưu nhiều lỗi
-            request.setAttribute("errorMessage", "Vui lòng kiểm tra lại thông tin nhập."); // Thông báo lỗi chung
+            request.setAttribute("errors", errors); 
+            request.setAttribute("errorMessage", "Vui lòng kiểm tra lại thông tin nhập.");
             
-            // Giữ lại dữ liệu đã nhập
             request.setAttribute("formName", name);
-            request.setAttribute("formStartDate", startDateStr); // Truyền lại dạng String để input type=date hiển thị đúng
-            request.setAttribute("formEndDate", endDateStr);     // Truyền lại dạng String
+            request.setAttribute("formStartDate", startDateStr); 
+            request.setAttribute("formEndDate", endDateStr);     
             request.setAttribute("formStatus", status);
             request.setAttribute("formDescription", description);
 
@@ -273,12 +347,32 @@ public class SemestersController extends HttpServlet {
             return;
         }
         
-        // Nếu không có lỗi, tiến hành thêm kỳ học
-        semesterDao.insertSemester(new Semester(name, startDate, endDate, status, LocalDateTime.now(),LocalDateTime.now(), description, user.getId()));
-        response.sendRedirect(request.getContextPath() + "/semesters");   
+        try {
+            semesterDao.addSemester(new Semester(name, startDate, endDate, status, LocalDateTime.now(),LocalDateTime.now(), description, userId));
+            response.sendRedirect(request.getContextPath() + "/semesters/display");   
+        } catch (Exception e) { // Đã sửa: Thay SQLException bằng Exception để bắt mọi lỗi
+            LOGGER.log(Level.SEVERE, "Lỗi cơ sở dữ liệu khi thêm kỳ học: {0}", e.getMessage());
+            errors.put("general", "Lỗi cơ sở dữ liệu khi thêm kỳ học.");
+            request.setAttribute("errors", errors);
+            request.setAttribute("formName", name);
+            request.setAttribute("formStartDate", startDateStr); 
+            request.setAttribute("formEndDate", endDateStr);     
+            request.setAttribute("formStatus", status);
+            request.setAttribute("formDescription", description);
+            request.getRequestDispatcher("/components/semester/semester-add.jsp").forward(request, response);
+        }
     }
 
-    private void editSemester(HttpServletRequest request, HttpServletResponse response)
+    /**
+     * Xử lý logic cập nhật kỳ học.
+     * Tên hàm cũ: `editSemester`
+     * @param request HttpServletRequest
+     * @param response HttpServletResponse
+     * @param userId ID của người dùng.
+     * @throws ServletException
+     * @throws IOException
+     */
+    private void editSemester(HttpServletRequest request, HttpServletResponse response, int userId)
             throws ServletException, IOException {
         String idStr = request.getParameter("id");
         String name = request.getParameter("name");
@@ -286,14 +380,6 @@ public class SemestersController extends HttpServlet {
         String endDateStr = request.getParameter("endDate");
         String status = request.getParameter("status");
         String description = request.getParameter("description");
-
-        HttpSession session = request.getSession(false);
-        if (session == null || session.getAttribute("loggedInUser") == null) {
-            response.sendRedirect(request.getContextPath() + "/auth/login");
-            return;
-        }
-
-        User user = (User) session.getAttribute("loggedInUser");
         
         int semesterId = -1;
         Map<String, String> errors = new HashMap<>();
@@ -302,10 +388,9 @@ public class SemestersController extends HttpServlet {
             semesterId = Integer.parseInt(idStr);
         } catch (NumberFormatException e) {
             errors.put("id", "ID kỳ học không hợp lệ.");
-            LOGGER.log(Level.WARNING, "Invalid semester ID format for edit: {0}", idStr);
+            LOGGER.log(Level.WARNING, "Định dạng ID kỳ học không hợp lệ để chỉnh sửa: {0}", idStr);
         }
 
-        // Server-side validation for Edit Semester
         if (name == null || name.trim().isEmpty() || name.length() > 100) {
             errors.put("name", "Tên kỳ học không được để trống và không quá 100 ký tự.");
         }
@@ -339,59 +424,76 @@ public class SemestersController extends HttpServlet {
             LOGGER.log(Level.WARNING, "Lỗi định dạng ngày khi sửa kỳ học: {0}", e.getMessage());
         }
 
-        // Check for duplicate name, excluding the current semester's ID
+        // Kiểm tra tên trùng lặp, loại trừ ID của kỳ học hiện tại
+        // semesterDao.getSemesterByNameExceptId đã tự xử lý SQLException
         if (name != null && !name.trim().isEmpty() && semesterId != -1) {
-            if (semesterDao.getSemesterByNameExceptId(name, semesterId, user.getId()) != null) {
+            if (semesterDao.getSemesterByNameExceptId(name, semesterId, userId) != null) {
                 errors.put("name", "Tên của kỳ học đã tồn tại. Vui lòng chọn giá trị khác.");
             }
         }
+        
 
         if (!errors.isEmpty()) {
-            // Nếu có lỗi, thiết lập các thuộc tính để hiển thị trên JSP
             request.setAttribute("errors", errors);
             request.setAttribute("errorMessage", "Vui lòng kiểm tra lại thông tin nhập.");
             
-            // Giữ lại dữ liệu đã nhập bằng cách tạo lại đối tượng Semester
-            Semester currentSemester = new Semester(semesterId, name, startDate, endDate, status, null, null, description, user.getId());
-            request.setAttribute("semester", currentSemester); // Truyền đối tượng semester đã sửa đổi để giữ lại giá trị trên form
+            Semester currentSemester = new Semester(semesterId, name, startDate, endDate, status, null, null, description, userId);
+            request.setAttribute("semester", currentSemester); 
             
             request.getRequestDispatcher("/components/semester/semester-edit.jsp").forward(request, response);
             return;
         }
 
-        // Nếu không có lỗi, tiến hành cập nhật kỳ học
-        Semester updatedSemester = new Semester(semesterId, name, startDate, endDate, status, null, LocalDateTime.now(), description, user.getId());
-        boolean success = semesterDao.updateSemester(updatedSemester);
+        try {
+            Semester updatedSemester = new Semester(semesterId, name, startDate, endDate, status, null, LocalDateTime.now(), description, userId);
+            boolean success = semesterDao.editSemester(updatedSemester); // Sử dụng editSemester
 
-        if (success) {
-            response.sendRedirect(request.getContextPath() + "/semesters");
-        } else {
-            LOGGER.log(Level.SEVERE, "Failed to update semester with ID: {0}", semesterId);
-            request.setAttribute("errorMessage", "Có lỗi xảy ra khi cập nhật kỳ học. Vui lòng thử lại.");
-            // Giữ lại dữ liệu đã nhập
-            Semester currentSemester = new Semester(semesterId, name, startDate, endDate, status, null, null, description, user.getId());
+            if (success) {
+                response.sendRedirect(request.getContextPath() + "/semesters/display");
+            } else {
+                LOGGER.log(Level.SEVERE, "Không thể cập nhật kỳ học với ID: {0}", semesterId);
+                request.setAttribute("errorMessage", "Có lỗi xảy ra khi cập nhật kỳ học. Vui lòng thử lại.");
+                Semester currentSemester = new Semester(semesterId, name, startDate, endDate, status, null, null, description, userId);
+                request.setAttribute("semester", currentSemester);
+                request.getRequestDispatcher("/components/semester/semester-edit.jsp").forward(request, response);
+            }
+        } catch (Exception e) { // Đã sửa: Thay SQLException bằng Exception để bắt mọi lỗi
+            LOGGER.log(Level.SEVERE, "Lỗi cơ sở dữ liệu khi cập nhật kỳ học: {0}", e.getMessage());
+            request.setAttribute("errorMessage", "Lỗi cơ sở dữ liệu khi cập nhật kỳ học.");
+            Semester currentSemester = new Semester(semesterId, name, startDate, endDate, status, null, null, description, userId);
             request.setAttribute("semester", currentSemester);
             request.getRequestDispatcher("/components/semester/semester-edit.jsp").forward(request, response);
         }
     }
     
-    private void deleteSemester(HttpServletRequest request, HttpServletResponse response, User user) throws IOException, ServletException {
+    /**
+     * Xử lý logic xóa kỳ học.
+     * @param request HttpServletRequest
+     * @param response HttpServletResponse
+     * @param userId ID của người dùng.
+     * @throws IOException
+     * @throws ServletException
+     */
+    private void deleteSemester(HttpServletRequest request, HttpServletResponse response, int userId) throws IOException, ServletException {
         try {
             int deleteId = Integer.parseInt(request.getParameter("id"));
-            boolean success = semesterDao.deleteSemester(deleteId, user.getId());
+            boolean success = semesterDao.deleteSemester(deleteId, userId); // Sử dụng deleteSemester
             if (success) {
-                LOGGER.log(Level.INFO, "Semester with ID {0} deleted successfully by user {1}.", new Object[]{deleteId, user.getId()});
-                response.sendRedirect(request.getContextPath() + "/semesters");
+                LOGGER.log(Level.INFO, "Kỳ học với ID {0} đã xóa thành công bởi người dùng {1}.", new Object[]{deleteId, userId});
+                response.sendRedirect(request.getContextPath() + "/semesters/display?message=deleteSuccess");
             } else {
-                LOGGER.log(Level.WARNING, "Failed to delete semester with ID {0} for user {1}.", new Object[]{deleteId, user.getId()});
+                LOGGER.log(Level.WARNING, "Không thể xóa kỳ học với ID {0} cho người dùng {1}.", new Object[]{deleteId, userId});
                 request.setAttribute("errorMessage", "Không thể xóa kỳ học. Có thể kỳ học không tồn tại hoặc bạn không có quyền.");
-                // Quay lại dashboard với thông báo lỗi
-                displayDashboard(request, response, user);
+                displaySemesters(request, response, userId); // Quay lại dashboard với thông báo lỗi
             }
         } catch (NumberFormatException e) {
-            LOGGER.log(Level.WARNING, "Invalid semester ID format for delete: {0}", request.getParameter("id"));
+            LOGGER.log(Level.WARNING, "Định dạng ID kỳ học không hợp lệ để xóa: {0}", request.getParameter("id"));
             request.setAttribute("errorMessage", "ID kỳ học không hợp lệ.");
-            displayDashboard(request, response, user);
+            displaySemesters(request, response, userId);
+        } catch (Exception e) { // Đã sửa: Thay SQLException bằng Exception để bắt mọi lỗi
+            LOGGER.log(Level.SEVERE, "Lỗi khi xóa kỳ học.", e);
+            request.setAttribute("errorMessage", "Đã xảy ra lỗi không mong muốn khi xóa kỳ học.");
+            displaySemesters(request, response, userId);
         }
     }
 }

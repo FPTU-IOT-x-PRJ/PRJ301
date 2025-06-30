@@ -1,11 +1,11 @@
 package controller;
 
 import dao.DocumentDAO;
-import dao.LessonDAO; // Thêm import
-import dao.SubjectDAO; // Thêm import
+import dao.LessonDAO;
+import dao.SubjectDAO;
 import entity.Document;
-import entity.Lesson; // Thêm import
-import entity.Subject; // Thêm import
+import entity.Lesson;
+import entity.Subject;
 import entity.User;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.MultipartConfig;
@@ -34,25 +34,29 @@ import utils.ConfigManager;
         maxFileSize = 1024 * 1024 * 10, // 10MB
         maxRequestSize = 1024 * 1024 * 50 // 50MB
 )
+/**
+ * Controller xử lý các thao tác liên quan đến tài liệu (Document).
+ */
 public class DocumentController extends HttpServlet {
 
     private static final Logger LOGGER = Logger.getLogger(DocumentController.class.getName());
     private DocumentDAO documentDao;
-    private SubjectDAO subjectDao; // Khởi tạo SubjectDAO
-    private LessonDAO lessonDao;   // Khởi tạo LessonDAO
+    private SubjectDAO subjectDao;
+    private LessonDAO lessonDao;
     private Cloudinary cloudinary;
 
     @Override
     public void init() throws ServletException {
         super.init();
         documentDao = new DocumentDAO();
-        subjectDao = new SubjectDAO(); // Khởi tạo
-        lessonDao = new LessonDAO();   // Khởi tạo
+        subjectDao = new SubjectDAO();
+        lessonDao = new LessonDAO();
 
         Map<String, String> config = new HashMap<>();
-        config.put("cloud_name", ConfigManager.getCloudinaryCloudName());
-        config.put("api_key", ConfigManager.getCloudinaryApiKey());
-        config.put("api_secret", ConfigManager.getCloudinaryApiSecret());
+        config.put("cloud_name", ConfigManager.getInstance().getProperty("CLOUDINARY_CLOUD_NAME"));
+        config.put("api_key", ConfigManager.getInstance().getProperty("CLOUDINARY_API_KEY"));
+        config.put("api_secret", ConfigManager.getInstance().getProperty("CLOUDINARY_API_SECRET"));
+
         cloudinary = new Cloudinary(config);
     }
 
@@ -69,29 +73,29 @@ public class DocumentController extends HttpServlet {
         }
 
         try {
-            switch (action != null ? action : "/list") {
-                case "/new":
-                    showNewForm(request, response, user.getId());
+            switch (action != null ? action : "/display") { // Default action là display list
+                case "/add":
+                    displayAddForm(request, response, user.getId());
                     break;
-                case "/list":
-                    listDocuments(request, response, user.getId());
+                case "/display":
+                    displayDocuments(request, response, user.getId());
                     break;
                 case "/edit":
-                    showEditForm(request, response, user.getId());
+                    displayEditForm(request, response, user.getId());
                     break;
                 case "/detail":
-                    showDocumentDetail(request, response, user.getId());
+                    displayDocumentDetail(request, response, user.getId());
                     break;
-                case "/delete":
+                case "/delete": // Xử lý xóa qua GET (ít được khuyến nghị hơn POST cho xóa)
                     deleteDocument(request, response, user.getId());
                     break;
                 default:
-                    response.sendError(HttpServletResponse.SC_NOT_FOUND);
+                    response.sendError(HttpServletResponse.SC_NOT_FOUND, "Action không hợp lệ.");
                     break;
             }
         } catch (SQLException ex) {
-            LOGGER.log(Level.SEVERE, "Database error in DocumentController.doGet", ex);
-            throw new ServletException(ex);
+            LOGGER.log(Level.SEVERE, "Lỗi cơ sở dữ liệu trong DocumentController.doGet", ex);
+            throw new ServletException("Lỗi truy vấn cơ sở dữ liệu.", ex);
         }
     }
 
@@ -106,93 +110,138 @@ public class DocumentController extends HttpServlet {
             response.sendRedirect(request.getContextPath() + "/auth/login");
             return;
         }
+        request.setCharacterEncoding("UTF-8"); // Đảm bảo nhận tiếng Việt
+        response.setCharacterEncoding("UTF-8"); // Đảm bảo gửi tiếng Việt
 
         try {
             switch (action != null ? action : "") {
-                case "/upload":
-                    uploadDocument(request, response, user.getId());
+                case "/add": // Dùng POST cho việc thêm mới (upload)
+                    addDocument(request, response, user.getId());
                     break;
-                case "/update":
-                    updateDocument(request, response, user.getId());
+                case "/edit": // Dùng POST cho việc cập nhật
+                    editDocument(request, response, user.getId());
                     break;
+                // Đối với delete, bạn có thể chọn POST nếu muốn an toàn hơn, hoặc vẫn dùng GET như hiện tại nếu URL delete có confirmation.
+                // Nếu dùng POST cho delete:
+                // case "/delete":
+                //     deleteDocument(request, response, user.getId());
+                //     break;
                 default:
-                    response.sendError(HttpServletResponse.SC_NOT_FOUND);
+                    response.sendError(HttpServletResponse.SC_NOT_FOUND, "Action không hợp lệ.");
                     break;
             }
         } catch (SQLException ex) {
-            LOGGER.log(Level.SEVERE, "Database error in DocumentController.doPost", ex);
-            throw new ServletException(ex);
+            LOGGER.log(Level.SEVERE, "Lỗi cơ sở dữ liệu trong DocumentController.doPost", ex);
+            throw new ServletException("Lỗi truy vấn cơ sở dữ liệu.", ex);
         }
     }
 
-    private void listDocuments(HttpServletRequest request, HttpServletResponse response, int userId)
+    /**
+     * Hiển thị danh sách các tài liệu của người dùng hiện tại.
+     *
+     * @param request HttpServletRequest
+     * @param response HttpServletResponse
+     * @param userId ID của người dùng.
+     * @throws SQLException
+     * @throws ServletException
+     * @throws IOException
+     */
+    private void displayDocuments(HttpServletRequest request, HttpServletResponse response, int userId)
             throws SQLException, ServletException, IOException {
-        List<Document> listDocuments = documentDao.getAllDocuments(userId);
-        
-        // Lấy danh sách Subjects và Lessons để hiển thị tên thay vì chỉ ID
-        // (Đây là ví dụ đơn giản, trong thực tế có thể cần tối ưu hơn nếu số lượng lớn)
+        List<Document> listDocuments = documentDao.getAllDocumentsByUserId(userId); // Sử dụng getAllDocumentsByUserId
+
+        // Lấy danh sách Subjects và Lessons để hiển thị tên thay vì chỉ ID (nếu cần)
         Map<Integer, String> subjectNames = new HashMap<>();
         Map<Integer, String> lessonNames = new HashMap<>();
-        
-        List<Subject> allSubjects = subjectDao.getAllSubjects(); // Giả sử có method này
+
+        // Lấy tất cả subjects của người dùng (giả định SubjectDAO có method này, hoặc cần thêm filter user)
+        // Hiện tại SubjectDAO.getAllSubjects() chưa có userId. Cần điều chỉnh nếu muốn lọc theo user.
+        // Tạm thời lấy tất cả subjects (nếu có thể) hoặc chỉ những subjects liên quan đến các tài liệu này.
+        // Để đơn giản, giả định getAllSubjects() lấy tất cả hoặc bạn đã có cơ chế khác.
+        List<Subject> allSubjects = subjectDao.getAllSubjects(null, null, null, 0, Integer.MAX_VALUE, null);
         for (Subject s : allSubjects) {
             subjectNames.put(s.getId(), s.getName());
         }
-        
-        // Lấy tất cả lessons để ánh xạ, cần điều chỉnh nếu lessonDAO chỉ lấy theo subjectId
-        // Hiện tại LessonDAO có method SELECT_LESSONS_BY_SUBJECT_ID_SQL
-        // Cần một method getAllLessons() hoặc cải thiện logic để tránh N+1 query
-        // Tạm thời, để đơn giản, sẽ không fetch lesson names ở đây mà chỉ subject names.
-        // Nếu cần lesson names, cần fetch chúng từ lessonDao.
-        // Hoặc truyền lessonId và subjectId sang JSP và để JSP tự xử lý hiển thị tên nếu có các Map tương ứng.
 
+        // Tương tự cho lessons, nếu cần hiển thị tên lesson.
+        // Logic phức tạp hơn vì lessons thuộc subjects.
+        // Có thể lấy lessons chỉ cho các subject mà tài liệu có liên kết.
         request.setAttribute("listDocuments", listDocuments);
-        request.setAttribute("subjectNames", subjectNames); // Truyền map tên môn học
-        // Nếu muốn hiển thị tên buổi học, bạn sẽ cần một map tương tự cho lessons
-        
+        request.setAttribute("subjectNames", subjectNames);
+        // request.setAttribute("lessonNames", lessonNames); // Nếu có
+
         request.getRequestDispatcher("/views/documents/list.jsp").forward(request, response);
     }
 
-    private void showNewForm(HttpServletRequest request, HttpServletResponse response, int userId)
+    /**
+     * Hiển thị form để thêm tài liệu mới.
+     *
+     * @param request HttpServletRequest
+     * @param response HttpServletResponse
+     * @param userId ID của người dùng.
+     * @throws SQLException
+     * @throws ServletException
+     * @throws IOException
+     */
+    private void displayAddForm(HttpServletRequest request, HttpServletResponse response, int userId)
             throws SQLException, ServletException, IOException {
-        // Lấy danh sách các môn học để điền vào dropdown
-        List<Subject> subjects = subjectDao.getAllSubjects(); // Giả sử getAllSubjects() không cần userId
+        // Lấy danh sách các môn học để điền vào dropdown (cần điều chỉnh getAllSubjects để lọc theo userId nếu có)
+        List<Subject> subjects = subjectDao.getAllSubjects(null, null, null, 0, Integer.MAX_VALUE, null); // Giả định
         request.setAttribute("subjects", subjects);
         request.getRequestDispatcher("/views/documents/new.jsp").forward(request, response);
     }
 
-    private void showEditForm(HttpServletRequest request, HttpServletResponse response, int userId)
+    /**
+     * Hiển thị form để chỉnh sửa tài liệu.
+     *
+     * @param request HttpServletRequest
+     * @param response HttpServletResponse
+     * @param userId ID của người dùng.
+     * @throws SQLException
+     * @throws ServletException
+     * @throws IOException
+     */
+    private void displayEditForm(HttpServletRequest request, HttpServletResponse response, int userId)
             throws SQLException, ServletException, IOException {
         int id = Integer.parseInt(request.getParameter("id"));
-        Document existingDocument = documentDao.getDocumentById(id, userId);
-        
+        Document existingDocument = documentDao.getDocumentById(id, userId); // Sử dụng getDocumentById
+
         if (existingDocument != null) {
             request.setAttribute("document", existingDocument);
             // Lấy danh sách các môn học để điền vào dropdown
-            List<Subject> subjects = subjectDao.getAllSubjects();
+            List<Subject> subjects = subjectDao.getAllSubjects(null, null, null, 0, Integer.MAX_VALUE, null);
             request.setAttribute("subjects", subjects);
-            
+
             // Nếu tài liệu đã có subjectId, lấy danh sách lessons của subject đó
             if (existingDocument.getSubjectId() != null) {
-                List<Lesson> lessons = lessonDao.getLessonsBySubjectId(existingDocument.getSubjectId());
+                List<Lesson> lessons = lessonDao.getAllLessonsBySubjectId(existingDocument.getSubjectId(), null, null, 1, Integer.MAX_VALUE); // getAllLessonsBySubjectId
                 request.setAttribute("lessonsOfSelectedSubject", lessons);
             }
-            
+
             request.getRequestDispatcher("/views/documents/edit.jsp").forward(request, response);
         } else {
             request.setAttribute("errorMessage", "Tài liệu không tồn tại hoặc bạn không có quyền chỉnh sửa.");
-            listDocuments(request, response, userId); // Trở lại danh sách
+            displayDocuments(request, response, userId); // Trở lại danh sách
         }
     }
 
-    private void uploadDocument(HttpServletRequest request, HttpServletResponse response, int userId)
+    /**
+     * Xử lý việc thêm tài liệu mới (bao gồm upload file).
+     *
+     * @param request HttpServletRequest
+     * @param response HttpServletResponse
+     * @param userId ID của người dùng.
+     * @throws SQLException
+     * @throws ServletException
+     * @throws IOException
+     */
+    private void addDocument(HttpServletRequest request, HttpServletResponse response, int userId)
             throws SQLException, ServletException, IOException {
         try {
             Part filePart = request.getPart("file");
             String fileName = getFileName(filePart);
             String description = request.getParameter("description");
-            
-            // Lấy subjectId và lessonId từ request
+
             Integer subjectId = null;
             Integer lessonId = null;
             String subjectIdStr = request.getParameter("subjectId");
@@ -202,33 +251,30 @@ public class DocumentController extends HttpServlet {
                 try {
                     subjectId = Integer.parseInt(subjectIdStr);
                 } catch (NumberFormatException e) {
-                    LOGGER.log(Level.WARNING, "Invalid subject ID format: {0}", subjectIdStr);
+                    LOGGER.log(Level.WARNING, "Định dạng ID môn học không hợp lệ: {0}", subjectIdStr);
                     request.setAttribute("errorMessage", "ID môn học không hợp lệ.");
-                    showNewForm(request, response, userId);
+                    displayAddForm(request, response, userId);
                     return;
                 }
             }
-            
+
             if (lessonIdStr != null && !lessonIdStr.trim().isEmpty()) {
                 try {
                     lessonId = Integer.parseInt(lessonIdStr);
                 } catch (NumberFormatException e) {
-                    LOGGER.log(Level.WARNING, "Invalid lesson ID format: {0}", lessonIdStr);
+                    LOGGER.log(Level.WARNING, "Định dạng ID buổi học không hợp lệ: {0}", lessonIdStr);
                     request.setAttribute("errorMessage", "ID buổi học không hợp lệ.");
-                    showNewForm(request, response, userId);
+                    displayAddForm(request, response, userId);
                     return;
                 }
             }
-            
-            // Logic: Nếu có lessonId thì subjectId phải có (vì lesson thuộc subject)
+
             if (lessonId != null && subjectId == null) {
-                // Đây là một lỗi logic, nếu có lessonId thì phải có subjectId
                 request.setAttribute("errorMessage", "Một tài liệu gắn với buổi học phải có môn học tương ứng.");
-                showNewForm(request, response, userId);
+                displayAddForm(request, response, userId);
                 return;
             }
 
-            // Upload to Cloudinary
             String storedFileName = UUID.randomUUID().toString() + "_" + fileName;
             String filePath = null;
             String fileType = filePart.getContentType();
@@ -236,43 +282,52 @@ public class DocumentController extends HttpServlet {
 
             try (InputStream fileContent = filePart.getInputStream()) {
                 Map uploadResult = cloudinary.uploader().upload(fileContent.readAllBytes(), ObjectUtils.asMap(
-                        "public_id", storedFileName // Sử dụng tên file đã xử lý làm public_id
+                        "public_id", storedFileName
                 ));
                 filePath = (String) uploadResult.get("secure_url");
-                LOGGER.log(Level.INFO, "Uploaded file to Cloudinary: {0}", filePath);
+                LOGGER.log(Level.INFO, "Đã tải file lên Cloudinary: {0}", filePath);
             } catch (IOException e) {
-                LOGGER.log(Level.SEVERE, "Failed to upload file to Cloudinary.", e);
+                LOGGER.log(Level.SEVERE, "Không thể tải file lên Cloudinary.", e);
                 request.setAttribute("errorMessage", "Tải file lên Cloudinary thất bại: " + e.getMessage());
-                showNewForm(request, response, userId);
+                displayAddForm(request, response, userId);
                 return;
             }
 
             Document newDocument = new Document(fileName, storedFileName, filePath, fileType, fileSize, userId, description, subjectId, lessonId);
-            boolean success = documentDao.addDocument(newDocument);
+            boolean success = documentDao.addDocument(newDocument); // Sử dụng addDocument
 
             if (success) {
-                LOGGER.log(Level.INFO, "Document {0} uploaded successfully by user {1}.", new Object[]{fileName, userId});
-                response.sendRedirect(request.getContextPath() + "/documents/list?message=uploadSuccess");
+                LOGGER.log(Level.INFO, "Tài liệu {0} đã được tải lên thành công bởi người dùng {1}.", new Object[]{fileName, userId});
+                response.sendRedirect(request.getContextPath() + "/documents/display?message=uploadSuccess");
             } else {
-                LOGGER.log(Level.WARNING, "Failed to add document {0} to DB for user {1}.", new Object[]{fileName, userId});
+                LOGGER.log(Level.WARNING, "Không thể thêm tài liệu {0} vào DB cho người dùng {1}.", new Object[]{fileName, userId});
                 request.setAttribute("errorMessage", "Lỗi khi lưu thông tin tài liệu vào cơ sở dữ liệu.");
-                showNewForm(request, response, userId);
+                displayAddForm(request, response, userId);
             }
         } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Error uploading document.", e);
+            LOGGER.log(Level.SEVERE, "Lỗi khi tải lên tài liệu.", e);
             request.setAttribute("errorMessage", "Đã xảy ra lỗi không mong muốn khi tải lên tài liệu: " + e.getMessage());
-            showNewForm(request, response, userId);
+            displayAddForm(request, response, userId);
         }
     }
 
-    private void updateDocument(HttpServletRequest request, HttpServletResponse response, int userId)
+    /**
+     * Xử lý việc cập nhật thông tin tài liệu.
+     *
+     * @param request HttpServletRequest
+     * @param response HttpServletResponse
+     * @param userId ID của người dùng.
+     * @throws SQLException
+     * @throws ServletException
+     * @throws IOException
+     */
+    private void editDocument(HttpServletRequest request, HttpServletResponse response, int userId)
             throws SQLException, ServletException, IOException {
         try {
             int id = Integer.parseInt(request.getParameter("id"));
-            String fileName = request.getParameter("fileName"); // fileName không thay đổi
+            String fileName = request.getParameter("fileName");
             String description = request.getParameter("description");
-            
-            // Lấy subjectId và lessonId từ request
+
             Integer subjectId = null;
             Integer lessonId = null;
             String subjectIdStr = request.getParameter("subjectId");
@@ -282,77 +337,83 @@ public class DocumentController extends HttpServlet {
                 try {
                     subjectId = Integer.parseInt(subjectIdStr);
                 } catch (NumberFormatException e) {
-                    LOGGER.log(Level.WARNING, "Invalid subject ID format for update: {0}", subjectIdStr);
+                    LOGGER.log(Level.WARNING, "Định dạng ID môn học không hợp lệ khi cập nhật: {0}", subjectIdStr);
                     request.setAttribute("errorMessage", "ID môn học không hợp lệ.");
-                    showEditForm(request, response, userId);
+                    displayEditForm(request, response, userId);
                     return;
                 }
             }
-            
+
             if (lessonIdStr != null && !lessonIdStr.trim().isEmpty()) {
                 try {
                     lessonId = Integer.parseInt(lessonIdStr);
                 } catch (NumberFormatException e) {
-                    LOGGER.log(Level.WARNING, "Invalid lesson ID format for update: {0}", lessonIdStr);
+                    LOGGER.log(Level.WARNING, "Định dạng ID buổi học không hợp lệ khi cập nhật: {0}", lessonIdStr);
                     request.setAttribute("errorMessage", "ID buổi học không hợp lệ.");
-                    showEditForm(request, response, userId);
+                    displayEditForm(request, response, userId);
                     return;
                 }
             }
-            
-            // Logic: Nếu có lessonId thì subjectId phải có (vì lesson thuộc subject)
+
             if (lessonId != null && subjectId == null) {
                 request.setAttribute("errorMessage", "Một tài liệu gắn với buổi học phải có môn học tương ứng.");
-                showEditForm(request, response, userId);
+                displayEditForm(request, response, userId);
                 return;
             }
 
             Document existingDocument = documentDao.getDocumentById(id, userId);
 
             if (existingDocument != null) {
-                // Cập nhật các trường có thể thay đổi
                 existingDocument.setDescription(description);
                 existingDocument.setSubjectId(subjectId);
                 existingDocument.setLessonId(lessonId);
 
-                boolean success = documentDao.updateDocument(existingDocument);
+                boolean success = documentDao.editDocument(existingDocument); // Sử dụng editDocument
 
                 if (success) {
-                    LOGGER.log(Level.INFO, "Document with ID {0} updated successfully by user {1}.", new Object[]{id, userId});
-                    response.sendRedirect(request.getContextPath() + "/documents/list?message=updateSuccess");
+                    LOGGER.log(Level.INFO, "Tài liệu với ID {0} đã được cập nhật thành công bởi người dùng {1}.", new Object[]{id, userId});
+                    response.sendRedirect(request.getContextPath() + "/documents/display?message=updateSuccess");
                 } else {
-                    LOGGER.log(Level.WARNING, "Failed to update document with ID {0} for user {1}.", new Object[]{id, userId});
+                    LOGGER.log(Level.WARNING, "Không thể cập nhật tài liệu với ID {0} cho người dùng {1}.", new Object[]{id, userId});
                     request.setAttribute("errorMessage", "Không thể cập nhật tài liệu. Vui lòng thử lại.");
-                    showEditForm(request, response, userId); // Trở lại form edit với lỗi
+                    displayEditForm(request, response, userId);
                 }
             } else {
-                LOGGER.log(Level.WARNING, "Attempt to update non-existent or unauthorized document with ID {0} by user {1}.", new Object[]{id, userId});
+                LOGGER.log(Level.WARNING, "Cố gắng cập nhật tài liệu không tồn tại hoặc không được phép với ID {0} bởi người dùng {1}.", new Object[]{id, userId});
                 request.setAttribute("errorMessage", "Tài liệu không tồn tại hoặc bạn không có quyền chỉnh sửa.");
-                listDocuments(request, response, userId); // Trở lại danh sách
+                displayDocuments(request, response, userId);
             }
         } catch (NumberFormatException e) {
-            LOGGER.log(Level.WARNING, "Invalid document ID format for update: {0}", request.getParameter("id"));
+            LOGGER.log(Level.WARNING, "Định dạng ID tài liệu không hợp lệ khi cập nhật: {0}", request.getParameter("id"));
             request.setAttribute("errorMessage", "ID tài liệu không hợp lệ.");
-            listDocuments(request, response, userId);
+            displayDocuments(request, response, userId);
         } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Error updating document.", e);
+            LOGGER.log(Level.SEVERE, "Lỗi khi cập nhật tài liệu.", e);
             request.setAttribute("errorMessage", "Đã xảy ra lỗi không mong muốn khi cập nhật tài liệu: " + e.getMessage());
-            listDocuments(request, response, userId);
+            displayDocuments(request, response, userId);
         }
     }
 
-    private void showDocumentDetail(HttpServletRequest request, HttpServletResponse response, int userId)
+    /**
+     * Hiển thị chi tiết của một tài liệu.
+     *
+     * @param request HttpServletRequest
+     * @param response HttpServletResponse
+     * @param userId ID của người dùng.
+     * @throws SQLException
+     * @throws ServletException
+     * @throws IOException
+     */
+    private void displayDocumentDetail(HttpServletRequest request, HttpServletResponse response, int userId)
             throws SQLException, ServletException, IOException {
         try {
             int id = Integer.parseInt(request.getParameter("id"));
-            Document document = documentDao.getDocumentById(id, userId);
+            Document document = documentDao.getDocumentById(id, userId); // Sử dụng getDocumentById
             if (document != null) {
-                // Nếu có subjectId, lấy thông tin Subject
                 if (document.getSubjectId() != null) {
                     Subject subject = subjectDao.getSubjectById(document.getSubjectId());
                     request.setAttribute("associatedSubject", subject);
                 }
-                // Nếu có lessonId, lấy thông tin Lesson
                 if (document.getLessonId() != null) {
                     Lesson lesson = lessonDao.getLessonById(document.getLessonId());
                     request.setAttribute("associatedLesson", lesson);
@@ -361,15 +422,25 @@ public class DocumentController extends HttpServlet {
                 request.getRequestDispatcher("/views/documents/detail.jsp").forward(request, response);
             } else {
                 request.setAttribute("errorMessage", "Tài liệu không tồn tại hoặc bạn không có quyền xem.");
-                listDocuments(request, response, userId);
+                displayDocuments(request, response, userId);
             }
         } catch (NumberFormatException e) {
-            LOGGER.log(Level.WARNING, "Invalid document ID format for detail: {0}", request.getParameter("id"));
+            LOGGER.log(Level.WARNING, "Định dạng ID tài liệu không hợp lệ để xem chi tiết: {0}", request.getParameter("id"));
             request.setAttribute("errorMessage", "ID tài liệu không hợp lệ.");
-            listDocuments(request, response, userId);
+            displayDocuments(request, response, userId);
         }
     }
 
+    /**
+     * Xử lý việc xóa tài liệu.
+     *
+     * @param request HttpServletRequest
+     * @param response HttpServletResponse
+     * @param userId ID của người dùng.
+     * @throws SQLException
+     * @throws ServletException
+     * @throws IOException
+     */
     private void deleteDocument(HttpServletRequest request, HttpServletResponse response, int userId)
             throws SQLException, ServletException, IOException {
         try {
@@ -377,41 +448,45 @@ public class DocumentController extends HttpServlet {
             Document docToDelete = documentDao.getDocumentById(id, userId);
 
             if (docToDelete == null) {
-                LOGGER.log(Level.WARNING, "Attempt to delete non-existent or unauthorized document with ID {0} by user {1}.", new Object[]{id, userId});
+                LOGGER.log(Level.WARNING, "Cố gắng xóa tài liệu không tồn tại hoặc không được phép với ID {0} bởi người dùng {1}.", new Object[]{id, userId});
                 request.setAttribute("errorMessage", "Không thể xóa tài liệu. Tài liệu không tồn tại hoặc bạn không có quyền.");
-                listDocuments(request, response, userId);
+                displayDocuments(request, response, userId);
                 return;
             }
 
-            // Xóa file khỏi Cloudinary trước
             if (docToDelete.getStoredFileName() != null && !docToDelete.getStoredFileName().isEmpty()) {
                 try {
                     cloudinary.uploader().destroy(docToDelete.getStoredFileName(), ObjectUtils.emptyMap());
-                    LOGGER.log(Level.INFO, "Deleted file {0} from Cloudinary.", docToDelete.getStoredFileName());
+                    LOGGER.log(Level.INFO, "Đã xóa file {0} từ Cloudinary.", docToDelete.getStoredFileName());
                 } catch (Exception cloudinaryEx) {
-                    LOGGER.log(Level.WARNING, "Failed to delete file {0} from Cloudinary: {1}",
+                    LOGGER.log(Level.WARNING, "Không thể xóa file {0} từ Cloudinary: {1}",
                             new Object[]{docToDelete.getStoredFileName(), cloudinaryEx.getMessage()});
-                    // Log lỗi nhưng vẫn tiếp tục xóa trong DB để tránh inconsistent state
                 }
             }
 
-            boolean success = documentDao.deleteDocument(id, userId);
+            boolean success = documentDao.deleteDocument(id, userId); // Sử dụng deleteDocument
 
             if (success) {
-                LOGGER.log(Level.INFO, "Document with ID {0} deleted successfully from DB by user {1}..", new Object[]{id, userId});
-                response.sendRedirect(request.getContextPath() + "/documents/list?message=deleteSuccess");
+                LOGGER.log(Level.INFO, "Tài liệu với ID {0} đã được xóa thành công từ DB bởi người dùng {1}.", new Object[]{id, userId});
+                response.sendRedirect(request.getContextPath() + "/documents/display?message=deleteSuccess");
             } else {
-                LOGGER.log(Level.WARNING, "Failed to delete document with ID {0} for user {1}. Document not found or unauthorized.", new Object[]{id, userId});
+                LOGGER.log(Level.WARNING, "Không thể xóa tài liệu với ID {0} cho người dùng {1}. Tài liệu không tìm thấy hoặc không được phép.", new Object[]{id, userId});
                 request.setAttribute("errorMessage", "Không thể xóa tài liệu. Tài liệu không tồn tại hoặc bạn không có quyền.");
-                listDocuments(request, response, userId); // Trở lại danh sách với lỗi
+                displayDocuments(request, response, userId);
             }
         } catch (NumberFormatException e) {
-            LOGGER.log(Level.WARNING, "Invalid document ID format for delete: {0}", request.getParameter("id"));
+            LOGGER.log(Level.WARNING, "Định dạng ID tài liệu không hợp lệ để xóa: {0}", request.getParameter("id"));
             request.setAttribute("errorMessage", "ID tài liệu không hợp lệ.");
-            listDocuments(request, response, userId);
+            displayDocuments(request, response, userId);
         }
     }
 
+    /**
+     * Phương thức trợ giúp để lấy tên file từ Part.
+     *
+     * @param part Part chứa file upload.
+     * @return Tên file.
+     */
     private String getFileName(final Part part) {
         for (String content : part.getHeader("content-disposition").split(";")) {
             if (content.trim().startsWith("filename")) {
