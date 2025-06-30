@@ -22,8 +22,8 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * Servlet Controller để quản lý các buổi học (Lessons).
- * Xử lý các yêu cầu thêm, hiển thị, chỉnh sửa và xóa buổi học.
+ * Servlet Controller để quản lý các buổi học (Lessons). Xử lý các yêu cầu thêm,
+ * hiển thị, chỉnh sửa và xóa buổi học.
  */
 @WebServlet(name = "LessonsController", urlPatterns = {"/lessons", "/lessons/*"})
 public class LessonsController extends HttpServlet {
@@ -54,7 +54,7 @@ public class LessonsController extends HttpServlet {
         }
 
         User user = (User) session.getAttribute("loggedInUser");
-        
+
         try {
             switch (action == null ? "/" : action) {
                 case "/": // Mặc định là hiển thị danh sách buổi học
@@ -122,8 +122,9 @@ public class LessonsController extends HttpServlet {
     }
 
     /**
-     * Hiển thị chi tiết của một buổi học.
-     * Kiểm tra quyền truy cập của người dùng.
+     * Hiển thị chi tiết của một buổi học. Kiểm tra quyền truy cập của người
+     * dùng.
+     *
      * @param request HttpServletRequest
      * @param response HttpServletResponse
      * @param userId ID của người dùng hiện tại
@@ -144,7 +145,7 @@ public class LessonsController extends HttpServlet {
                     response.sendRedirect(request.getContextPath() + "/subjects"); // Chuyển về trang subjects
                     return;
                 }
-                
+
                 request.setAttribute("lesson", lesson);
                 request.setAttribute("subject", subject); // Để có thông tin môn học liên quan
                 request.getRequestDispatcher("/components/lesson/lesson-detail.jsp").forward(request, response);
@@ -156,8 +157,9 @@ public class LessonsController extends HttpServlet {
                     if (subjectIdParam != null && !subjectIdParam.isEmpty()) {
                         subjectId = Integer.parseInt(subjectIdParam);
                     }
-                } catch (NumberFormatException e) { /* bỏ qua */ }
-                
+                } catch (NumberFormatException e) {
+                    /* bỏ qua */ }
+
                 if (subjectId != -1) {
                     response.sendRedirect(request.getContextPath() + "/lessons?subjectId=" + subjectId + "&errorMessage=" + java.net.URLEncoder.encode("Không tìm thấy buổi học bạn muốn xem chi tiết.", "UTF-8"));
                 } else {
@@ -167,15 +169,16 @@ public class LessonsController extends HttpServlet {
         } catch (NumberFormatException e) {
             LOGGER.log(Level.WARNING, "ID buổi học không hợp lệ để xem chi tiết: {0}", request.getParameter("id"));
             response.sendError(HttpServletResponse.SC_BAD_REQUEST, "ID buổi học không hợp lệ.");
-        } catch (Exception e) { 
+        } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Đã xảy ra lỗi không mong muốn khi hiển thị chi tiết buổi học", e);
             response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Đã xảy ra lỗi không mong muốn.");
         }
     }
-    
+
     /**
-     * Hiển thị form xác nhận xóa buổi học.
-     * Kiểm tra quyền truy cập của người dùng.
+     * Hiển thị form xác nhận xóa buổi học. Kiểm tra quyền truy cập của người
+     * dùng.
+     *
      * @param request HttpServletRequest
      * @param response HttpServletResponse
      * @param userId ID của người dùng hiện tại
@@ -191,16 +194,16 @@ public class LessonsController extends HttpServlet {
                 // Kiểm tra xem môn học của buổi học này có thuộc về user hay không
                 Subject subjectOfLesson = subjectDao.getSubjectById(lesson.getSubjectId());
                 if (subjectOfLesson == null || semesterDao.getSemesterById(subjectOfLesson.getSemesterId(), userId) == null) {
-                     request.setAttribute("errorMessage", "Bạn không có quyền xóa buổi học này.");
-                     String subjectIdParam = request.getParameter("subjectId");
-                     if (subjectIdParam != null && !subjectIdParam.isEmpty()) {
+                    request.setAttribute("errorMessage", "Bạn không có quyền xóa buổi học này.");
+                    String subjectIdParam = request.getParameter("subjectId");
+                    if (subjectIdParam != null && !subjectIdParam.isEmpty()) {
                         response.sendRedirect(request.getContextPath() + "/lessons?subjectId=" + subjectIdParam);
-                     } else {
+                    } else {
                         response.sendRedirect(request.getContextPath() + "/subjects");
-                     }
-                     return;
+                    }
+                    return;
                 }
-                
+
                 request.setAttribute("lessonToDelete", lesson);
                 request.setAttribute("subjectId", lesson.getSubjectId()); // Truyền subjectId để quay về đúng trang
                 request.getRequestDispatcher("/components/lesson/lesson-delete-confirm.jsp").forward(request, response);
@@ -211,22 +214,23 @@ public class LessonsController extends HttpServlet {
                 } catch (NumberFormatException e) {
                     LOGGER.log(Level.WARNING, "Subject ID không tìm thấy hoặc không hợp lệ trong yêu cầu xác nhận xóa", e);
                 }
-                
+
                 request.setAttribute("errorMessage", "Không tìm thấy buổi học bạn muốn xóa.");
-                response.sendRedirect(request.getContextPath() + "/lessons?subjectId=" + subjectId); 
+                response.sendRedirect(request.getContextPath() + "/lessons?subjectId=" + subjectId);
             }
         } catch (NumberFormatException e) {
             LOGGER.log(Level.WARNING, "ID buổi học không hợp lệ để xác nhận xóa", e);
             response.sendError(HttpServletResponse.SC_BAD_REQUEST, "ID buổi học không hợp lệ.");
-        } catch (Exception e) { 
+        } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Lỗi khi lấy buổi học để xác nhận xóa", e);
             response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Có lỗi xảy ra khi lấy thông tin buổi học.");
         }
     }
-    
+
     /**
-     * Hiển thị danh sách các buổi học cho một môn học cụ thể, có hỗ trợ tìm kiếm và phân trang.
-     * Kiểm tra quyền truy cập của người dùng.
+     * Hiển thị danh sách các buổi học cho một môn học cụ thể, có hỗ trợ tìm
+     * kiếm và phân trang. Kiểm tra quyền truy cập của người dùng.
+     *
      * @param request HttpServletRequest
      * @param response HttpServletResponse
      * @param userId ID của người dùng hiện tại
@@ -258,7 +262,7 @@ public class LessonsController extends HttpServlet {
             String search = request.getParameter("search");
             String statusFilter = request.getParameter("status");
             int page = 1;
-            int pageSize = 10; 
+            int pageSize = 10;
 
             try {
                 if (request.getParameter("page") != null) {
@@ -277,7 +281,7 @@ public class LessonsController extends HttpServlet {
             request.setAttribute("currentPage", page);
             request.setAttribute("totalPages", totalPages);
             request.setAttribute("search", search);
-            request.setAttribute("statusFilter", statusFilter); 
+            request.setAttribute("statusFilter", statusFilter);
 
             request.getRequestDispatcher("/components/lesson/lesson-dashboard.jsp").forward(request, response);
 
@@ -293,8 +297,9 @@ public class LessonsController extends HttpServlet {
     }
 
     /**
-     * Hiển thị form thêm buổi học mới.
-     * Yêu cầu tham số `subjectId`. Kiểm tra quyền truy cập của người dùng.
+     * Hiển thị form thêm buổi học mới. Yêu cầu tham số `subjectId`. Kiểm tra
+     * quyền truy cập của người dùng.
+     *
      * @param request HttpServletRequest
      * @param response HttpServletResponse
      * @param userId ID của người dùng hiện tại
@@ -313,7 +318,7 @@ public class LessonsController extends HttpServlet {
         try {
             int subjectId = Integer.parseInt(subjectIdStr);
             Subject subject = subjectDao.getSubjectById(subjectId);
-            
+
             // Kiểm tra xem môn học có thuộc về user không (qua semester)
             if (subject == null || semesterDao.getSemesterById(subject.getSemesterId(), userId) == null) {
                 LOGGER.log(Level.WARNING, "Môn học với ID {0} không tìm thấy hoặc không thuộc về người dùng {1} để thêm buổi học.", new Object[]{subjectId, userId});
@@ -336,6 +341,7 @@ public class LessonsController extends HttpServlet {
 
     /**
      * Xử lý yêu cầu thêm buổi học mới.
+     *
      * @param request HttpServletRequest
      * @param response HttpServletResponse
      * @param userId ID của người dùng hiện tại
@@ -345,11 +351,11 @@ public class LessonsController extends HttpServlet {
     private void addLesson(HttpServletRequest request, HttpServletResponse response, int userId)
             throws ServletException, IOException {
         Map<String, String> errors = new HashMap<>();
-        int subjectId = 0; 
+        int subjectId = 0;
         try {
             String subjectIdStr = request.getParameter("subjectId");
             if (subjectIdStr == null || subjectIdStr.isEmpty()) {
-                 errors.put("general", "ID môn học không được cung cấp.");
+                errors.put("general", "ID môn học không được cung cấp.");
             } else {
                 subjectId = Integer.parseInt(subjectIdStr);
                 Subject subject = subjectDao.getSubjectById(subjectId);
@@ -357,10 +363,10 @@ public class LessonsController extends HttpServlet {
                 if (subject == null || semesterDao.getSemesterById(subject.getSemesterId(), userId) == null) {
                     errors.put("general", "Môn học không tồn tại hoặc bạn không có quyền truy cập.");
                 } else {
-                    request.setAttribute("subject", subject); 
+                    request.setAttribute("subject", subject);
                 }
             }
-            
+
             String name = request.getParameter("name");
             String lessonDateStr = request.getParameter("lessonDate");
             String description = request.getParameter("description");
@@ -417,7 +423,7 @@ public class LessonsController extends HttpServlet {
                     request.setAttribute("subject", subjectDao.getSubjectById(subjectId));
                 }
             } catch (Exception ex) { // Catch Exception chung
-                 LOGGER.log(Level.SEVERE, "Lỗi khi lấy môn học cho trang lỗi.", ex);
+                LOGGER.log(Level.SEVERE, "Lỗi khi lấy môn học cho trang lỗi.", ex);
             }
             request.getRequestDispatcher("/components/lesson/lesson-add.jsp").forward(request, response);
         } catch (Exception e) { // Bắt lỗi Exception chung
@@ -433,15 +439,16 @@ public class LessonsController extends HttpServlet {
                     request.setAttribute("subject", subjectDao.getSubjectById(subjectId));
                 }
             } catch (Exception ex) { // Catch Exception chung
-                 LOGGER.log(Level.SEVERE, "Lỗi khi lấy môn học cho trang lỗi.", ex);
+                LOGGER.log(Level.SEVERE, "Lỗi khi lấy môn học cho trang lỗi.", ex);
             }
             request.getRequestDispatcher("/components/lesson/lesson-add.jsp").forward(request, response);
         }
     }
 
     /**
-     * Hiển thị form chỉnh sửa buổi học.
-     * Yêu cầu tham số `id` (lessonId) và `subjectId`. Kiểm tra quyền truy cập của người dùng.
+     * Hiển thị form chỉnh sửa buổi học. Yêu cầu tham số `id` (lessonId) và
+     * `subjectId`. Kiểm tra quyền truy cập của người dùng.
+     *
      * @param request HttpServletRequest
      * @param response HttpServletResponse
      * @param userId ID của người dùng hiện tại
@@ -474,7 +481,7 @@ public class LessonsController extends HttpServlet {
                 request.getRequestDispatcher("/error.jsp").forward(request, response);
                 return;
             }
-            
+
             request.setAttribute("lesson", lesson);
             request.setAttribute("subject", subject);
             request.getRequestDispatcher("/components/lesson/lesson-edit.jsp").forward(request, response);
@@ -484,14 +491,15 @@ public class LessonsController extends HttpServlet {
             request.setAttribute("errorMessage", "ID buổi học hoặc ID môn học không hợp lệ.");
             request.getRequestDispatcher("/error.jsp").forward(request, response);
         } catch (Exception e) { // Bắt lỗi Exception chung
-             LOGGER.log(Level.SEVERE, "Lỗi hệ thống khi hiển thị form chỉnh sửa buổi học: {0}", e.getMessage());
-             request.setAttribute("errorMessage", "Lỗi hệ thống.");
-             request.getRequestDispatcher("/error.jsp").forward(request, response);
+            LOGGER.log(Level.SEVERE, "Lỗi hệ thống khi hiển thị form chỉnh sửa buổi học: {0}", e.getMessage());
+            request.setAttribute("errorMessage", "Lỗi hệ thống.");
+            request.getRequestDispatcher("/error.jsp").forward(request, response);
         }
     }
 
     /**
      * Xử lý yêu cầu cập nhật buổi học.
+     *
      * @param request HttpServletRequest
      * @param response HttpServletResponse
      * @param userId ID của người dùng hiện tại
@@ -520,7 +528,7 @@ public class LessonsController extends HttpServlet {
                 if (existingLesson == null || subject == null || existingLesson.getSubjectId() != subjectId || semesterDao.getSemesterById(subject.getSemesterId(), userId) == null) {
                     errors.put("general", "Buổi học hoặc môn học không tồn tại hoặc bạn không có quyền cập nhật.");
                 } else {
-                    request.setAttribute("lesson", existingLesson); 
+                    request.setAttribute("lesson", existingLesson);
                     request.setAttribute("subject", subject);
                 }
             }
@@ -559,8 +567,8 @@ public class LessonsController extends HttpServlet {
             }
 
             Lesson currentLesson = lessonDao.getLessonById(lessonId);
-            LocalDateTime createdAt = (currentLesson != null) ? currentLesson.getCreatedAt() : LocalDateTime.now(); 
-            
+            LocalDateTime createdAt = (currentLesson != null) ? currentLesson.getCreatedAt() : LocalDateTime.now();
+
             Lesson updatedLesson = new Lesson(lessonId, subjectId, name, lessonDate, description, status, createdAt, LocalDateTime.now());
 
             boolean success = lessonDao.editLesson(updatedLesson);
@@ -583,10 +591,14 @@ public class LessonsController extends HttpServlet {
             errors.put("general", "ID buổi học hoặc ID môn học không hợp lệ.");
             request.setAttribute("errors", errors);
             try {
-                if (lessonId > 0) request.setAttribute("lesson", lessonDao.getLessonById(lessonId));
-                if (subjectId > 0) request.setAttribute("subject", subjectDao.getSubjectById(subjectId));
+                if (lessonId > 0) {
+                    request.setAttribute("lesson", lessonDao.getLessonById(lessonId));
+                }
+                if (subjectId > 0) {
+                    request.setAttribute("subject", subjectDao.getSubjectById(subjectId));
+                }
             } catch (Exception ex) { // Catch Exception chung
-                 LOGGER.log(Level.SEVERE, "Lỗi khi lấy buổi học/môn học cho trang lỗi trong quá trình cập nhật.", ex);
+                LOGGER.log(Level.SEVERE, "Lỗi khi lấy buổi học/môn học cho trang lỗi trong quá trình cập nhật.", ex);
             }
             request.getRequestDispatcher("/components/lesson/lesson-edit.jsp").forward(request, response);
         } catch (Exception e) { // Bắt lỗi Exception chung
@@ -597,19 +609,23 @@ public class LessonsController extends HttpServlet {
             request.setAttribute("formLessonDate", request.getParameter("lessonDate"));
             request.setAttribute("formDescription", request.getParameter("description"));
             request.setAttribute("formStatus", request.getParameter("status"));
-             try {
-                if (lessonId > 0) request.setAttribute("lesson", lessonDao.getLessonById(lessonId));
-                if (subjectId > 0) request.setAttribute("subject", subjectDao.getSubjectById(subjectId));
+            try {
+                if (lessonId > 0) {
+                    request.setAttribute("lesson", lessonDao.getLessonById(lessonId));
+                }
+                if (subjectId > 0) {
+                    request.setAttribute("subject", subjectDao.getSubjectById(subjectId));
+                }
             } catch (Exception ex) { // Catch Exception chung
-                 LOGGER.log(Level.SEVERE, "Lỗi khi lấy buổi học/môn học cho trang lỗi trong quá trình cập nhật.", ex);
+                LOGGER.log(Level.SEVERE, "Lỗi khi lấy buổi học/môn học cho trang lỗi trong quá trình cập nhật.", ex);
             }
             request.getRequestDispatcher("/components/lesson/lesson-edit.jsp").forward(request, response);
         }
     }
 
     /**
-     * Xử lý yêu cầu xóa buổi học.
-     * Kiểm tra quyền truy cập của người dùng.
+     * Xử lý yêu cầu xóa buổi học. Kiểm tra quyền truy cập của người dùng.
+     *
      * @param request HttpServletRequest
      * @param response HttpServletResponse
      * @param userId ID của người dùng hiện tại

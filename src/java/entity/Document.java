@@ -4,12 +4,13 @@ import java.time.LocalDateTime;
 import java.sql.Date;
 
 /**
- * Entity class đại diện cho một tài liệu (Document).
- * Có thể liên kết với một môn học (Subject) hoặc một buổi học (Lesson).
+ * Entity class đại diện cho một tài liệu (Document). Có thể liên kết với một
+ * môn học (Subject) hoặc một buổi học (Lesson).
  *
  * @author Dung Ann
  */
 public class Document {
+
     private int id;
     private String fileName;
     private String storedFileName;

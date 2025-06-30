@@ -7,6 +7,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.sql.Connection;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -14,8 +15,8 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * Lớp DAO quản lý các thao tác CRUD và các truy vấn liên quan đến đối tượng Subject trong cơ sở dữ liệu.
- * Author: Dung Ann
+ * Lớp DAO quản lý các thao tác CRUD và các truy vấn liên quan đến đối tượng
+ * Subject trong cơ sở dữ liệu. Author: Dung Ann
  */
 public class SubjectDAO extends DBContext {
 
@@ -37,19 +38,19 @@ public class SubjectDAO extends DBContext {
      */
     public boolean addSubject(Subject subject) {
         boolean rowInserted = false;
-        try (PreparedStatement ps = connection.prepareStatement(INSERT_SUBJECT_SQL, Statement.RETURN_GENERATED_KEYS)) {
-            ps.setInt(1, subject.getSemesterId());
-            ps.setString(2, subject.getName());
-            ps.setString(3, subject.getCode());
-            ps.setString(4, subject.getDescription());
-            ps.setInt(5, subject.getCredits());
-            ps.setString(6, subject.getTeacherName());
-            ps.setBoolean(7, subject.isActive());
-            ps.setString(8, subject.getPrerequisites());
-            
-            int affectedRows = ps.executeUpdate();
+        try (Connection con = getConnection(); PreparedStatement preparedStatement = con.prepareStatement(INSERT_SUBJECT_SQL, Statement.RETURN_GENERATED_KEYS)) {
+            preparedStatement.setInt(1, subject.getSemesterId());
+            preparedStatement.setString(2, subject.getName());
+            preparedStatement.setString(3, subject.getCode());
+            preparedStatement.setString(4, subject.getDescription());
+            preparedStatement.setInt(5, subject.getCredits());
+            preparedStatement.setString(6, subject.getTeacherName());
+            preparedStatement.setBoolean(7, subject.isActive());
+            preparedStatement.setString(8, subject.getPrerequisites());
+
+            int affectedRows = preparedStatement.executeUpdate();
             if (affectedRows > 0) {
-                try (ResultSet generatedKeys = ps.getGeneratedKeys()) {
+                try (ResultSet generatedKeys = preparedStatement.getGeneratedKeys()) {
                     if (generatedKeys.next()) {
                         subject.setId(generatedKeys.getInt(1)); // Cập nhật ID cho đối tượng Subject
                     }
@@ -70,9 +71,9 @@ public class SubjectDAO extends DBContext {
      */
     public Subject getSubjectById(int id) {
         Subject subject = null;
-        try (PreparedStatement ps = connection.prepareStatement(SELECT_SUBJECT_BY_ID_SQL)) {
-            ps.setInt(1, id);
-            try (ResultSet rs = ps.executeQuery()) {
+        try (Connection con = getConnection(); PreparedStatement preparedStatement = con.prepareStatement(SELECT_SUBJECT_BY_ID_SQL)) {
+            preparedStatement.setInt(1, id);
+            try (ResultSet rs = preparedStatement.executeQuery()) {
                 if (rs.next()) {
                     subject = extractSubjectFromResultSet(rs);
                 }
@@ -84,7 +85,8 @@ public class SubjectDAO extends DBContext {
     }
 
     /**
-     * Lấy danh sách tất cả môn học theo semesterId, có hỗ trợ tìm kiếm, lọc và phân trang.
+     * Lấy danh sách tất cả môn học theo semesterId, có hỗ trợ tìm kiếm, lọc và
+     * phân trang.
      *
      * @param search Từ khóa tìm kiếm (tên, mã). Có thể null hoặc rỗng.
      * @param semesterId ID của kỳ học để lọc. Có thể null.
@@ -131,7 +133,7 @@ public class SubjectDAO extends DBContext {
         params.add(offset);
         params.add(limit);
 
-        try (PreparedStatement preparedStatement = connection.prepareStatement(sqlBuilder.toString())) {
+        try (Connection con = getConnection(); PreparedStatement preparedStatement = con.prepareStatement(sqlBuilder.toString())) {
             for (int i = 0; i < params.size(); i++) {
                 preparedStatement.setObject(i + 1, params.get(i));
             }
@@ -149,22 +151,23 @@ public class SubjectDAO extends DBContext {
     /**
      * Cập nhật thông tin môn học.
      *
-     * @param subject Đối tượng Subject chứa thông tin cần cập nhật (ID để xác định bản ghi).
+     * @param subject Đối tượng Subject chứa thông tin cần cập nhật (ID để xác
+     * định bản ghi).
      * @return true nếu cập nhật thành công, ngược lại là false.
      */
     public boolean editSubject(Subject subject) {
         boolean rowUpdated = false;
-        try (PreparedStatement ps = connection.prepareStatement(UPDATE_SUBJECT_SQL)) {
-            ps.setInt(1, subject.getSemesterId());
-            ps.setString(2, subject.getName());
-            ps.setString(3, subject.getCode());
-            ps.setString(4, subject.getDescription());
-            ps.setInt(5, subject.getCredits());
-            ps.setString(6, subject.getTeacherName());
-            ps.setBoolean(7, subject.isActive());
-            ps.setString(8, subject.getPrerequisites());
-            ps.setInt(9, subject.getId());
-            rowUpdated = ps.executeUpdate() > 0;
+        try (Connection con = getConnection(); PreparedStatement preparedStatement = con.prepareStatement(UPDATE_SUBJECT_SQL)) {
+            preparedStatement.setInt(1, subject.getSemesterId());
+            preparedStatement.setString(2, subject.getName());
+            preparedStatement.setString(3, subject.getCode());
+            preparedStatement.setString(4, subject.getDescription());
+            preparedStatement.setInt(5, subject.getCredits());
+            preparedStatement.setString(6, subject.getTeacherName());
+            preparedStatement.setBoolean(7, subject.isActive());
+            preparedStatement.setString(8, subject.getPrerequisites());
+            preparedStatement.setInt(9, subject.getId());
+            rowUpdated = preparedStatement.executeUpdate() > 0;
         } catch (SQLException e) {
             printSQLException(e);
         }
@@ -179,16 +182,16 @@ public class SubjectDAO extends DBContext {
      */
     public boolean deleteSubject(int subjectId) {
         boolean rowDeleted = false;
-        try (PreparedStatement statement = connection.prepareStatement(DELETE_SUBJECT_SQL)) {
-            statement.setInt(1, subjectId);
-            rowDeleted = statement.executeUpdate() > 0;
+        try (Connection con = getConnection(); PreparedStatement preparedStatement = con.prepareStatement(DELETE_SUBJECT_SQL)) {
+            preparedStatement.setInt(1, subjectId);
+            rowDeleted = preparedStatement.executeUpdate() > 0;
         } catch (SQLException ex) {
             LOGGER.log(Level.SEVERE, "Lỗi khi xóa môn học với ID: " + subjectId, ex);
             printSQLException(ex);
         }
         return rowDeleted;
     }
-    
+
     /**
      * Đếm tổng số môn học theo điều kiện tìm kiếm.
      *
@@ -216,11 +219,11 @@ public class SubjectDAO extends DBContext {
             params.add("%" + teacherName + "%");
         }
 
-        try (PreparedStatement ps = connection.prepareStatement(sqlBuilder.toString())) {
+        try (Connection con = getConnection(); PreparedStatement preparedStatement = con.prepareStatement(sqlBuilder.toString())) {
             for (int i = 0; i < params.size(); i++) {
-                ps.setObject(i + 1, params.get(i));
+                preparedStatement.setObject(i + 1, params.get(i));
             }
-            try (ResultSet rs = ps.executeQuery()) {
+            try (ResultSet rs = preparedStatement.executeQuery()) {
                 if (rs.next()) {
                     return rs.getInt(1);
                 }
@@ -240,10 +243,10 @@ public class SubjectDAO extends DBContext {
      */
     public boolean isCodeExists(String code, int semesterId) {
         boolean exists = false;
-        try (PreparedStatement ps = connection.prepareStatement(CHECK_CODE_EXISTS_SQL)) {
-            ps.setString(1, code);
-            ps.setInt(2, semesterId);
-            try (ResultSet rs = ps.executeQuery()) {
+        try (Connection con = getConnection(); PreparedStatement preparedStatement = con.prepareStatement(CHECK_CODE_EXISTS_SQL)) {
+            preparedStatement.setString(1, code);
+            preparedStatement.setInt(2, semesterId);
+            try (ResultSet rs = preparedStatement.executeQuery()) {
                 if (rs.next()) {
                     exists = rs.getInt(1) > 0;
                 }
@@ -255,8 +258,9 @@ public class SubjectDAO extends DBContext {
     }
 
     /**
-     * Kiểm tra xem mã môn học đã tồn tại trong một kỳ học cụ thể chưa, loại trừ một ID môn học.
-     * Hữu ích khi cập nhật để kiểm tra trùng lặp không phải với chính bản ghi đó.
+     * Kiểm tra xem mã môn học đã tồn tại trong một kỳ học cụ thể chưa, loại trừ
+     * một ID môn học. Hữu ích khi cập nhật để kiểm tra trùng lặp không phải với
+     * chính bản ghi đó.
      *
      * @param code Mã môn học cần kiểm tra.
      * @param semesterId ID của kỳ học.
@@ -265,11 +269,11 @@ public class SubjectDAO extends DBContext {
      */
     public boolean isCodeExistsExceptId(String code, int semesterId, int id) {
         boolean exists = false;
-        try (PreparedStatement ps = connection.prepareStatement(CHECK_CODE_EXISTS_EXCEPT_ID_SQL)) {
-            ps.setString(1, code);
-            ps.setInt(2, semesterId);
-            ps.setInt(3, id);
-            try (ResultSet rs = ps.executeQuery()) {
+        try (Connection con = getConnection(); PreparedStatement preparedStatement = con.prepareStatement(CHECK_CODE_EXISTS_EXCEPT_ID_SQL)) {
+            preparedStatement.setString(1, code);
+            preparedStatement.setInt(2, semesterId);
+            preparedStatement.setInt(3, id);
+            try (ResultSet rs = preparedStatement.executeQuery()) {
                 if (rs.next()) {
                     exists = rs.getInt(1) > 0;
                 }

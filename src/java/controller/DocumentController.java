@@ -23,10 +23,12 @@ import java.util.UUID;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.sql.SQLException;
+import com.google.gson.Gson; // Import Gson
 
 // Cloudinary Imports
 import com.cloudinary.Cloudinary;
 import com.cloudinary.utils.ObjectUtils;
+import java.util.ArrayList;
 import utils.ConfigManager;
 
 @MultipartConfig(
@@ -67,6 +69,15 @@ public class DocumentController extends HttpServlet {
         HttpSession session = request.getSession(false);
         User user = (session != null) ? (User) session.getAttribute("loggedInUser") : null;
 
+         // --- Debug Logging ---
+        if (user != null) {
+            LOGGER.log(Level.INFO, "User logged in with ID: {0}", user.getId());
+        } else {
+            LOGGER.log(Level.INFO, "No user logged in. Redirecting to login page.");
+        }
+        // --- End Debug Logging ---
+
+        
         if (user == null) {
             response.sendRedirect(request.getContextPath() + "/auth/login");
             return;
@@ -88,6 +99,9 @@ public class DocumentController extends HttpServlet {
                     break;
                 case "/delete": // Xử lý xóa qua GET (ít được khuyến nghị hơn POST cho xóa)
                     deleteDocument(request, response, user.getId());
+                    break;
+                case "/getLessonsBySubject": // New action for AJAX request
+                    getLessonsBySubject(request, response);
                     break;
                 default:
                     response.sendError(HttpServletResponse.SC_NOT_FOUND, "Action không hợp lệ.");
@@ -121,11 +135,6 @@ public class DocumentController extends HttpServlet {
                 case "/edit": // Dùng POST cho việc cập nhật
                     editDocument(request, response, user.getId());
                     break;
-                // Đối với delete, bạn có thể chọn POST nếu muốn an toàn hơn, hoặc vẫn dùng GET như hiện tại nếu URL delete có confirmation.
-                // Nếu dùng POST cho delete:
-                // case "/delete":
-                //     deleteDocument(request, response, user.getId());
-                //     break;
                 default:
                     response.sendError(HttpServletResponse.SC_NOT_FOUND, "Action không hợp lệ.");
                     break;
@@ -137,7 +146,7 @@ public class DocumentController extends HttpServlet {
     }
 
     /**
-     * Hiển thị danh sách các tài liệu của người dùng hiện tại.
+     * Hiển thị danh sách các tài liệu của người dùng hiện tại, có thể lọc theo môn học và buổi học.
      *
      * @param request HttpServletRequest
      * @param response HttpServletResponse
@@ -148,27 +157,83 @@ public class DocumentController extends HttpServlet {
      */
     private void displayDocuments(HttpServletRequest request, HttpServletResponse response, int userId)
             throws SQLException, ServletException, IOException {
-        List<Document> listDocuments = documentDao.getAllDocumentsByUserId(userId); // Sử dụng getAllDocumentsByUserId
+        
+        Integer filterSubjectId = null;
+        Integer filterLessonId = null;
 
-        // Lấy danh sách Subjects và Lessons để hiển thị tên thay vì chỉ ID (nếu cần)
+        String subjectIdParam = request.getParameter("subjectId");
+        String lessonIdParam = request.getParameter("lessonId");
+
+        if (subjectIdParam != null && !subjectIdParam.trim().isEmpty()) {
+            try {
+                filterSubjectId = Integer.parseInt(subjectIdParam);
+            } catch (NumberFormatException e) {
+                LOGGER.log(Level.WARNING, "Định dạng ID môn học không hợp lệ cho bộ lọc: {0}", subjectIdParam);
+                request.setAttribute("errorMessage", "ID môn học không hợp lệ.");
+            }
+        }
+
+        if (lessonIdParam != null && !lessonIdParam.trim().isEmpty()) {
+            try {
+                filterLessonId = Integer.parseInt(lessonIdParam);
+            } catch (NumberFormatException e) {
+                LOGGER.log(Level.WARNING, "Định dạng ID buổi học không hợp lệ cho bộ lọc: {0}", lessonIdParam);
+                request.setAttribute("errorMessage", "ID buổi học không hợp lệ.");
+            }
+        }
+        
+        // Lấy danh sách tài liệu đã lọc
+        List<Document> listDocuments = documentDao.getFilteredDocuments(userId, filterSubjectId, filterLessonId);
+        
+//         // --- Debug Logging ---
+//        LOGGER.log(Level.INFO, "Fetching documents for userId: {0}", userId);
+//        LOGGER.log(Level.INFO, "Filter Subject ID: {0}, Filter Lesson ID: {1}", new Object[]{filterSubjectId, filterLessonId});
+//        LOGGER.log(Level.INFO, "Number of documents returned by DAO: {0}", listDocuments.size());
+//        // --- End Debug Logging ---
+
+
+        // Lấy danh sách Subjects để hiển thị trong bộ lọc và bảng
+        List<Subject> allSubjects = subjectDao.getAllSubjects(null, null, null, 0, Integer.MAX_VALUE, null); // Giả định này nếu không có user filter cho subjects
         Map<Integer, String> subjectNames = new HashMap<>();
-        Map<Integer, String> lessonNames = new HashMap<>();
-
-        // Lấy tất cả subjects của người dùng (giả định SubjectDAO có method này, hoặc cần thêm filter user)
-        // Hiện tại SubjectDAO.getAllSubjects() chưa có userId. Cần điều chỉnh nếu muốn lọc theo user.
-        // Tạm thời lấy tất cả subjects (nếu có thể) hoặc chỉ những subjects liên quan đến các tài liệu này.
-        // Để đơn giản, giả định getAllSubjects() lấy tất cả hoặc bạn đã có cơ chế khác.
-        List<Subject> allSubjects = subjectDao.getAllSubjects(null, null, null, 0, Integer.MAX_VALUE, null);
         for (Subject s : allSubjects) {
             subjectNames.put(s.getId(), s.getName());
         }
 
-        // Tương tự cho lessons, nếu cần hiển thị tên lesson.
-        // Logic phức tạp hơn vì lessons thuộc subjects.
-        // Có thể lấy lessons chỉ cho các subject mà tài liệu có liên kết.
+        // Lấy danh sách Lessons nếu có subjectId được chọn, để hiển thị trong bộ lọc và bảng
+        List<Lesson> lessonsOfSelectedSubject = new ArrayList<>();
+        Map<Integer, String> lessonNames = new HashMap<>();
+        if (filterSubjectId != null) {
+             lessonsOfSelectedSubject = lessonDao.getAllLessonsBySubjectId(filterSubjectId, null, null, 1, Integer.MAX_VALUE);
+             for(Lesson l : lessonsOfSelectedSubject) {
+                 lessonNames.put(l.getId(), l.getName());
+             }
+        } else {
+            // Nếu không có subjectId nào được chọn, bạn có thể chọn hiển thị tất cả lessons hoặc không hiển thị gì.
+            // Để đơn giản, sẽ không populate lessonNames nếu không có subject được chọn.
+            // Tuy nhiên, nếu một tài liệu có lessonId nhưng không có subjectId, cần đảm bảo tên lesson vẫn được hiển thị.
+            // Cần một cách để lấy tên lesson từ lessonId mà không cần subjectId. Hiện tại LessonDAO chưa có getLessonById(int lessonId).
+            // UPDATE: lessonDao.getLessonById đã có.
+            for (Document doc : listDocuments) {
+                if (doc.getLessonId() != null && !lessonNames.containsKey(doc.getLessonId())) {
+                    Lesson lesson = lessonDao.getLessonById(doc.getLessonId());
+                    if (lesson != null) {
+                        lessonNames.put(lesson.getId(), lesson.getName());
+                    }
+                }
+            }
+        }
+
+
         request.setAttribute("listDocuments", listDocuments);
-        request.setAttribute("subjectNames", subjectNames);
-        // request.setAttribute("lessonNames", lessonNames); // Nếu có
+        request.setAttribute("subjects", allSubjects); // Dùng cho dropdown bộ lọc
+        request.setAttribute("subjectNames", subjectNames); // Dùng để hiển thị tên trong bảng
+        request.setAttribute("lessonsOfSelectedSubject", lessonsOfSelectedSubject); // Dùng cho dropdown bộ lọc lessons
+        request.setAttribute("lessonNames", lessonNames); // Dùng để hiển thị tên trong bảng
+
+        // Giữ lại các giá trị đã chọn để hiển thị trên form sau khi submit
+        request.setAttribute("selectedSubjectId", filterSubjectId);
+        request.setAttribute("selectedLessonId", filterLessonId);
+
 
         request.getRequestDispatcher("/components/document/document-dashboard.jsp").forward(request, response);
     }
@@ -186,7 +251,8 @@ public class DocumentController extends HttpServlet {
     private void displayAddForm(HttpServletRequest request, HttpServletResponse response, int userId)
             throws SQLException, ServletException, IOException {
         // Lấy danh sách các môn học để điền vào dropdown (cần điều chỉnh getAllSubjects để lọc theo userId nếu có)
-        List<Subject> subjects = subjectDao.getAllSubjects(null, null, null, 0, Integer.MAX_VALUE, null); // Giả định
+        // Hiện tại SubjectDAO.getAllSubjects() không nhận userId, cần giả định hoặc điều chỉnh DAO nếu cần.
+        List<Subject> subjects = subjectDao.getAllSubjects(null, null, null, 0, Integer.MAX_VALUE, null); 
         request.setAttribute("subjects", subjects);
         request.getRequestDispatcher("/components/document/document-add.jsp").forward(request, response);
     }
@@ -203,25 +269,31 @@ public class DocumentController extends HttpServlet {
      */
     private void displayEditForm(HttpServletRequest request, HttpServletResponse response, int userId)
             throws SQLException, ServletException, IOException {
-        int id = Integer.parseInt(request.getParameter("id"));
-        Document existingDocument = documentDao.getDocumentById(id, userId); // Sử dụng getDocumentById
+        try {
+            int id = Integer.parseInt(request.getParameter("id"));
+            Document existingDocument = documentDao.getDocumentById(id, userId); // Sử dụng getDocumentById
 
-        if (existingDocument != null) {
-            request.setAttribute("document", existingDocument);
-            // Lấy danh sách các môn học để điền vào dropdown
-            List<Subject> subjects = subjectDao.getAllSubjects(null, null, null, 0, Integer.MAX_VALUE, null);
-            request.setAttribute("subjects", subjects);
+            if (existingDocument != null) {
+                request.setAttribute("document", existingDocument);
+                // Lấy danh sách các môn học để điền vào dropdown
+                List<Subject> subjects = subjectDao.getAllSubjects(null, null, null, 0, Integer.MAX_VALUE, null);
+                request.setAttribute("subjects", subjects);
 
-            // Nếu tài liệu đã có subjectId, lấy danh sách lessons của subject đó
-            if (existingDocument.getSubjectId() != null) {
-                List<Lesson> lessons = lessonDao.getAllLessonsBySubjectId(existingDocument.getSubjectId(), null, null, 1, Integer.MAX_VALUE); // getAllLessonsBySubjectId
-                request.setAttribute("lessonsOfSelectedSubject", lessons);
+                // Nếu tài liệu đã có subjectId, lấy danh sách lessons của subject đó
+                if (existingDocument.getSubjectId() != null) {
+                    List<Lesson> lessons = lessonDao.getAllLessonsBySubjectId(existingDocument.getSubjectId(), null, null, 1, Integer.MAX_VALUE); // getAllLessonsBySubjectId
+                    request.setAttribute("lessonsOfSelectedSubject", lessons);
+                }
+
+                request.getRequestDispatcher("/components/document/document-edit.jsp").forward(request, response);
+            } else {
+                request.setAttribute("errorMessage", "Tài liệu không tồn tại hoặc bạn không có quyền chỉnh sửa.");
+                displayDocuments(request, response, userId); // Trở lại danh sách
             }
-
-            request.getRequestDispatcher("/components/document/document-edit.jsp").forward(request, response);
-        } else {
-            request.setAttribute("errorMessage", "Tài liệu không tồn tại hoặc bạn không có quyền chỉnh sửa.");
-            displayDocuments(request, response, userId); // Trở lại danh sách
+        } catch (NumberFormatException e) {
+            LOGGER.log(Level.WARNING, "Định dạng ID tài liệu không hợp lệ khi hiển thị form chỉnh sửa: {0}", request.getParameter("id"));
+            request.setAttribute("errorMessage", "ID tài liệu không hợp lệ.");
+            displayDocuments(request, response, userId);
         }
     }
 
@@ -275,6 +347,7 @@ public class DocumentController extends HttpServlet {
                 return;
             }
 
+            // Xử lý upload file lên Cloudinary
             String storedFileName = UUID.randomUUID().toString() + "_" + fileName;
             String filePath = null;
             String fileType = filePart.getContentType();
@@ -325,7 +398,7 @@ public class DocumentController extends HttpServlet {
             throws SQLException, ServletException, IOException {
         try {
             int id = Integer.parseInt(request.getParameter("id"));
-            String fileName = request.getParameter("fileName");
+            String fileName = request.getParameter("fileName"); // fileName không thay đổi khi edit
             String description = request.getParameter("description");
 
             Integer subjectId = null;
@@ -364,9 +437,55 @@ public class DocumentController extends HttpServlet {
             Document existingDocument = documentDao.getDocumentById(id, userId);
 
             if (existingDocument != null) {
+                // Chỉ cập nhật các trường có thể thay đổi qua form edit
+                existingDocument.setFileName(fileName); // Cập nhật lại fileName từ request
                 existingDocument.setDescription(description);
                 existingDocument.setSubjectId(subjectId);
                 existingDocument.setLessonId(lessonId);
+
+                // Nếu có file mới được upload (kiểm tra part "file" có dữ liệu không)
+                Part newFilePart = request.getPart("file");
+                if (newFilePart != null && newFilePart.getSize() > 0) {
+                    // Xóa file cũ trên Cloudinary nếu có
+                    if (existingDocument.getStoredFileName() != null && !existingDocument.getStoredFileName().isEmpty()) {
+                        try {
+                            cloudinary.uploader().destroy(existingDocument.getStoredFileName(), ObjectUtils.emptyMap());
+                            LOGGER.log(Level.INFO, "Đã xóa file cũ {0} từ Cloudinary để cập nhật.", existingDocument.getStoredFileName());
+                        } catch (Exception cloudinaryEx) {
+                            LOGGER.log(Level.WARNING, "Không thể xóa file cũ {0} từ Cloudinary: {1}",
+                                    new Object[]{existingDocument.getStoredFileName(), cloudinaryEx.getMessage()});
+                            // Không return ở đây, vẫn tiếp tục cập nhật DB nếu chỉ lỗi xóa file Cloudinary cũ
+                        }
+                    }
+                    
+                    // Upload file mới
+                    String newFileName = getFileName(newFilePart);
+                    String newStoredFileName = UUID.randomUUID().toString() + "_" + newFileName;
+                    String newFilePath = null;
+                    String newFileType = newFilePart.getContentType();
+                    long newFileSize = newFilePart.getSize();
+
+                    try (InputStream fileContent = newFilePart.getInputStream()) {
+                        Map uploadResult = cloudinary.uploader().upload(fileContent.readAllBytes(), ObjectUtils.asMap(
+                                "public_id", newStoredFileName
+                        ));
+                        newFilePath = (String) uploadResult.get("secure_url");
+                        LOGGER.log(Level.INFO, "Đã tải file mới lên Cloudinary: {0}", newFilePath);
+                        
+                        // Cập nhật thông tin file mới vào đối tượng document
+                        existingDocument.setFileName(newFileName);
+                        existingDocument.setStoredFileName(newStoredFileName);
+                        existingDocument.setFilePath(newFilePath);
+                        existingDocument.setFileType(newFileType);
+                        existingDocument.setFileSize(newFileSize);
+
+                    } catch (IOException e) {
+                        LOGGER.log(Level.SEVERE, "Không thể tải file mới lên Cloudinary trong khi cập nhật.", e);
+                        request.setAttribute("errorMessage", "Tải file mới lên Cloudinary thất bại: " + e.getMessage());
+                        displayEditForm(request, response, userId);
+                        return;
+                    }
+                }
 
                 boolean success = documentDao.editDocument(existingDocument); // Sử dụng editDocument
 
@@ -419,7 +538,7 @@ public class DocumentController extends HttpServlet {
                     request.setAttribute("associatedLesson", lesson);
                 }
                 request.setAttribute("document", document);
-                request.getRequestDispatcher("/components/documents/document-detail.jsp").forward(request, response);
+                request.getRequestDispatcher("/components/document/document-detail.jsp").forward(request, response);
             } else {
                 request.setAttribute("errorMessage", "Tài liệu không tồn tại hoặc bạn không có quyền xem.");
                 displayDocuments(request, response, userId);
@@ -479,6 +598,38 @@ public class DocumentController extends HttpServlet {
             request.setAttribute("errorMessage", "ID tài liệu không hợp lệ.");
             displayDocuments(request, response, userId);
         }
+    }
+
+    /**
+     * Phương thức xử lý AJAX để lấy danh sách các buổi học (Lessons) dựa trên SubjectId được chọn.
+     * Trả về JSON.
+     *
+     * @param request HttpServletRequest
+     * @param response HttpServletResponse
+     * @throws ServletException
+     * @throws IOException
+     */
+    private void getLessonsBySubject(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
+        Gson gson = new Gson(); // Khởi tạo Gson
+
+        try {
+            String subjectIdStr = request.getParameter("subjectId");
+            if (subjectIdStr == null || subjectIdStr.trim().isEmpty()) {
+                response.getWriter().write(gson.toJson(new ArrayList<>())); // Trả về mảng rỗng nếu không có subjectId
+                return;
+            }
+
+            int subjectId = Integer.parseInt(subjectIdStr);
+            // Lấy tất cả lessons cho subjectId đó. Có thể thêm tham số userId nếu LessonDAO hỗ trợ
+            List<Lesson> lessons = lessonDao.getAllLessonsBySubjectId(subjectId, null, null, 1, Integer.MAX_VALUE);
+            response.getWriter().write(gson.toJson(lessons));
+        }catch (NumberFormatException e) {
+            LOGGER.log(Level.WARNING, "Định dạng ID môn học không hợp lệ cho AJAX: {0}", request.getParameter("subjectId"));
+            response.getWriter().write(gson.toJson(new ArrayList<>())); // Trả về mảng rỗng hoặc lỗi
+        }        
     }
 
     /**
