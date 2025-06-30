@@ -20,6 +20,18 @@
         <servlet-name>SubjectsController</servlet-name>
         <servlet-class>controller.SubjectsController</servlet-class>
     </servlet>
+    <servlet>
+        <servlet-name>LessonsController</servlet-name>
+        <servlet-class>controller.LessonsController</servlet-class>
+    </servlet>
+    <servlet>
+        <servlet-name>DocumentController</servlet-name>
+        <servlet-class>controller.DocumentController</servlet-class>
+    </servlet>
+    <servlet>
+        <servlet-name>CalendarController</servlet-name>
+        <servlet-class>controller.CalendarController</servlet-class>
+    </servlet>
     <servlet-mapping>
         <servlet-name>TestDB</servlet-name>
         <url-pattern>/TestDB</url-pattern>
@@ -40,6 +52,18 @@
         <servlet-name>SubjectsController</servlet-name>
         <url-pattern>/subjects/*</url-pattern>
     </servlet-mapping>
+    <servlet-mapping>
+        <servlet-name>LessonsController</servlet-name>
+        <url-pattern>/lessons/*</url-pattern>
+    </servlet-mapping>
+    <servlet-mapping>
+        <servlet-name>DocumentController</servlet-name>
+        <url-pattern>/documents/*</url-pattern>
+    </servlet-mapping>
+    <servlet-mapping>
+        <servlet-name>CalendarController</servlet-name>
+        <url-pattern>/calendar</url-pattern>
+    </servlet-mapping>
     <filter>
         <filter-name>AuthFilter</filter-name>
         <filter-class>filter.AuthFilter</filter-class>
@@ -52,5 +76,16 @@
         <filter-name>AuthFilter</filter-name>
         <url-pattern>/semesters/*</url-pattern>
     </filter-mapping>
-    
+    <filter-mapping>
+        <filter-name>AuthFilter</filter-name>
+        <url-pattern>/lessons/*</url-pattern>
+    </filter-mapping>
+    <filter-mapping>
+        <filter-name>AuthFilter</filter-name>
+        <url-pattern>/documents/*</url-pattern>
+    </filter-mapping>
+    <filter-mapping>
+        <filter-name>AuthFilter</filter-name>
+        <url-pattern>/calendar/*</url-pattern>
+    </filter-mapping>
 </web-app>

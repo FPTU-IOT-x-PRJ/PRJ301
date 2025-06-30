@@ -3,7 +3,7 @@
 
 <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm">
     <div class="container">
-        <%-- Logo đã sát trái theo mặc định trong container --%>
+        <%-- Logo: Giữ icon cho EduPlan --%>
         <a class="navbar-brand fw-bold text-dark" href="${pageContext.request.contextPath}/">
             <i class="fas fa-graduation-cap me-2"></i>EduPlan
         </a>
@@ -13,28 +13,41 @@
         </button>
 
         <div class="collapse navbar-collapse" id="navbarNav">
-            <%-- me-auto đẩy các mục này sang trái (còn lại sẽ sang phải) --%>
+            <%-- Các mục bên trái (me-auto) --%>
             <ul class="navbar-nav me-auto">
                 <li class="nav-item">
                     <a class="nav-link" href="${pageContext.request.contextPath}/user/dashboard">
                         <i class="fas fa-home me-1"></i>Dashboard
                     </a>
                 </li>
+                <%-- Gạch dọc dùng Bootstrap VR --%>
+                <div class="vr mx-2"></div>
 
                 <li class="nav-item">
                     <a class="nav-link" href="${pageContext.request.contextPath}/semesters">
                         <i class="fas fa-calendar-alt me-1"></i>Kỳ học
                     </a>
                 </li>
+                <%-- Gạch dọc dùng Bootstrap VR --%>
+                <div class="vr mx-2"></div>
 
                 <li class="nav-item">
                     <a class="nav-link" href="${pageContext.request.contextPath}/subjects">
                         <i class="fas fa-book me-1"></i>Môn học
                     </a>
                 </li>
+                <%-- Gạch dọc dùng Bootstrap VR --%>
+                <div class="vr mx-2"></div>
+                
+                <%-- Thêm ô "Lịch học" với icon mới --%>
+                <li class="nav-item">
+                    <a class="nav-link" href="${pageContext.request.contextPath}/calendar">
+                        <i class="fas fa-chalkboard-teacher me-1"></i>Lịch học
+                    </a>
+                </li>
             </ul>
 
-            <%-- ms-auto đẩy các mục này sang phải --%>
+            <%-- Các mục bên phải (ms-auto) --%>
             <ul class="navbar-nav ms-auto">
                 <li class="nav-item dropdown">
                     <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">

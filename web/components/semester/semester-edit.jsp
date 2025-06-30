@@ -24,6 +24,10 @@
             padding-top: 20px;
             padding-bottom: 20px;
         }
+        /* Style cho invalid feedback khi dùng JSTL errors map */
+        .is-invalid + .invalid-feedback {
+            display: block;
+        }
     </style>
 </head>
 <body>
@@ -37,7 +41,7 @@
                         <h4 class="mb-0 text-start"><i class="fas fa-edit me-2"></i>Chỉnh sửa kỳ học</h4>
                     </div>
                     <div class="card-body p-4">
-                        <%-- Hiển thị thông báo lỗi từ backend nếu có --%>
+                        <%-- Hiển thị thông báo lỗi chung từ backend nếu có --%>
                         <c:if test="${not empty errorMessage}">
                             <div class="alert alert-danger alert-dismissible fade show" role="alert">
                                 <i class="fas fa-exclamation-triangle me-2"></i>${errorMessage}
@@ -49,50 +53,78 @@
                         <c:if test="${empty semester}">
                             <div class="alert alert-warning text-center" role="alert">
                                 <i class="fas fa-exclamation-circle me-2"></i>Không tìm thấy thông tin kỳ học để chỉnh sửa.
-                                <p class="mt-2"><a href="${pageContext.request.contextPath}/semesters/dashboard" class="alert-link">Quay lại danh sách kỳ học</a></p>
+                                <p class="mt-2"><a href="${pageContext.request.contextPath}/semesters" class="alert-link">Quay lại danh sách kỳ học</a></p>
                             </div>
                         </c:if>
                         
                         <%-- Hiển thị form chỉ khi có semester object --%>
                         <c:if test="${not empty semester}">
-                            <form id="editSemesterForm" action="${pageContext.request.contextPath}/semesters/update" method="POST" class="needs-validation" novalidate>
+                            <form id="editSemesterForm" action="${pageContext.request.contextPath}/semesters/edit" method="POST" class="needs-validation" novalidate>
                                 <input type="hidden" id="id" name="id" value="${semester.id}">
                                 <div class="row g-3">
                                     <div class="col-md-12">
                                         <label for="name" class="form-label">Tên kỳ học <span class="text-danger">*</span></label>
-                                        <input type="text" class="form-control" id="name" name="name" value="${semester.name}" required maxlength="100">
-                                        <div class="invalid-feedback">Vui lòng nhập tên kỳ học không quá 100 ký tự.</div>
+                                        <input type="text" class="form-control ${not empty errors.name ? 'is-invalid' : ''}" id="name" name="name" value="${semester.name}" required maxlength="100">
+                                        <div class="invalid-feedback">
+                                            <c:choose>
+                                                <c:when test="${not empty errors.name}">${errors.name}</c:when>
+                                                <c:otherwise>Vui lòng nhập tên kỳ học không quá 100 ký tự.</c:otherwise>
+                                            </c:choose>
+                                        </div>
                                     </div>
                                     <div class="col-md-6">
                                         <label for="startDate" class="form-label">Ngày bắt đầu <span class="text-danger">*</span></label>
-                                        <input type="date" class="form-control" id="startDate" name="startDate" value="${semester.startDate}" required>
-                                        <div class="invalid-feedback">Vui lòng chọn ngày bắt đầu.</div>
+                                        <%-- Convert java.sql.Date sang định dạng yyyy-MM-dd cho input type="date" --%>
+                                        <input type="date" class="form-control ${not empty errors.startDate || not empty errors.date ? 'is-invalid' : ''}" id="startDate" name="startDate" value="${semester.startDate}" required>
+                                        <div class="invalid-feedback">
+                                            <c:choose>
+                                                <c:when test="${not empty errors.startDate}">${errors.startDate}</c:when>
+                                                <c:when test="${not empty errors.date}">${errors.date}</c:when>
+                                                <c:otherwise>Vui lòng chọn ngày bắt đầu.</c:otherwise>
+                                            </c:choose>
+                                        </div>
                                     </div>
                                     <div class="col-md-6">
                                         <label for="endDate" class="form-label">Ngày kết thúc <span class="text-danger">*</span></label>
-                                        <input type="date" class="form-control" id="endDate" name="endDate" value="${semester.endDate}" required>
-                                        <div class="invalid-feedback" id="endDateError">Vui lòng chọn ngày kết thúc.</div>
+                                        <input type="date" class="form-control ${not empty errors.endDate || not empty errors.date ? 'is-invalid' : ''}" id="endDate" name="endDate" value="${semester.endDate}" required>
+                                        <div class="invalid-feedback" id="endDateError">
+                                            <c:choose>
+                                                <c:when test="${not empty errors.endDate}">${errors.endDate}</c:when>
+                                                <c:when test="${not empty errors.date}">${errors.date}</c:when>
+                                                <c:otherwise>Vui lòng chọn ngày kết thúc.</c:otherwise>
+                                            </c:choose>
+                                        </div>
                                     </div>
                                     <div class="col-md-12">
                                         <label for="status" class="form-label">Trạng thái <span class="text-danger">*</span></label>
-                                        <select class="form-select" id="status" name="status" required>
+                                        <select class="form-select ${not empty errors.status ? 'is-invalid' : ''}" id="status" name="status" required>
                                             <option value="">Chọn trạng thái</option>
                                             <option value="Active" <c:if test="${semester.status eq 'Active'}">selected</c:if>>Đang diễn ra</option>
                                             <option value="Inactive" <c:if test="${semester.status eq 'Inactive'}">selected</c:if>>Bảo lưu</option>
                                             <option value="Completed" <c:if test="${semester.status eq 'Completed'}">selected</c:if>>Hoàn thành</option>
                                         </select>
-                                        <div class="invalid-feedback">Vui lòng chọn trạng thái kỳ học.</div>
+                                        <div class="invalid-feedback">
+                                            <c:choose>
+                                                <c:when test="${not empty errors.status}">${errors.status}</c:when>
+                                                <c:otherwise>Vui lòng chọn trạng thái kỳ học.</c:otherwise>
+                                            </c:choose>
+                                        </div>
                                     </div>
                                     <div class="col-md-12">
                                         <label for="description" class="form-label">Mô tả</label>
-                                        <textarea class="form-control" id="description" name="description" rows="6" placeholder="Nhập mô tả cho kỳ học..." maxlength="300">${semester.description}</textarea>
+                                        <textarea class="form-control ${not empty errors.description ? 'is-invalid' : ''}" id="description" name="description" rows="6" placeholder="Nhập mô tả cho kỳ học..." maxlength="300">${semester.description}</textarea>
                                         <div class="form-text">Mô tả chi tiết về kỳ học (không bắt buộc, tối đa 300 ký tự).</div>
-                                        <div class="invalid-feedback" id="descriptionError">Mô tả không được vượt quá 300 ký tự.</div>
+                                        <div class="invalid-feedback" id="descriptionError">
+                                            <c:choose>
+                                                <c:when test="${not empty errors.description}">${errors.description}</c:when>
+                                                <c:otherwise>Mô tả không được vượt quá 300 ký tự.</c:otherwise>
+                                            </c:choose>
+                                        </div>
                                     </div>
                                 </div>
                                 <hr class="my-4">
                                 <div class="d-flex justify-content-end">
-                                    <a href="${pageContext.request.contextPath}/semesters/dashboard" class="btn btn-secondary me-2">
+                                    <a href="${pageContext.request.contextPath}/semesters" class="btn btn-secondary me-2">
                                         <i class="fas fa-times me-2"></i>Hủy
                                     </a>
                                     <button type="submit" class="btn btn-primary">
@@ -115,57 +147,52 @@
             var form = document.getElementById('editSemesterForm');
 
             function validateDateRange() {
-                var startDate = document.getElementById('startDate');
-                var endDate = document.getElementById('endDate');
-                var endDateError = document.getElementById('endDateError');
+                var startDateInput = document.getElementById('startDate');
+                var endDateInput = document.getElementById('endDate');
+                var endDateErrorDiv = document.getElementById('endDateError');
 
-                startDate.setCustomValidity('');
-                endDate.setCustomValidity('');
+                startDateInput.setCustomValidity('');
+                endDateInput.setCustomValidity('');
 
-                if (startDate.value && endDate.value) {
-                    var startDateValue = new Date(startDate.value);
-                    var endDateValue = new Date(endDate.value);
+                if (startDateInput.value && endDateInput.value) {
+                    var startDate = new Date(startDateInput.value);
+                    var endDate = new Date(endDateInput.value);
 
-                    if (endDateValue <= startDateValue) {
-                        endDate.setCustomValidity('Ngày kết thúc phải sau ngày bắt đầu.');
-                        if (endDateError) {
-                            endDateError.textContent = 'Ngày kết thúc phải sau ngày bắt đầu.';
-                        }
+                    if (endDate <= startDate) {
+                        endDateInput.setCustomValidity('Ngày kết thúc phải sau ngày bắt đầu.');
+                        endDateErrorDiv.textContent = 'Ngày kết thúc phải sau ngày bắt đầu.';
                         return false;
                     } else {
-                        if (endDateError) {
-                            endDateError.textContent = 'Vui lòng chọn ngày kết thúc.';
-                        }
+                        // Clear custom validity if valid, reset default message
+                        endDateErrorDiv.textContent = 'Vui lòng chọn ngày kết thúc.'; 
                     }
                 }
-
                 return true;
             }
 
             function validateDescriptionLength() {
-                var description = document.getElementById('description');
-                var descriptionError = document.getElementById('descriptionError');
+                var descriptionInput = document.getElementById('description');
+                var descriptionErrorDiv = document.getElementById('descriptionError');
 
-                if (description.value.length > 300) {
-                    description.setCustomValidity('Mô tả không được vượt quá 300 ký tự.');
-                    if (descriptionError) {
-                        descriptionError.textContent = 'Mô tả không được vượt quá 300 ký tự.';
-                    }
+                if (descriptionInput.value.length > 300) {
+                    descriptionInput.setCustomValidity('Mô tả không được vượt quá 300 ký tự.');
+                    descriptionErrorDiv.textContent = 'Mô tả không được vượt quá 300 ký tự.';
                     return false;
                 } else {
-                    description.setCustomValidity('');
+                    descriptionInput.setCustomValidity('');
+                    descriptionErrorDiv.textContent = 'Mô tả không được vượt quá 300 ký tự.'; // Reset default message
                     return true;
                 }
             }
 
             function validateNameLength() {
-                var name = document.getElementById('name');
+                var nameInput = document.getElementById('name');
 
-                if (name.value.length > 100) {
-                    name.setCustomValidity('Tên kỳ học không được vượt quá 100 ký tự.');
+                if (nameInput.value.length > 100) {
+                    nameInput.setCustomValidity('Tên kỳ học không được vượt quá 100 ký tự.');
                     return false;
                 } else {
-                    name.setCustomValidity('');
+                    nameInput.setCustomValidity('');
                     return true;
                 }
             }
@@ -173,17 +200,24 @@
             // Validation khi submit form
             if (form) {
                 form.addEventListener('submit', function (event) {
-                    validateDateRange();
-                    validateDescriptionLength();
-                    validateNameLength();
+                    // Chạy tất cả các validations để hiển thị feedback đầy đủ
+                    var isDateValid = validateDateRange();
+                    var isDescriptionValid = validateDescriptionLength();
+                    var isNameValid = validateNameLength();
 
-                    if (!form.checkValidity()) {
+                    if (!form.checkValidity() || !isDateValid || !isDescriptionValid || !isNameValid) {
                         event.preventDefault();
                         event.stopPropagation();
                     }
 
                     form.classList.add('was-validated');
                 }, false);
+
+                // Add event listeners for real-time validation feedback
+                document.getElementById('startDate').addEventListener('change', validateDateRange);
+                document.getElementById('endDate').addEventListener('change', validateDateRange);
+                document.getElementById('description').addEventListener('input', validateDescriptionLength);
+                document.getElementById('name').addEventListener('input', validateNameLength);
             }
         })();
     </script>
