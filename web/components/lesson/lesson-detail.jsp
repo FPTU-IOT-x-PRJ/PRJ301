@@ -37,9 +37,19 @@
                             <div class="text-center mb-4">
                                 <i class="fas fa-calendar-check fa-4x text-muted mb-3"></i> <%-- Icon cho buổi học --%>
                                 <h4><c:out value="${lesson.name}"/></h4>
-                                <p class="text-muted">Thuộc môn học ID: <c:out value="${lesson.subjectId}"/></p>
+                                <%-- Cập nhật dòng này để thêm liên kết --%>
+                                <p class="text-muted">Thuộc môn học: 
+                                    <c:if test="${not empty subject}">
+                                        <a href="${pageContext.request.contextPath}/lessons?subjectId=${subject.id}" class="text-decoration-none">
+                                            <c:out value="${subject.name}"/>
+                                        </a>
+                                    </c:if>
+                                    <c:if test="${empty subject}">
+                                        Không xác định
+                                    </c:if>
+                                </p>
                             </div>
-
+                                
                             <div class="row g-3">
                                 <div class="col-md-12">
                                     <label class="form-label fw-bold">Tên buổi học:</label>
@@ -54,20 +64,20 @@
                                 <div class="col-md-6">
                                     <label class="form-label fw-bold">Trạng thái:</label>
                                     <p class="form-control-plaintext">
-                                        <c:choose>
-                                            <c:when test="${lesson.status == 'Completed'}">
-                                                <span class="badge bg-success"><i class="fas fa-check-circle me-1"></i>Đã hoàn thành</span>
-                                            </c:when>
-                                            <c:when test="${lesson.status == 'Planned'}">
-                                                <span class="badge bg-info"><i class="fas fa-clock me-1"></i>Đã lên kế hoạch</span>
-                                            </c:when>
-                                            <c:when test="${lesson.status == 'Cancelled'}">
-                                                <span class="badge bg-danger"><i class="fas fa-times-circle me-1"></i>Đã hủy</span>
-                                            </c:when>
-                                            <c:otherwise>
-                                                <span class="badge bg-secondary"><i class="fas fa-question-circle me-1"></i>Không xác định</span>
-                                            </c:otherwise>
-                                        </c:choose>
+                                    <c:choose>
+                                        <c:when test="${lesson.status == 'Completed'}">
+                                            <span class="badge bg-success"><i class="fas fa-check-circle me-1"></i>Đã hoàn thành</span>
+                                        </c:when>
+                                        <c:when test="${lesson.status == 'Inactive'}">
+                                            <span class="badge bg-danger"><i class="fas fa-times-circle me-1"></i>Vắng</span>
+                                        </c:when>
+                                        <c:when test="${lesson.status == 'Active'}">
+                                            <span class="badge bg-secondary"><i class="fas fa-info-circle me-1"></i>Chưa học</span>
+                                        </c:when>
+                                        <c:otherwise>
+                                            <span class="badge bg-secondary"><i class="fas fa-question-circle me-1"></i>Không xác định</span>
+                                        </c:otherwise>
+                                    </c:choose>
                                     </p>
                                 </div>
                                 <div class="col-md-12">

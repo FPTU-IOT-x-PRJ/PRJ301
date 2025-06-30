@@ -233,7 +233,7 @@
                                                 <td class="text-center">
                                                     <c:choose>
                                                         <c:when test="${lesson.status == 'Active'}">
-                                                            <span class="badge bg-info badge-fixed-width">Chưa học</span>
+                                                            <span class="badge bg-secondary badge-fixed-width">Chưa học</span>
                                                         </c:when>
                                                         <c:when test="${lesson.status == 'Inactive'}">
                                                             <span class="badge bg-danger badge-fixed-width">Vắng</span>
@@ -249,12 +249,12 @@
                                                 <td>
                                                     <div class="btn-group-actions">
                                                         <%-- Không có trang chi tiết cho lesson trong ví dụ này, có thể thêm sau nếu cần --%>
-                                                        <%-- <a href="${pageContext.request.contextPath}/lessons/detail?id=${lesson.id}"
+                                                        <a href="${pageContext.request.contextPath}/lessons/detail?id=${lesson.id}"
                                                              class="btn btn-sm btn-outline-info"
                                                              title="Xem chi tiết" data-bs-toggle="tooltip">
                                                              <i class="fas fa-eye"></i>
-                                                         </a> --%>
-                                                        <a href="${pageContext.request.contextPath}/lessons/edit?id=${lesson.id}&subjectId=${requestScope.subject.id}"
+                                                         </a>
+                                                        <a href="${pageContext.request.contextPath}/lessons/edit?id=${lesson.id}"
                                                              class="btn btn-sm btn-outline-warning"
                                                              title="Chỉnh sửa" data-bs-toggle="tooltip">
                                                              <i class="fas fa-edit"></i>
