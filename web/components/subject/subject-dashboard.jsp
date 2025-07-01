@@ -247,12 +247,12 @@
                                                            title="Xem buổi học" data-bs-toggle="tooltip">
                                                             <i class="fas fa-eye"></i>
                                                         </a>
-                                                        <a href="${pageContext.request.contextPath}/subjects/edit?id=${subject.id}&semesterId=${semesterId}"
+                                                        <a href="${pageContext.request.contextPath}/subjects/edit?id=${subject.id}"
                                                            class="btn btn-sm btn-outline-warning"
                                                            title="Chỉnh sửa" data-bs-toggle="tooltip">
                                                             <i class="fas fa-edit"></i>
                                                         </a>
-                                                        <a href="${pageContext.request.contextPath}/subjects/delete-confirm?id=${subject.id}&semesterId=${semesterId}"
+                                                        <a href="${pageContext.request.contextPath}/subjects/delete-confirm?id=${subject.id}"
                                                            class="btn btn-sm btn-outline-danger"
                                                            title="Xóa" data-bs-toggle="tooltip">
                                                             <i class="fas fa-trash"></i>

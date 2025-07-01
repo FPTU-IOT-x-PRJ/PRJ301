@@ -7,6 +7,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.sql.Connection;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -38,7 +39,7 @@ public class SemesterDAO extends DBContext {
      */
     public boolean addSemester(Semester semester) {
         boolean rowInserted = false;
-        try (PreparedStatement preparedStatement = connection.prepareStatement(INSERT_SEMESTER_SQL, Statement.RETURN_GENERATED_KEYS)) {
+        try (Connection con = getConnection();             PreparedStatement preparedStatement = con.prepareStatement(INSERT_SEMESTER_SQL, Statement.RETURN_GENERATED_KEYS)) {
             preparedStatement.setString(1, semester.getName());
             preparedStatement.setDate(2, semester.getStartDate());
             preparedStatement.setDate(3, semester.getEndDate());
@@ -71,7 +72,7 @@ public class SemesterDAO extends DBContext {
      */
     public Semester getSemesterById(int id, int userId) {
         Semester semester = null;
-        try (PreparedStatement preparedStatement = connection.prepareStatement(SELECT_SEMESTER_BY_ID_SQL)) {
+        try (Connection con = getConnection();             PreparedStatement preparedStatement = con.prepareStatement(SELECT_SEMESTER_BY_ID_SQL)) {
             preparedStatement.setInt(1, id);
             preparedStatement.setInt(2, userId);
             try (ResultSet rs = preparedStatement.executeQuery()) {
@@ -131,7 +132,7 @@ public class SemesterDAO extends DBContext {
         params.add(offset);
         params.add(limit);
 
-        try (PreparedStatement preparedStatement = connection.prepareStatement(sqlBuilder.toString())) {
+        try (Connection con = getConnection();             PreparedStatement preparedStatement = con.prepareStatement(sqlBuilder.toString())) {
             for (int i = 0; i < params.size(); i++) {
                 preparedStatement.setObject(i + 1, params.get(i));
             }
@@ -155,7 +156,7 @@ public class SemesterDAO extends DBContext {
      */
     public boolean editSemester(Semester semester) {
         boolean rowUpdated = false;
-        try (PreparedStatement preparedStatement = connection.prepareStatement(UPDATE_SEMESTER_SQL)) {
+        try (Connection con = getConnection();             PreparedStatement preparedStatement = con.prepareStatement(UPDATE_SEMESTER_SQL)) {
             preparedStatement.setString(1, semester.getName());
             preparedStatement.setDate(2, semester.getStartDate());
             preparedStatement.setDate(3, semester.getEndDate());
@@ -180,7 +181,7 @@ public class SemesterDAO extends DBContext {
      */
     public boolean deleteSemester(int id, int userId) {
         boolean rowDeleted = false;
-        try (PreparedStatement preparedStatement = connection.prepareStatement(DELETE_SEMESTER_SQL)) {
+        try (Connection con = getConnection();             PreparedStatement preparedStatement = con.prepareStatement(DELETE_SEMESTER_SQL)) {
             preparedStatement.setInt(1, id);
             preparedStatement.setInt(2, userId);
             rowDeleted = preparedStatement.executeUpdate() > 0;
@@ -228,7 +229,7 @@ public class SemesterDAO extends DBContext {
             params.add(endDate);
         }
 
-        try (PreparedStatement preparedStatement = connection.prepareStatement(sqlBuilder.toString())) {
+        try (Connection con = getConnection();             PreparedStatement preparedStatement = con.prepareStatement(sqlBuilder.toString())) {
             for (int i = 0; i < params.size(); i++) {
                 preparedStatement.setObject(i + 1, params.get(i));
             }
@@ -252,7 +253,7 @@ public class SemesterDAO extends DBContext {
      */
     public Semester getSemesterByName(String name, int userId) {
         Semester semester = null;
-        try (PreparedStatement preparedStatement = connection.prepareStatement(SELECT_SEMESTER_BY_NAME_SQL)) {
+        try (Connection con = getConnection();             PreparedStatement preparedStatement = con.prepareStatement(SELECT_SEMESTER_BY_NAME_SQL)) {
             preparedStatement.setString(1, name);
             preparedStatement.setInt(2, userId);
             try (ResultSet rs = preparedStatement.executeQuery()) {
@@ -274,9 +275,9 @@ public class SemesterDAO extends DBContext {
      */
     public Semester getLatestSemester(int userId) {
         Semester latestSemester = null;
-        try (PreparedStatement ps = connection.prepareStatement(SELECT_SEMESTER_LASTEST_SQL)) {
-            ps.setInt(1, userId);
-            try (ResultSet rs = ps.executeQuery()) {
+        try (Connection con = getConnection();             PreparedStatement preparedStatement = con.prepareStatement(SELECT_SEMESTER_LASTEST_SQL)) {
+            preparedStatement.setInt(1, userId);
+            try (ResultSet rs = preparedStatement.executeQuery()) {
                 if (rs.next()) {
                     latestSemester = extractSemesterFromResultSet(rs);
                 }
@@ -299,7 +300,7 @@ public class SemesterDAO extends DBContext {
      */
     public Semester getSemesterByNameExceptId(String name, int id, int userId) {
         Semester semester = null;
-        try (PreparedStatement preparedStatement = connection.prepareStatement(SELECT_SEMESTER_BY_NAME_EXCEPT_ID_SQL)) {
+        try (Connection con = getConnection();             PreparedStatement preparedStatement = con.prepareStatement(SELECT_SEMESTER_BY_NAME_EXCEPT_ID_SQL)) {
             preparedStatement.setString(1, name);
             preparedStatement.setInt(2, id); // Loại trừ ID này
             preparedStatement.setInt(3, userId);

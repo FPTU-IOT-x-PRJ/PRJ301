@@ -6,6 +6,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.sql.Connection;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -43,7 +44,7 @@ public class LessonDAO extends DBContext {
      */
     public boolean addLesson(Lesson lesson) {
         boolean rowInserted = false;
-        try (PreparedStatement preparedStatement = connection.prepareStatement(INSERT_LESSON_SQL, Statement.RETURN_GENERATED_KEYS)) {
+        try (Connection con = getConnection();             PreparedStatement preparedStatement = con.prepareStatement(INSERT_LESSON_SQL, Statement.RETURN_GENERATED_KEYS)) {
             preparedStatement.setInt(1, lesson.getSubjectId());
             preparedStatement.setString(2, lesson.getName());
             preparedStatement.setDate(3, lesson.getLessonDate());
@@ -73,7 +74,7 @@ public class LessonDAO extends DBContext {
      */
     public Lesson getLessonById(int lessonId) {
         Lesson lesson = null;
-        try (PreparedStatement preparedStatement = connection.prepareStatement(SELECT_LESSON_BY_ID_SQL)) {
+        try (Connection con = getConnection();             PreparedStatement preparedStatement = con.prepareStatement(SELECT_LESSON_BY_ID_SQL)) {
             preparedStatement.setInt(1, lessonId);
             try (ResultSet rs = preparedStatement.executeQuery()) {
                 if (rs.next()) {
@@ -121,7 +122,7 @@ public class LessonDAO extends DBContext {
         params.add(offset);
         params.add(pageSize);
 
-        try (PreparedStatement preparedStatement = connection.prepareStatement(sqlBuilder.toString())) {
+        try (Connection con = getConnection();             PreparedStatement preparedStatement = con.prepareStatement(sqlBuilder.toString())) {
             for (int i = 0; i < params.size(); i++) {
                 preparedStatement.setObject(i + 1, params.get(i));
             }
@@ -146,10 +147,10 @@ public class LessonDAO extends DBContext {
      */
     public List<Lesson> getAllLessonsForSemester(int semesterId, int userId) throws SQLException {
         List<Lesson> lessons = new ArrayList<>();
-        try (PreparedStatement ps = connection.prepareStatement(SELECT_LESSONS_FOR_SEMESTER_SQL)) {
-            ps.setInt(1, semesterId);
-            ps.setInt(2, userId);
-            try (ResultSet rs = ps.executeQuery()) {
+        try (Connection con = getConnection();             PreparedStatement preparedStatement = con.prepareStatement(SELECT_LESSONS_FOR_SEMESTER_SQL)) {
+            preparedStatement.setInt(1, semesterId);
+            preparedStatement.setInt(2, userId);
+            try (ResultSet rs = preparedStatement.executeQuery()) {
                 while (rs.next()) {
                     lessons.add(extractLessonFromResultSet(rs));
                 }
@@ -169,7 +170,8 @@ public class LessonDAO extends DBContext {
      */
     public boolean editLesson(Lesson lesson) {
         boolean rowUpdated = false;
-        try (PreparedStatement preparedStatement = connection.prepareStatement(UPDATE_LESSON_SQL)) {
+        try (Connection con = getConnection();
+                PreparedStatement preparedStatement = con.prepareStatement(UPDATE_LESSON_SQL)) {
             preparedStatement.setInt(1, lesson.getSubjectId());
             preparedStatement.setString(2, lesson.getName());
             preparedStatement.setDate(3, lesson.getLessonDate());
@@ -192,7 +194,7 @@ public class LessonDAO extends DBContext {
      */
     public boolean deleteLesson(int lessonId) {
         boolean rowDeleted = false;
-        try (PreparedStatement preparedStatement = connection.prepareStatement(DELETE_LESSON_SQL)) {
+        try (Connection con = getConnection();             PreparedStatement preparedStatement = con.prepareStatement(DELETE_LESSON_SQL)) {
             preparedStatement.setInt(1, lessonId);
             rowDeleted = preparedStatement.executeUpdate() > 0;
         } catch (SQLException e) {
@@ -230,7 +232,7 @@ public class LessonDAO extends DBContext {
             params.add(status);
         }
         
-        try (PreparedStatement preparedStatement = connection.prepareStatement(sqlBuilder.toString())) {
+        try (Connection con = getConnection();             PreparedStatement preparedStatement = con.prepareStatement(sqlBuilder.toString())) {
             for (int i = 0; i < params.size(); i++) {
                 preparedStatement.setObject(i + 1, params.get(i));
             }

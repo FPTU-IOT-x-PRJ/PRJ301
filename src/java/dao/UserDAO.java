@@ -8,6 +8,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Date; // Sử dụng java.sql.Date cho cột Date trong DB
+import java.sql.Connection;
 import java.time.LocalDate;
 import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
@@ -17,8 +18,8 @@ import java.util.logging.Logger;
 import org.mindrot.jbcrypt.BCrypt;
 
 /**
- * Lớp DAO quản lý các thao tác CRUD và các truy vấn liên quan đến đối tượng User trong cơ sở dữ liệu.
- * Author: Dung Ann
+ * Lớp DAO quản lý các thao tác CRUD và các truy vấn liên quan đến đối tượng
+ * User trong cơ sở dữ liệu. Author: Dung Ann
  */
 public class UserDAO extends DBContext {
 
@@ -40,15 +41,15 @@ public class UserDAO extends DBContext {
     private static final String COUNT_TOTAL_USERS_SQL = "SELECT COUNT(*) FROM Users";
 
     /**
-     * Thêm một người dùng mới vào cơ sở dữ liệu.
-     * Mật khẩu của người dùng NÊN được hash trước khi gọi phương thức này.
+     * Thêm một người dùng mới vào cơ sở dữ liệu. Mật khẩu của người dùng NÊN
+     * được hash trước khi gọi phương thức này.
      *
      * @param user Đối tượng User chứa thông tin người dùng mới.
      * @return true nếu thêm thành công, ngược lại là false.
      */
     public boolean addUser(User user) {
         boolean rowInserted = false;
-        try (PreparedStatement preparedStatement = connection.prepareStatement(INSERT_USER_SQL, Statement.RETURN_GENERATED_KEYS)) {
+        try (Connection con = getConnection(); PreparedStatement preparedStatement = con.prepareStatement(INSERT_USER_SQL, Statement.RETURN_GENERATED_KEYS)) {
             preparedStatement.setString(1, user.getUsername());
             preparedStatement.setString(2, user.getEmail());
             preparedStatement.setString(3, user.getPassword()); // Mật khẩu đã được HASH
@@ -81,7 +82,7 @@ public class UserDAO extends DBContext {
      */
     public User getUserById(int id) {
         User user = null;
-        try (PreparedStatement preparedStatement = connection.prepareStatement(SELECT_USER_BY_ID_SQL)) {
+        try (Connection con = getConnection(); PreparedStatement preparedStatement = con.prepareStatement(SELECT_USER_BY_ID_SQL)) {
             preparedStatement.setInt(1, id);
             try (ResultSet rs = preparedStatement.executeQuery()) {
                 if (rs.next()) {
@@ -95,12 +96,15 @@ public class UserDAO extends DBContext {
     }
 
     /**
-     * Lấy tất cả người dùng từ cơ sở dữ liệu.
-     * Phương thức này có thể được lọc và phân trang.
+     * Lấy tất cả người dùng từ cơ sở dữ liệu. Phương thức này có thể được lọc
+     * và phân trang.
      *
-     * @param search Từ khóa tìm kiếm (firstName, lastName, email, username). Có thể null hoặc rỗng.
-     * @param roleFilter Vai trò để lọc (ví dụ: "Admin", "User"). Có thể null hoặc rỗng.
-     * @param sortOrder Thứ tự sắp xếp (ví dụ: "createdAt_desc", "firstName_asc").
+     * @param search Từ khóa tìm kiếm (firstName, lastName, email, username). Có
+     * thể null hoặc rỗng.
+     * @param roleFilter Vai trò để lọc (ví dụ: "Admin", "User"). Có thể null
+     * hoặc rỗng.
+     * @param sortOrder Thứ tự sắp xếp (ví dụ: "createdAt_desc",
+     * "firstName_asc").
      * @param offset Vị trí bắt đầu của kết quả (cho phân trang).
      * @param limit Số lượng kết quả tối đa mỗi trang.
      * @return Danh sách các đối tượng User.
@@ -147,7 +151,7 @@ public class UserDAO extends DBContext {
         params.add(offset);
         params.add(limit);
 
-        try (PreparedStatement preparedStatement = connection.prepareStatement(sqlBuilder.toString())) {
+        try (Connection con = getConnection(); PreparedStatement preparedStatement = con.prepareStatement(sqlBuilder.toString())) {
             for (int i = 0; i < params.size(); i++) {
                 preparedStatement.setObject(i + 1, params.get(i));
             }
@@ -170,39 +174,42 @@ public class UserDAO extends DBContext {
      */
     public boolean editUser(User user) {
         boolean rowUpdated = false;
-        try (PreparedStatement statement = connection.prepareStatement(UPDATE_USER_PROFILE_SQL)) {
-            statement.setString(1, user.getFirstName());
-            statement.setString(2, user.getLastName());
-            statement.setString(3, user.getRole());
-            statement.setInt(4, user.getId());
+        try (Connection con = getConnection(); PreparedStatement preparedStatement = con.prepareStatement(UPDATE_USER_PROFILE_SQL)) {
+            preparedStatement.setString(1, user.getFirstName());
+            preparedStatement.setString(2, user.getLastName());
+            preparedStatement.setString(3, user.getRole());
+            preparedStatement.setInt(4, user.getId());
 
-            rowUpdated = statement.executeUpdate() > 0;
+            rowUpdated = preparedStatement.executeUpdate() > 0;
         } catch (SQLException e) {
             printSQLException(e);
         }
         return rowUpdated;
     }
+    
     private static final String UPDATE_USER_PASSWORD_BY_EMAIL_SQL = 
-    "UPDATE Users SET password = ? WHERE email = ?";
+        "UPDATE Users SET password = ? WHERE email = ?";
 
-public boolean updatePasswordByEmail(String email, String newHashedPassword) {
-    boolean rowUpdated = false;
+    public boolean updatePasswordByEmail(String email, String newHashedPassword) {
+        boolean rowUpdated = false;
 
-    try (PreparedStatement statement = connection.prepareStatement(UPDATE_USER_PASSWORD_BY_EMAIL_SQL)) {
-        statement.setString(1, newHashedPassword);
-        statement.setString(2, email);
+        try (Connection con = getConnection(); 
+             PreparedStatement statement = con.prepareStatement(UPDATE_USER_PASSWORD_BY_EMAIL_SQL)) {
 
-        rowUpdated = statement.executeUpdate() > 0;
-        System.out.println("email"+email+"newHashedPassword"+newHashedPassword+"rowUpdated"+rowUpdated);
-    } catch (SQLException e) {
-        printSQLException(e); // hoặc e.printStackTrace();
+            statement.setString(1, newHashedPassword);
+            statement.setString(2, email);
+
+            rowUpdated = statement.executeUpdate() > 0;
+        } catch (SQLException e) {
+            printSQLException(e); // hoặc e.printStackTrace();
+        }
+
+        return rowUpdated;
     }
 
-    return rowUpdated;
-}
     /**
-     * Cập nhật mật khẩu của người dùng.
-     * Mật khẩu MỚI NÊN được hash trước khi gọi phương thức này.
+     * Cập nhật mật khẩu của người dùng. Mật khẩu MỚI NÊN được hash trước khi
+     * gọi phương thức này.
      *
      * @param userId ID của người dùng cần cập nhật mật khẩu.
      * @param newHashedPassword Mật khẩu mới (đã được hash).
@@ -210,11 +217,11 @@ public boolean updatePasswordByEmail(String email, String newHashedPassword) {
      */
     public boolean updatePassword(int userId, String newHashedPassword) {
         boolean rowUpdated = false;
-        try (PreparedStatement statement = connection.prepareStatement(UPDATE_USER_PASSWORD_SQL)) {
-            statement.setString(1, newHashedPassword);
-            statement.setInt(2, userId);
+        try (Connection con = getConnection(); PreparedStatement preparedStatement = con.prepareStatement(UPDATE_USER_PASSWORD_SQL)) {
+            preparedStatement.setString(1, newHashedPassword);
+            preparedStatement.setInt(2, userId);
 
-            rowUpdated = statement.executeUpdate() > 0;
+            rowUpdated = preparedStatement.executeUpdate() > 0;
         } catch (SQLException e) {
             printSQLException(e);
         }
@@ -229,9 +236,9 @@ public boolean updatePasswordByEmail(String email, String newHashedPassword) {
      */
     public boolean deleteUser(int id) {
         boolean rowDeleted = false;
-        try (PreparedStatement statement = connection.prepareStatement(DELETE_USER_SQL)) {
-            statement.setInt(1, id);
-            rowDeleted = statement.executeUpdate() > 0;
+        try (Connection con = getConnection(); PreparedStatement preparedStatement = con.prepareStatement(DELETE_USER_SQL)) {
+            preparedStatement.setInt(1, id);
+            rowDeleted = preparedStatement.executeUpdate() > 0;
         } catch (SQLException e) {
             printSQLException(e);
         }
@@ -246,7 +253,7 @@ public boolean updatePasswordByEmail(String email, String newHashedPassword) {
      */
     public boolean isUsernameExists(String username) {
         boolean exists = false;
-        try (PreparedStatement preparedStatement = connection.prepareStatement(CHECK_USERNAME_EXISTS_SQL)) {
+        try (Connection con = getConnection(); PreparedStatement preparedStatement = con.prepareStatement(CHECK_USERNAME_EXISTS_SQL)) {
             preparedStatement.setString(1, username);
             try (ResultSet rs = preparedStatement.executeQuery()) {
                 if (rs.next()) {
@@ -267,7 +274,7 @@ public boolean updatePasswordByEmail(String email, String newHashedPassword) {
      */
     public boolean isEmailExists(String email) {
         boolean exists = false;
-        try (PreparedStatement preparedStatement = connection.prepareStatement(CHECK_EMAIL_EXISTS_SQL)) {
+        try (Connection con = getConnection(); PreparedStatement preparedStatement = con.prepareStatement(CHECK_EMAIL_EXISTS_SQL)) {
             preparedStatement.setString(1, email);
             try (ResultSet rs = preparedStatement.executeQuery()) {
                 if (rs.next()) {
@@ -289,7 +296,7 @@ public boolean updatePasswordByEmail(String email, String newHashedPassword) {
      */
     public User getUserByUsernameOrEmail(String identifier) {
         User user = null;
-        try (PreparedStatement preparedStatement = connection.prepareStatement(SELECT_USER_BY_USERNAME_OR_EMAIL_SQL)) {
+        try (Connection con = getConnection(); PreparedStatement preparedStatement = con.prepareStatement(SELECT_USER_BY_USERNAME_OR_EMAIL_SQL)) {
             preparedStatement.setString(1, identifier);
             preparedStatement.setString(2, identifier); // Dùng cùng một giá trị cho cả username và email
             try (ResultSet rs = preparedStatement.executeQuery()) {
@@ -302,7 +309,7 @@ public boolean updatePasswordByEmail(String email, String newHashedPassword) {
         }
         return user;
     }
-    
+
     /**
      * Xác thực người dùng bằng tên đăng nhập/email và mật khẩu.
      *
@@ -312,7 +319,7 @@ public boolean updatePasswordByEmail(String email, String newHashedPassword) {
      */
     public User authenticateUser(String identifier, String password) {
         User user = null;
-        try (PreparedStatement preparedStatement = connection.prepareStatement(SELECT_USER_BY_USERNAME_OR_EMAIL_SQL)) {
+        try (Connection con = getConnection(); PreparedStatement preparedStatement = con.prepareStatement(SELECT_USER_BY_USERNAME_OR_EMAIL_SQL)) {
             preparedStatement.setString(1, identifier);
             preparedStatement.setString(2, identifier);
             try (ResultSet rs = preparedStatement.executeQuery()) {
@@ -327,15 +334,15 @@ public boolean updatePasswordByEmail(String email, String newHashedPassword) {
             printSQLException(e);
         }
         return user;
-    }    
+    }
 
     /**
-     * Lấy các số liệu thống kê người dùng từ cơ sở dữ liệu.
-     * Bao gồm: số người dùng mới trong tháng này, số người dùng admin,
-     * tổng số người dùng đang hoạt động và tổng số người dùng.
+     * Lấy các số liệu thống kê người dùng từ cơ sở dữ liệu. Bao gồm: số người
+     * dùng mới trong tháng này, số người dùng admin, tổng số người dùng đang
+     * hoạt động và tổng số người dùng.
      *
-     * @return Đối tượng UserStatistics chứa các số liệu thống kê.
-     * Trả về một đối tượng UserStatistics với tất cả giá trị là 0 nếu có lỗi.
+     * @return Đối tượng UserStatistics chứa các số liệu thống kê. Trả về một
+     * đối tượng UserStatistics với tất cả giá trị là 0 nếu có lỗi.
      */
     public UserStatistics getUserStatistics() {
         int newUsersThisMonth = 0;
@@ -347,25 +354,23 @@ public boolean updatePasswordByEmail(String email, String newHashedPassword) {
         java.sql.Date sqlDateFirstDayOfMonth = java.sql.Date.valueOf(firstDayOfCurrentMonth);
 
         try {
-            try (PreparedStatement ps = connection.prepareStatement(COUNT_TOTAL_USERS_SQL);
-                 ResultSet rs = ps.executeQuery()) {
+            try (Connection con = getConnection(); PreparedStatement preparedStatement = con.prepareStatement(COUNT_TOTAL_USERS_SQL); ResultSet rs = preparedStatement.executeQuery()) {
                 if (rs.next()) {
                     totalUsers = rs.getInt(1);
                 }
             }
             activeUsers = totalUsers; // Giả sử activeUsers là tổng số người dùng nếu không có điều kiện khác
 
-            try (PreparedStatement ps = connection.prepareStatement(COUNT_NEW_USERS_THIS_MONTH_SQL)) {
-                ps.setDate(1, sqlDateFirstDayOfMonth);
-                try (ResultSet rs = ps.executeQuery()) {
+            try (Connection con = getConnection(); PreparedStatement preparedStatement = con.prepareStatement(COUNT_NEW_USERS_THIS_MONTH_SQL)) {
+                preparedStatement.setDate(1, sqlDateFirstDayOfMonth);
+                try (ResultSet rs = preparedStatement.executeQuery()) {
                     if (rs.next()) {
                         newUsersThisMonth = rs.getInt(1);
                     }
                 }
             }
 
-            try (PreparedStatement ps = connection.prepareStatement(COUNT_ADMIN_USERS_SQL);
-                 ResultSet rs = ps.executeQuery()) {
+            try (Connection con = getConnection(); PreparedStatement preparedStatement = con.prepareStatement(COUNT_ADMIN_USERS_SQL); ResultSet rs = preparedStatement.executeQuery()) {
                 if (rs.next()) {
                     adminUsers = rs.getInt(1);
                 }
@@ -376,11 +381,12 @@ public boolean updatePasswordByEmail(String email, String newHashedPassword) {
         }
         return new UserStatistics(newUsersThisMonth, adminUsers, activeUsers, totalUsers);
     }
-    
+
     /**
      * Đếm tổng số người dùng dựa trên các tiêu chí lọc.
      *
-     * @param search Từ khóa tìm kiếm (firstName, lastName, email, username). Có thể null hoặc rỗng.
+     * @param search Từ khóa tìm kiếm (firstName, lastName, email, username). Có
+     * thể null hoặc rỗng.
      * @param roleFilter Vai trò để lọc. Có thể null hoặc rỗng.
      * @return Tổng số người dùng thỏa mãn điều kiện.
      */
@@ -402,7 +408,7 @@ public boolean updatePasswordByEmail(String email, String newHashedPassword) {
             params.add(roleFilter);
         }
 
-        try (PreparedStatement preparedStatement = connection.prepareStatement(sqlBuilder.toString())) {
+        try (Connection con = getConnection(); PreparedStatement preparedStatement = con.prepareStatement(sqlBuilder.toString())) {
             for (int i = 0; i < params.size(); i++) {
                 preparedStatement.setObject(i + 1, params.get(i));
             }
@@ -416,7 +422,7 @@ public boolean updatePasswordByEmail(String email, String newHashedPassword) {
         }
         return 0;
     }
-    
+
     /**
      * Trích xuất thông tin người dùng từ một ResultSet và tạo đối tượng User.
      *

@@ -84,34 +84,90 @@
         .calendar-lessons {
             font-size: 0.85em;
             width: 100%; /* Đảm bảo danh sách lesson nằm gọn */
+            margin-top: 5px; /* Thêm khoảng cách với số ngày */
         }
         .calendar-lessons .lesson-item {
-            margin-bottom: 3px;
-            padding: 3px 5px;
-            border-radius: 4px;
-            background-color: var(--warning-color);
+            margin-bottom: 5px; /* Tăng khoảng cách giữa các khối buổi học */
+            padding: 6px 8px; /* Tăng padding để khối to hơn */
+            border-radius: 6px; /* Bo tròn góc */
+            /* background-color: #e0e0e0; Màu nền mặc định sẽ bị ghi đè bởi các trạng thái cụ thể */
             color: var(--dark-color);
-            white-space: nowrap; /* Ngăn không cho text xuống dòng */
-            overflow: hidden; /* Ẩn phần text thừa */
-            text-overflow: ellipsis; /* Hiển thị dấu ba chấm */
-            font-size: 0.8em;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            font-size: 0.85em;
             font-weight: 500;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1); /* Thêm bóng nhẹ */
+            display: flex; /* Dùng flexbox để căn chỉnh icon và text */
+            align-items: center; /* Căn giữa theo chiều dọc */
+            transition: background-color 0.2s ease, box-shadow 0.2s ease;
         }
+        .calendar-lessons .lesson-item:hover {
+            /* Màu hover có thể tinh chỉnh để phù hợp với màu nền của từng trạng thái */
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        .calendar-lessons .lesson-item .lesson-icon {
+            margin-right: 5px; /* Khoảng cách giữa icon và text */
+            /* color: #6c757d; Màu icon mặc định sẽ bị ghi đè bởi các trạng thái cụ thể */
+        }
+
+        /* Styles for different lesson statuses - ĐÃ CẬP NHẬT THEO YÊU CẦU MỚI */
         .calendar-lessons .lesson-item.completed {
-            background-color: var(--success-color);
-            color: white;
+            background-color: #d4edda; /* Light green for completed */
+            color: #155724;
+            border: 1px solid #c3e6cb;
         }
-         .calendar-lessons .lesson-item.inactive {
-            background-color: var(--secondary-color);
-            color: white;
+        .calendar-lessons .lesson-item.completed .lesson-icon {
+            color: #198754; /* Success color for icon */
         }
+
+        .calendar-lessons .lesson-item.inactive {
+            background-color: #f8d7da; /* Light red for inactive (vắng) */
+            color: #842029;
+            border: 1px solid #f5c2c7;
+        }
+        .calendar-lessons .lesson-item.inactive .lesson-icon {
+            color: #dc3545; /* Danger color for icon */
+        }
+
+        .calendar-lessons .lesson-item.active {
+            background-color: #e2e3e5; /* Light gray for active/upcoming */
+            color: #495057;
+            border: 1px solid #d6d8db;
+        }
+        .calendar-lessons .lesson-item.active .lesson-icon {
+            color: #6c757d; /* Secondary color for icon */
+        }
+
+
+        /* Thêm màu cho các loại buổi học cụ thể nếu cần (ví dụ: meeting, exam) */
+        .calendar-lessons .lesson-item.meeting {
+            background-color: #cfe2ff; /* Light blue for meetings */
+            color: #055160;
+            border: 1px solid #b6effb;
+        }
+        .calendar-lessons .lesson-item.meeting .lesson-icon {
+            color: #0dcaf0;
+        }
+
+        .calendar-lessons .lesson-item.exam {
+            background-color: #f8d7da; /* Light red for exams (đã có từ trước, giữ nguyên) */
+            color: #842029;
+            border: 1px solid #f5c2c7;
+        }
+        .calendar-lessons .lesson-item.exam .lesson-icon {
+            color: #dc3545;
+        }
+
         .calendar-lessons .lesson-item a {
             color: inherit;
             text-decoration: none;
-            display: block; /* Để link chiếm toàn bộ item */
+            display: flex; /* Để link bao trọn nội dung và icon */
+            align-items: center;
+            flex-grow: 1; /* Cho phép link chiếm hết không gian còn lại */
         }
         .calendar-lessons .lesson-item a:hover {
-            text-decoration: underline;
+            text-decoration: none; /* Bỏ gạch chân khi hover để trông gọn hơn */
         }
         .calendar-day:nth-child(7n), .calendar-weekdays > div:nth-child(7n) {
             color: var(--danger-color); /* Chủ nhật màu đỏ */
@@ -119,7 +175,7 @@
         .calendar-day:nth-child(6n), .calendar-weekdays > div:nth-child(6n) {
             color: var(--info-color); /* Thứ 7 màu xanh */
         }
-    </style>
+    </style>  
 </head>
 <body>
     <jsp:include page="../navigation/navigation.jsp" />
@@ -131,7 +187,7 @@
                 <select class="form-select" id="semesterSelect" onchange="location = this.value;">
                     <c:forEach var="sem" items="${semesters}">
                         <option value="${pageContext.request.contextPath}/calendar?semesterId=${sem.id}"
-                                ${sem.id == currentSemester.id ? 'selected' : ''}>
+                                    ${sem.id == currentSemester.id ? 'selected' : ''}>
                             <c:out value="${sem.name}"/>
                         </option>
                     </c:forEach>
@@ -160,11 +216,9 @@
                     LocalDate semesterEndDate = semester.getEndDate().toLocalDate();
                     LocalDate today = LocalDate.now();
 
-                    // Lấy tháng bắt đầu và tháng kết thúc của kỳ học
                     YearMonth startMonth = YearMonth.from(semesterStartDate);
                     YearMonth endMonth = YearMonth.from(semesterEndDate);
                     
-                    // Lặp qua từng tháng từ startMonth đến endMonth
                     for (LocalDate currentMonthDate = semesterStartDate.withDayOfMonth(1); 
                          !currentMonthDate.isAfter(semesterEndDate.withDayOfMonth(semesterEndDate.lengthOfMonth())); 
                          currentMonthDate = currentMonthDate.plusMonths(1)) {
@@ -187,56 +241,60 @@
                             <div class="calendar-day-grid">
                             <%
                                 LocalDate firstDayOfMonth = currentMonth.atDay(1);
-                                // Số ngày cần đệm từ cuối tuần trước để bắt đầu lịch từ T2
                                 int daysToPadStart = firstDayOfMonth.getDayOfWeek().getValue() - DayOfWeek.MONDAY.getValue();
-                                if (daysToPadStart < 0) { // Nếu ngày đầu tiên là Chủ nhật, DayOfWeek.SUNDAY.getValue() là 7
-                                    daysToPadStart = 6; // Đệm 6 ngày từ T2 -> CN
+                                if (daysToPadStart < 0) { 
+                                    daysToPadStart = 6; 
                                 }
                                 
-                                // In các ô trống nếu tháng không bắt đầu từ T2
                                 for (int i = 0; i < daysToPadStart; i++) {
                             %>
                                 <div class="calendar-day other-month"></div>
                             <%
                                 }
 
-                                // In các ngày trong tháng
                                 for (int day = 1; day <= currentMonth.lengthOfMonth(); day++) {
                                     LocalDate currentDate = currentMonth.atDay(day);
                                     String todayClass = currentDate.equals(today) ? " today" : "";
                                     String otherMonthClass = (currentDate.isBefore(semesterStartDate) || currentDate.isAfter(semesterEndDate)) ? " other-month" : "";
                             %>
-                                <div class="calendar-day<%= todayClass %><%= otherMonthClass %>">
-                                    <div class="day-number"><%= day %></div>
-                                    <div class="calendar-lessons">
-                                    <%
-                                        if (lessonsByDate != null && lessonsByDate.containsKey(currentDate)) {
-                                            List<Lesson> dailyLessons = lessonsByDate.get(currentDate);
-                                            for (Lesson lesson : dailyLessons) {
-                                                String lessonStatusClass = "";
-                                                if ("Completed".equals(lesson.getStatus())) {
-                                                    lessonStatusClass = "completed";
-                                                } else if ("Inactive".equals(lesson.getStatus())) {
-                                                    lessonStatusClass = "inactive";
+                                    <div class="calendar-day<%= todayClass %><%= otherMonthClass %>">
+                                        <div class="day-number"><%= day %></div>
+                                        <div class="calendar-lessons">
+                                        <%
+                                            if (lessonsByDate != null && lessonsByDate.containsKey(currentDate)) {
+                                                List<Lesson> dailyLessons = lessonsByDate.get(currentDate);
+                                                for (Lesson lesson : dailyLessons) {
+                                                    String lessonStatusClass = "";
+                                                    String iconClass = "fas fa-calendar-alt"; // Icon mặc định cho trạng thái Active
+                                                    
+                                                    if ("Completed".equals(lesson.getStatus())) {
+                                                        lessonStatusClass = "completed";
+                                                        iconClass = "fas fa-check-circle"; 
+                                                    } else if ("Inactive".equals(lesson.getStatus())) {
+                                                        lessonStatusClass = "inactive";
+                                                        iconClass = "fas fa-times-circle"; 
+                                                    } else { // Mặc định là Active (Chưa học)
+                                                        lessonStatusClass = "active";
+                                                        iconClass = "fas fa-circle-info"; // Hoặc icon phù hợp khác cho trạng thái Active
+                                                    }
+                                        %>
+                                                    <div class="lesson-item <%= lessonStatusClass %>">
+                                                        <a href="${pageContext.request.contextPath}/lessons/detail?id=<%= lesson.getId() %>" title="<%= lesson.getName() %>">
+                                                            <i class="<%= iconClass %> lesson-icon"></i> 
+                                                            <%= lesson.getName() %>
+                                                        </a>
+                                                    </div>
+                                        <%
                                                 }
-                                    %>
-                                                <div class="lesson-item <%= lessonStatusClass %>">
-                                                    <a href="${pageContext.request.contextPath}/lessons/detail?id=<%= lesson.getId() %>&subjectId=<%= lesson.getSubjectId() %>" title="<%= lesson.getName() %>">
-                                                        <%= lesson.getName() %>
-                                                    </a>
-                                                </div>
-                                    <%
                                             }
-                                        }
-                                    %>
+                                        %>
+                                        </div>
                                     </div>
-                                </div>
                             <%
                                 }
-                                // Đệm các ô trống cuối tháng nếu không kết thúc vào Chủ nhật
                                 LocalDate lastDayOfMonth = currentMonth.atEndOfMonth();
                                 int daysToPadEnd = DayOfWeek.SUNDAY.getValue() - lastDayOfMonth.getDayOfWeek().getValue();
-                                if (daysToPadEnd < 0) { // Nếu ngày cuối cùng là Chủ nhật, DayOfWeek.SUNDAY.getValue() là 7
+                                if (daysToPadEnd < 0) { 
                                     daysToPadEnd = 0; 
                                 }
                                 for (int i = 0; i < daysToPadEnd; i++) {
