@@ -130,6 +130,26 @@
                     <div>
                         <h2 class="mb-1">Quản lý Môn học</h2>
                         <p class="text-muted mb-0">Danh sách môn học trong hệ thống</p>
+                        <!-- Hiển thị kỳ học hiện tại và dropdown chuyển kỳ học -->
+                        <div class="mt-3 d-flex align-items-center gap-3">
+                            <h5 class="mb-0 text-primary">
+                                <i class="fas fa-calendar-alt me-1"></i>
+                                <span>Đang xem kỳ học:</span> 
+                                <strong>${currentSemester.name}</strong>
+                            </h5>
+
+                            <form method="get" action="${pageContext.request.contextPath}/subjects" class="d-flex align-items-center">
+                                <input type="hidden" name="page" value="1" />
+<!--                                <input type="hidden" name="semesterId" value="${semesterId}"/>-->
+                                <label for="semesterId" class="me-2 mb-0 fw-bold text-muted">Chuyển kỳ:</label>
+                                <select name="semesterId" id="semesterId" class="form-select form-select-sm" onchange="this.form.submit()">
+                                    <c:forEach var="s" items="${allSemesters}">
+                                        <option value="${s.id}" ${s.id == semesterId ? 'selected' : ''}>${s.name}</option>
+                                    </c:forEach>
+                                </select>
+                            </form>
+                        </div>
+
                     </div>
                     <a href="${pageContext.request.contextPath}/subjects/add?semesterId=${semesterId}" class="btn btn-primary">
                         <i class="fas fa-plus me-2"></i>Thêm môn học
