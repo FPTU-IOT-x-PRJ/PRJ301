@@ -11,7 +11,7 @@ import java.util.Properties;
 public class MailUtils {
     public static void send(String to, String subject, String content) {
         final String user = "thesevenplusplus@gmail.com";
-        final String pass = "mmzmpagrtgmrnual";
+        final String pass = "joqk anti trkk xycq";
 
         Properties props = new Properties();
         props.put("mail.smtp.host", "smtp.gmail.com");
