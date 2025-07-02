@@ -7,12 +7,28 @@ package utils;
 import jakarta.mail.*;
 import jakarta.mail.internet.*;
 import java.util.Properties;
+import java.util.logging.*;
 
 public class MailUtils {
-    public static void send(String to, String subject, String content) {
-        final String user = "thesevenplusplus@gmail.com";
-        final String pass = "joqk anti trkk xycq";
+    private static final Logger LOGGER = Logger.getLogger(MailUtils.class.getName());
+    // Khai báo biến để giữ instance của ConfigManager
+    private static ConfigManager configManagerInstance; 
 
+    // Khai báo user và pass, nhưng không khởi tạo ngay lập tức ở đây
+    static String user;
+    static String pass;
+
+    // Khối static initializer: Khối này sẽ chạy MỘT LẦN duy nhất khi class MailUtils được tải vào bộ nhớ
+    static {
+        // Lấy thể hiện Singleton của ConfigManager
+        configManagerInstance = ConfigManager.getInstance();
+        
+        // Bây giờ, khi configManagerInstance đã được khởi tạo, chúng ta có thể sử dụng nó
+        user = configManagerInstance.getProperty("mail.username");
+        pass = configManagerInstance.getProperty("mail.password");
+    }
+    
+    public static void send(String to, String subject, String content) {
         Properties props = new Properties();
         props.put("mail.smtp.host", "smtp.gmail.com");
         props.put("mail.smtp.auth", "true");
@@ -35,7 +51,7 @@ public class MailUtils {
 
             Transport.send(msg);
         } catch (MessagingException e) {
-            e.printStackTrace();
+            LOGGER.log(Level.INFO, e.getMessage());
         }
     }
 }

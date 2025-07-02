@@ -36,8 +36,6 @@
                 <div class="alert alert-danger">${errorMessage}</div>
             </c:if>
             <form method="post" action="${pageContext.request.contextPath}/auth/forgot-password" class="needs-validation" novalidate>
-                <input type="hidden" name="email" value="${email}" />
-
                 <div class="mb-3">
                     <label for="code" class="form-label">Nhập mã xác nhận đã gửi tới email</label>
                     <input type="text" class="form-control" id="code" name="code" required placeholder="Mã xác nhận gồm 6 chữ số">

@@ -35,13 +35,22 @@
             <c:if test="${not empty errorMessage}">
                 <div class="alert alert-danger">${errorMessage}</div>
             </c:if>
+            <c:if test="${not empty successMessage}">
+                <div class="alert alert-success">${successMessage}</div>
+            </c:if>
             <form method="post" action="${pageContext.request.contextPath}/auth/reset-password" class="needs-validation" novalidate>
-                <input type="text" name="email" value="${email}" />
+                <input type="hidden" name="email" value="${email}" />
 
                 <div class="mb-3">
                     <label for="newPassword" class="form-label">Mật khẩu mới</label>
                     <input type="password" class="form-control" id="newPassword" name="newPassword" required placeholder="Nhập mật khẩu mới">
-                    <div class="invalid-feedback">Vui lòng nhập mật khẩu mới.</div>
+                    <div class="invalid-feedback" id="newPasswordFeedback">Vui lòng nhập mật khẩu mới.</div>
+                </div>
+
+                <div class="mb-3">
+                    <label for="confirmNewPassword" class="form-label">Xác nhận mật khẩu mới</label>
+                    <input type="password" class="form-control" id="confirmNewPassword" name="confirmNewPassword" required placeholder="Nhập lại mật khẩu mới">
+                    <div class="invalid-feedback" id="confirmNewPasswordFeedback">Vui lòng xác nhận mật khẩu mới.</div>
                 </div>
 
                 <div class="d-grid mt-4">
@@ -66,10 +75,40 @@
             'use strict';
             const form = document.querySelector('form');
             form.addEventListener('submit', function (event) {
-                if (!form.checkValidity()) {
+                const newPasswordInput = document.getElementById('newPassword');
+                const confirmNewPasswordInput = document.getElementById('confirmNewPassword');
+                const newPasswordFeedback = document.getElementById('newPasswordFeedback');
+                const confirmNewPasswordFeedback = document.getElementById('confirmNewPasswordFeedback');
+
+                // Reset custom validity messages and validity state
+                newPasswordInput.setCustomValidity('');
+                confirmNewPasswordInput.setCustomValidity('');
+                newPasswordFeedback.textContent = 'Vui lòng nhập mật khẩu mới.'; // Reset default message
+                confirmNewPasswordFeedback.textContent = 'Vui lòng xác nhận mật khẩu mới.'; // Reset default message
+
+
+                let isValid = true;
+
+                // Validate new password length
+                if (newPasswordInput.value.length < 6) {
+                    newPasswordInput.setCustomValidity('Mật khẩu phải có ít nhất 6 ký tự.');
+                    newPasswordFeedback.textContent = 'Mật khẩu phải có ít nhất 6 ký tự.';
+                    isValid = false;
+                }
+
+                // Validate if confirm password matches new password
+                if (newPasswordInput.value !== confirmNewPasswordInput.value) {
+                    confirmNewPasswordInput.setCustomValidity('Mật khẩu xác nhận không khớp.');
+                    confirmNewPasswordFeedback.textContent = 'Mật khẩu xác nhận không khớp.';
+                    isValid = false;
+                }
+
+                // If any custom validation failed, prevent form submission
+                if (!isValid || !form.checkValidity()) {
                     event.preventDefault();
                     event.stopPropagation();
                 }
+
                 form.classList.add('was-validated');
             }, false);
         })();
