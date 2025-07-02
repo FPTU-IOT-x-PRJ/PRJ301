@@ -264,7 +264,7 @@ public class AuthController extends HttpServlet {
     }
 
     private void sendVerifyCode(HttpServletRequest request, HttpServletResponse response) throws IOException, ServletException {
-        String email = request.getParameter("email");
+        String email = (String) request.getSession().getAttribute("email");
         String code = request.getParameter("code");
 
         // Get the reset code from the session
@@ -277,12 +277,12 @@ public class AuthController extends HttpServlet {
             if (currentTime - storedTimestamp < 15 * 60 * 1000 && storedResetCode.equals(code)) {
                 // Reset code is valid
 //                response.sendRedirect("/components/auth/re-password.jsp?email=" + email);
-                request.setAttribute("email", email);
                 request.getRequestDispatcher("/components/auth/re-password.jsp?email=" + email).forward(request, response);
 
             } else {
                 // Invalid or expired code
-                response.getWriter().println("Invalid or expired reset code.");
+                request.setAttribute("errorMessage", "Mã xác nhận không đúng hoặc đã hết hạn");
+                request.getRequestDispatcher("/components/auth/verify-code.jsp").forward(request, response);
             }
         } else {
             // No reset code in session, possibly expired or not generated
@@ -300,7 +300,7 @@ public class AuthController extends HttpServlet {
         // Store the reset code in the session (with an expiration time)
         request.getSession().setAttribute("resetCode", resetCode);
         request.getSession().setAttribute("resetCodeTimestamp", System.currentTimeMillis());
-
+        request.getSession().setAttribute("email", email);
         // Send the reset code to the user's email
         MailUtils.send(email, "Password Reset", "Your reset code is: " + resetCode);
 
@@ -316,23 +316,65 @@ public class AuthController extends HttpServlet {
         return String.valueOf(code);
     }
 
+    /**
+     * Xử lý đặt lại mật khẩu mới.
+     * Phương thức này được gọi từ doPost("/auth/reset-password") sau khi submit form re-password.jsp
+     */
     private void resetPassword(HttpServletRequest request, HttpServletResponse response) throws IOException, ServletException {
-        String email = request.getParameter("email");
+        // Lấy email từ session (an toàn hơn hidden field)
+        HttpSession session = request.getSession();
+        String email = (String) session.getAttribute("email"); 
+
+        if (email == null) {
+            // Trường hợp không có email trong session (người dùng cố gắng truy cập trực tiếp hoặc session hết hạn)
+            request.setAttribute("errorMessage", "Phiên đặt lại mật khẩu đã hết hạn. Vui lòng bắt đầu lại quy trình.");
+            request.getRequestDispatcher("/components/auth/forgot-password.jsp").forward(request, response);
+            return;
+        }
+
         String newPassword = request.getParameter("newPassword");
-        String hashedPassword = BCrypt.hashpw(newPassword, BCrypt.gensalt());
+        String confirmNewPassword = request.getParameter("confirmNewPassword");
 
-        // Update the user's password in the database
-        UserDAO userdao = new UserDAO();
-        userdao.updatePasswordByEmail(email, hashedPassword);
+        if (newPassword == null || newPassword.trim().isEmpty() || confirmNewPassword == null || confirmNewPassword.trim().isEmpty()) {
+            request.setAttribute("errorMessage", "Vui lòng nhập đầy đủ mật khẩu mới và xác nhận mật khẩu.");
+            request.setAttribute("email", email); // Giữ email để truyền lại JSP
+            request.getRequestDispatcher("/components/auth/re-password.jsp").forward(request, response);
+            return;
+        }
 
-        // Clear the reset code from the session
-        request.getSession().removeAttribute("resetCode");
-        request.getSession().removeAttribute("resetCodeTimestamp");
+        if (!newPassword.equals(confirmNewPassword)) {
+            request.setAttribute("errorMessage", "Mật khẩu mới và mật khẩu xác nhận không khớp.");
+            request.setAttribute("email", email); // Giữ email để truyền lại JSP
+            request.getRequestDispatcher("/components/auth/re-password.jsp").forward(request, response);
+            return;
+        }
+        
+        if (newPassword.length() < 6) { // Ví dụ: yêu cầu mật khẩu tối thiểu 6 ký tự
+            request.setAttribute("errorMessage", "Mật khẩu phải có ít nhất 6 ký tự.");
+            request.setAttribute("email", email);
+            request.getRequestDispatcher("/components/auth/re-password.jsp").forward(request, response);
+            return;
+        }
 
-        // Redirect to the login page or a success page
-//        response.sendRedirect("/components/auth/login.jsp"); 
-        request.getRequestDispatcher("/components/auth/login.jsp").forward(request, response);
 
+        try {
+            String hashedPassword = BCrypt.hashpw(newPassword, BCrypt.gensalt());
+            userDAO.updatePasswordByEmail(email, hashedPassword);
+
+            // Xóa mã và email khỏi session sau khi đặt lại mật khẩu thành công
+            session.removeAttribute("resetCode");
+            session.removeAttribute("resetCodeTimestamp");
+            session.removeAttribute("email");
+
+            request.setAttribute("successMessage", "Mật khẩu của bạn đã được đặt lại thành công. Vui lòng đăng nhập.");
+            request.getRequestDispatcher("/components/auth/login.jsp").forward(request, response);
+
+        } catch (ServletException | IOException e) {
+            LOGGER.log(Level.SEVERE, "Lỗi khi cập nhật mật khẩu cho email " + email + ": " + e.getMessage(), e);
+            request.setAttribute("errorMessage", "Đã xảy ra lỗi khi đặt lại mật khẩu. Vui lòng thử lại.");
+            request.setAttribute("email", email);
+            request.getRequestDispatcher("/components/auth/re-password.jsp").forward(request, response);
+        }
     }
 
 }

@@ -93,7 +93,7 @@ public class DBInitializer {
                      "    createdAt DATETIME DEFAULT GETDATE(),\n" +
                      "    updatedAt DATETIME DEFAULT GETDATE(),\n" +
                      "    userId INT,\n" +
-                     "    FOREIGN KEY (userId) REFERENCES Users(id) ON DELETE CASCADE\n" + // THAY ĐỔI Ở ĐÂY
+                     "    FOREIGN KEY (userId) REFERENCES Users(id) ON DELETE CASCADE\n" + 
                      ");";
         try (Statement stmt = conn.createStatement()) {
             stmt.execute(sql);
@@ -121,7 +121,7 @@ public class DBInitializer {
                      "    prerequisites NVARCHAR(MAX),\n" +
                      "    createdAt DATETIME DEFAULT GETDATE(),\n" +
                      "    updatedAt DATETIME DEFAULT GETDATE(),\n" +
-                     "    FOREIGN KEY (semesterId) REFERENCES Semesters(id) ON DELETE CASCADE\n" + // THAY ĐỔI Ở ĐÂY
+                     "    FOREIGN KEY (semesterId) REFERENCES Semesters(id) ON DELETE CASCADE\n" + 
                      ");";
         try (Statement stmt = conn.createStatement()) {
             stmt.execute(sql);
@@ -146,13 +146,40 @@ public class DBInitializer {
                      "    status VARCHAR(50) NOT NULL,\n" +
                      "    createdAt DATETIME DEFAULT GETDATE(),\n" +
                      "    updatedAt DATETIME DEFAULT GETDATE(),\n" +
-                     "    FOREIGN KEY (subjectId) REFERENCES Subjects(id) ON DELETE CASCADE\n" + // THAY ĐỔI Ở ĐÂY
+                     "    FOREIGN KEY (subjectId) REFERENCES Subjects(id) ON DELETE CASCADE\n" + 
                      ");";
         try (Statement stmt = conn.createStatement()) {
             stmt.execute(sql);
             LOGGER.log(Level.INFO, "Table 'Lessons' created successfully.");
         } catch (SQLException e) {
             LOGGER.log(Level.SEVERE, "Error creating Lessons table", e);
+        }
+    }
+
+    /**
+     * Tạo bảng Documents nếu nó chưa tồn tại.
+     * Các bản ghi Documents sẽ bị xóa nếu User, Subject hoặc Lesson liên quan bị xóa.
+     * @param conn Đối tượng Connection.
+     */
+    private void createDocumentsTable(Connection conn) {
+        String sql = "CREATE TABLE Documents (\n" +
+                     "    id INT PRIMARY KEY IDENTITY(1,1),\n" +
+                     "    fileName NVARCHAR(255) NOT NULL,    \n" +
+                     "    storedFileName VARCHAR(255) NOT NULL UNIQUE,\n" +
+                     "    filePath NVARCHAR(MAX) NOT NULL,     \n" +
+                     "    fileType VARCHAR(100),             \n" +
+                     "    fileSize BIGINT,                     \n" +
+                     "    uploadedBy INT,                      \n" +
+                     "    uploadDate DATETIME DEFAULT GETDATE(), \n" +
+                     "    description NVARCHAR(MAX), \n" +
+                     "    subjectId INT,\n" +
+                     "    lessonId INT,\n" +
+                     ");";
+        try (Statement stmt = conn.createStatement()) {
+            stmt.execute(sql);
+            LOGGER.log(Level.INFO, "Table 'Documents' created successfully.");
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Error creating Documents table", e);
         }
     }
 
@@ -474,7 +501,8 @@ public class DBInitializer {
                 return;
             }
 
-            String[] tableNames = {"Lessons", "Subjects", "Semesters", "Users"}; 
+            // Đảm bảo thứ tự drop và create chính xác theo phụ thuộc khóa ngoại
+            String[] tableNames = {"Documents", "Lessons", "Subjects", "Semesters", "Users"}; 
 
             if (enforceReset) {
                 LOGGER.log(Level.INFO, "Enforce reset is true. Dropping all tables...");
@@ -482,12 +510,13 @@ public class DBInitializer {
                     dropTable(conn, tableNames[i]);
                 }
                 
-                // Sau khi drop, tạo lại bảng theo đúng thứ tự
+                // Sau khi drop, tạo lại bảng theo đúng thứ tự phụ thuộc
                 LOGGER.log(Level.INFO, "Creating tables after reset...");
                 createUsersTable(conn); 
                 createSemestersTable(conn); 
                 createSubjectsTable(conn); 
                 createLessonsTable(conn);
+                createDocumentsTable(conn); // Thêm tạo bảng Documents ở đây
 
             } else {
                 // Nếu không reset, chỉ tạo các bảng nếu chúng chưa tồn tại
@@ -496,11 +525,12 @@ public class DBInitializer {
                 if (!tableExists(conn, "Semesters")) createSemestersTable(conn);
                 if (!tableExists(conn, "Subjects")) createSubjectsTable(conn);
                 if (!tableExists(conn, "Lessons")) createLessonsTable(conn);
+                if (!tableExists(conn, "Documents")) createDocumentsTable(conn); // Thêm tạo bảng Documents ở đây
             }
             
             LOGGER.log(Level.INFO, "Inserting fake data...");
             insertFakeData(conn); // Luôn chạy insertFakeData để đảm bảo dữ liệu giả
-                                  // (với kiểm tra trùng lặp bên trong)
+                                     // (với kiểm tra trùng lặp bên trong)
 
             LOGGER.log(Level.INFO, "Database initialization completed.");
 
