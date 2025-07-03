@@ -62,7 +62,7 @@
     </servlet-mapping>
     <servlet-mapping>
         <servlet-name>CalendarController</servlet-name>
-        <url-pattern>/calendar</url-pattern>
+        <url-pattern>/calendar/*</url-pattern>
     </servlet-mapping>
     <filter>
         <filter-name>AuthFilter</filter-name>
@@ -86,6 +86,19 @@
     </filter-mapping>
     <filter-mapping>
         <filter-name>AuthFilter</filter-name>
+        <url-pattern>/subjects/*</url-pattern>
+    </filter-mapping>    
+    <filter-mapping>
+        <filter-name>AuthFilter</filter-name>
         <url-pattern>/calendar/*</url-pattern>
     </filter-mapping>
+    
+    <error-page>
+        <error-code>404</error-code>
+        <location>/components/error404.jsp</location>
+    </error-page>
+    <error-page>
+        <exception-type>java.lang.Throwable</exception-type>
+        <location>/errorGeneral.jsp</location>
+    </error-page>    
 </web-app>

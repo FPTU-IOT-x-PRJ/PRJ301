@@ -87,6 +87,27 @@ public class LessonDAO extends DBContext {
         return lesson;
     }
 
+    public List<Lesson> getAllLessonsBySubjectId(int subjectId) {
+        List<Lesson> lessons = new ArrayList<>();
+        String sqlBuilder = "SELECT id, subjectId, name, lessonDate, description, status, createdAt, updatedAt FROM Lessons WHERE subjectId = ?";
+        List<Object> params = new ArrayList<>();
+        params.add(subjectId);
+
+        try (Connection con = getConnection();             PreparedStatement preparedStatement = con.prepareStatement(sqlBuilder)) {
+            for (int i = 0; i < params.size(); i++) {
+                preparedStatement.setObject(i + 1, params.get(i));
+            }
+            try (ResultSet rs = preparedStatement.executeQuery()) {
+                while (rs.next()) {
+                    lessons.add(extractLessonFromResultSet(rs));
+                }
+            }
+        } catch (SQLException e) {
+            printSQLException(e);
+        }
+        return lessons;
+    }
+    
     /**
      * Lấy danh sách các buổi học theo ID môn học, có phân trang, tìm kiếm và lọc.
      *

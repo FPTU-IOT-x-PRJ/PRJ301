@@ -12,6 +12,11 @@
     --white-color: #ffffff;
     --border-color: #dee2e6;
     --text-muted: #6c757d;
+
+    /* Thêm biến màu nền cho trạng thái lesson */
+    --lesson-inactive-bg: #f8d7da; /* Light red for inactive */
+    --lesson-active-bg: #e9ecef; /* Light gray for active */
+    --lesson-completed-bg: #d4edda; /* Light green for completed */
 }
 
 /* Base styles */
