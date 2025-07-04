@@ -50,8 +50,8 @@ jobs:
           host: ${{ secrets.EC2_HOST }}
           username: ec2-user
           key: ${{ secrets.EC2_SSH_KEY }}
-          source: "dist/*.war"
-          target: "~/EduPlan.war"
+          source: "dist/EduPlan.war"
+          target: "~"
 
       - name: Restart Tomcat
         uses: appleboy/ssh-action@master
