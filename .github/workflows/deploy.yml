@@ -77,4 +77,3 @@ jobs:
             sudo cp ~/EduPlan.war /opt/tomcat10/webapps/
             sudo cp -r ~/eduplan-config /opt/tomcat10/
             sudo systemctl start tomcat
-            tail -n 100 /opt/tomcat10/logs/catalina.out
