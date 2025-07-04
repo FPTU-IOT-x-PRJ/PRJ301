@@ -135,8 +135,7 @@
             </div>
 
             <div class="card mb-4 shadow-sm">
-                <div class="card-body">
-                    <form method="GET" action="${pageContext.request.contextPath}/semesters/dashboard" id="filterForm">
+                <div class="card-body">                    <form method="GET" action="${pageContext.request.contextPath}/semesters/dashboard" id="filterForm">
                         <div class="row g-3">
                             <div class="col-md-4">
                                 <div class="input-group">
@@ -178,6 +177,7 @@
                             </div>
                         </div>
                     </form>
+
                 </div>
             </div>
 
