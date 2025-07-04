@@ -21,18 +21,21 @@ jobs:
       - name: Install Ant
         run: sudo apt-get install ant -y
 
-      - name: List Ant Targets
-        run: ant -p
+      - name: Download Tomcat (for build only)
+        run: |
+          curl -O https://downloads.apache.org/tomcat/tomcat-10/v10.1.24/bin/apache-tomcat-10.1.24.tar.gz
+          mkdir tomcat10
+          tar xzvf apache-tomcat-10.1.24.tar.gz -C tomcat10 --strip-components=1
 
       - name: Build with Ant
-        run: ant dist -Dlibs.CopyLibs.classpath=lib/CopyLibs/org-netbeans-modules-java-j2seproject-copylibstask.jar
+        run: ant dist \
+          -Dlibs.CopyLibs.classpath=lib/CopyLibs/org-netbeans-modules-java-j2seproject-copylibstask.jar \
+          -Dj2ee.server.home=tomcat10
 
-      - name: Find WAR file path
-        id: find_war
+      - name: Debug WAR path
         run: |
-          WAR_PATH=$(find . -name "*.war" | head -n 1)
-          echo "WAR_PATH=$WAR_PATH" >> $GITHUB_ENV
-          echo "Found WAR file: $WAR_PATH"
+          echo "Current dir: $(pwd)"
+          find . -name "*.war"
 
       - name: Copy WAR to EC2
         uses: appleboy/scp-action@master
@@ -40,10 +43,10 @@ jobs:
           host: ${{ secrets.EC2_HOST }}
           username: ec2-user
           key: ${{ secrets.EC2_SSH_KEY }}
-          source: "${{ env.WAR_PATH }}"
-          target: "/home/ec2-user/"
+          source: "dist/*.war"
+          target: "~/EduPlan.war"
 
-      - name: Restart Tomcat and deploy WAR
+      - name: Restart Tomcat
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.EC2_HOST }}
@@ -51,6 +54,6 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
             sudo systemctl stop tomcat
-            sudo rm -rf /opt/tomcat10/webapps/*.war /opt/tomcat10/webapps/*/
-            sudo cp /home/ec2-user/*.war /opt/tomcat10/webapps/
+            sudo rm -rf /opt/tomcat10/webapps/EduPlan /opt/tomcat10/webapps/EduPlan.war
+            sudo cp ~/EduPlan.war /opt/tomcat10/webapps/
             sudo systemctl start tomcat
