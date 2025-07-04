@@ -10,91 +10,90 @@ public class ConfigManager {
     private static final Logger LOGGER = Logger.getLogger(ConfigManager.class.getName());
     private static ConfigManager instance;
     private Properties properties;
-    
-    // Private constructor to implement Singleton pattern
+
     private ConfigManager() {
         loadProperties();
     }
-    
-    /**
-     * Singleton pattern - only one instance
-     */
+
     public static synchronized ConfigManager getInstance() {
         if (instance == null) {
             instance = new ConfigManager();
         }
         return instance;
     }
-    
-    /**
-     * Load configuration file .env only once
-     */
+
     private void loadProperties() {
         properties = new Properties();
-        
+
         try (InputStream input = ConfigManager.class.getClassLoader()
                 .getResourceAsStream("config/.env")) {
-            
+
             if (input == null) {
-                LOGGER.log(Level.SEVERE, "Cannot find .env file in config directory");
-                throw new RuntimeException(".env file does not exist");
+                LOGGER.log(Level.WARNING, "Cannot find .env file in config directory");
+                return; // Không ném lỗi, cho phép chạy nếu có biến môi trường
             }
-            
+
             properties.load(input);
             LOGGER.log(Level.INFO, "Successfully loaded .env configuration file");
-            
+
         } catch (IOException e) {
             LOGGER.log(Level.SEVERE, "Error reading .env file", e);
-            throw new RuntimeException("Cannot read configuration file", e);
         }
     }
-    
-    /**
-     * Get configuration value by key
-     */
+
     public String getProperty(String key) {
-        return properties.getProperty(key);
+        String envValue = System.getenv(key);
+        if (envValue != null) {
+            LOGGER.log(Level.INFO, "Loaded from ENV: {0} = {1}", new Object[]{key, maskIfSensitive(key, envValue)});
+            return envValue;
+        }
+
+        String fileValue = properties.getProperty(key);
+        if (fileValue != null) {
+            LOGGER.log(Level.INFO, "Loaded from .env file: {0} = {1}", new Object[]{key, maskIfSensitive(key, fileValue)});
+        } else {
+            LOGGER.log(Level.WARNING, "Configuration key not found: {0}", key);
+        }
+
+        return fileValue;
     }
-    
-    /**
-     * Get configuration value with default value
-     */
+
     public String getProperty(String key, String defaultValue) {
-        return properties.getProperty(key, defaultValue);
+        String value = getProperty(key);
+        return (value != null) ? value : defaultValue;
     }
-    
-    /**
-     * Get integer value from configuration
-     */
+
     public int getIntProperty(String key, int defaultValue) {
+        String value = getProperty(key);
         try {
-            String value = properties.getProperty(key);
-            return value != null ? Integer.parseInt(value) : defaultValue;
+            return (value != null) ? Integer.parseInt(value) : defaultValue;
         } catch (NumberFormatException e) {
             LOGGER.log(Level.WARNING, "Cannot parse integer for key: " + key, e);
             return defaultValue;
         }
     }
-    
-    /**
-     * Get boolean value from configuration
-     */
+
     public boolean getBooleanProperty(String key, boolean defaultValue) {
-        String value = properties.getProperty(key);
-        return value != null ? Boolean.parseBoolean(value) : defaultValue;
+        String value = getProperty(key);
+        return (value != null) ? Boolean.parseBoolean(value) : defaultValue;
     }
-    
-    /**
-     * Check if key exists
-     */
+
     public boolean containsKey(String key) {
-        return properties.containsKey(key);
+        return System.getenv(key) != null || properties.containsKey(key);
     }
-    
-    /**
-     * Get all properties (for debugging only)
-     */
+
     public Properties getAllProperties() {
-        return new Properties(properties); // Return copy to avoid modification
+        Properties combined = new Properties();
+        combined.putAll(properties);
+        System.getenv().forEach((k, v) -> combined.setProperty(k, v));
+        return combined;
+    }
+
+    // Ẩn giá trị nhạy cảm trong log
+    private String maskIfSensitive(String key, String value) {
+        if (key.toLowerCase().contains("password") || key.toLowerCase().contains("secret")) {
+            return "********";
+        }
+        return value;
     }
 }
