@@ -33,13 +33,13 @@
                 width: 20%; /* Điều chỉnh cho tên môn */
                 font-weight: 500;
             }
-            
+
             .table-custom th:nth-child(3),
             .table-custom td:nth-child(3) {
                 width: 10%; /* Mã môn */
                 text-align: center;
             }
-            
+
             .table-custom th:nth-child(4),
             .table-custom td:nth-child(4) {
                 width: 10%; /* Tín chỉ */
@@ -160,11 +160,11 @@
                                     </select>
                                 </div>
                             </div>
-                            
+
                             <div class="col-md-3">
                                 <div class="input-group">
                                     <span class="input-group-text"><i class="fas fa-user-tie"></i></span>
-                                    <%-- Đã chuyển từ select sang input text cho tìm kiếm giảng viên --%>
+                                        <%-- Đã chuyển từ select sang input text cho tìm kiếm giảng viên --%>
                                     <input type="text" class="form-control" name="teacherName" placeholder="Tìm theo tên giảng viên..."
                                            value="${param.teacherName}">
                                 </div>
@@ -227,7 +227,7 @@
                                                            title="Xem chi tiết" data-bs-toggle="tooltip">
                                                             <i class="fas fa-eye"></i>
                                                         </a>
-                                                        <a href="${pageContext.request.contextPath}/subjects/edit?id=${subject.id}"
+<!--                                                        <a href="${pageContext.request.contextPath}/subjects/edit?id=${subject.id}"
                                                            class="btn btn-sm btn-outline-warning"
                                                            title="Chỉnh sửa" data-bs-toggle="tooltip">
                                                             <i class="fas fa-edit"></i>
@@ -236,7 +236,7 @@
                                                            class="btn btn-sm btn-outline-danger"
                                                            title="Xóa" data-bs-toggle="tooltip">
                                                             <i class="fas fa-trash"></i>
-                                                        </a>
+                                                        </a>-->
                                                     </div>
                                                 </td>
                                             </tr>
@@ -269,9 +269,9 @@
             var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
                 return new bootstrap.Tooltip(tooltipTriggerEl)
             })
-            
+
             // Tự động submit form khi chọn kỳ học từ dropdown trong bộ lọc
-            document.getElementById('semesterId').addEventListener('change', function() {
+            document.getElementById('semesterId').addEventListener('change', function () {
                 document.getElementById('filterForm').submit();
             });
         </script>

@@ -63,7 +63,7 @@ public class SubjectsController extends HttpServlet {
             case "/delete-confirm":
                 displayDeleteSubjectConfirm(request, response);
                 break;
-            case "/detail": 
+            case "/detail":
                 displaySubjectDetail(request, response, user);
                 break;
             default:
@@ -121,7 +121,7 @@ public class SubjectsController extends HttpServlet {
             response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Có lỗi xảy ra khi lấy thông tin môn học.");
         }
     }
-    
+
     private void displaySubjects(HttpServletRequest request, HttpServletResponse response, User user)
             throws ServletException, IOException {
         String search = request.getParameter("search");
@@ -153,7 +153,7 @@ public class SubjectsController extends HttpServlet {
         // Truyền teacherName vào phương thức DAO (không thay đổi)
         List<Subject> subjects = subjectDao.getAllSubjects(search, semesterId, isActive, offset, pageSize, teacherName);
         // Truyền teacherName vào phương thức getTotalSubjectCount (không thay đổi)
-        int totalSubjects = subjectDao.countSubjects(search, semesterId, teacherName); 
+        int totalSubjects = subjectDao.countSubjects(search, semesterId, teacherName);
         int totalPages = (int) Math.ceil((double) totalSubjects / pageSize);
 
         Semester currentSemester = semesterDao.getSemesterById(semesterId, user.getId());
@@ -171,7 +171,7 @@ public class SubjectsController extends HttpServlet {
         //System.out.println("subjects: " + subjects);
         request.getRequestDispatcher("/components/subject/subject-dashboard.jsp").forward(request, response);
     }
-    
+
     private void displaySubjectDetail(HttpServletRequest request, HttpServletResponse response, User user)
             throws ServletException, IOException {
         try {
@@ -293,7 +293,7 @@ public class SubjectsController extends HttpServlet {
 
             request.getRequestDispatcher("/components/subject/subject-add.jsp").forward(request, response);
         } else {
-            response.sendRedirect(request.getContextPath() + "/subjects?semesterId=" + semesterId);
+            response.sendRedirect(request.getContextPath() + "/subjects/detail?id=" + subject.getId());
         }
     }
 
@@ -375,7 +375,7 @@ public class SubjectsController extends HttpServlet {
 
             request.getRequestDispatcher("/components/subject/subject-edit.jsp").forward(request, response);
         } else {
-            response.sendRedirect(request.getContextPath() + "/subjects?semesterId=" + semesterId);
+            response.sendRedirect(request.getContextPath() + "/subjects/detail?id=" + subject.getId());
         }
     }
 

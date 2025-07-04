@@ -135,7 +135,6 @@
             </c:if>
 
             <div class="row">
-                <!-- Thông tin tổng quan môn học -->
                 <div class="col-md-12">
                     <div class="card">
                         <div class="card-header">
@@ -177,7 +176,6 @@
             </div>
 
             <div class="row">
-                <!-- Buổi học (Lessons) -->
                 <div class="col-md-12">
                     <div class="card">
                         <div class="card-header d-flex justify-content-between align-items-center">
@@ -201,14 +199,13 @@
             </div>
 
             <div class="row">
-                <!-- Tài liệu (Documents) -->
                 <div class="col-md-12">
                     <div class="card">
                         <div class="card-header d-flex justify-content-between align-items-center">
                             <i class="fas fa-file-alt me-2"></i>Tài liệu
-                            <a href="${pageContext.request.contextPath}/documents/add?subjectId=${subject.id}" class="btn btn-light btn-sm rounded-pill">
+                            <button type="button" class="btn btn-light btn-sm rounded-pill" data-bs-toggle="modal" data-bs-target="#uploadDocumentModal">
                                 <i class="fas fa-upload me-2"></i>Tải lên tài liệu mới
-                            </a>
+                            </button>
                         </div>
                         <div class="card-body">
                             <c:if test="${empty documents}">
@@ -223,7 +220,6 @@
             </div>
 
             <div class="row">
-                <!-- Coming Soon: Quiz Feature -->
                 <div class="col-md-12">
                     <div class="card quiz-section">
                         <h4><i class="fas fa-hourglass-half me-2"></i>Tính năng Quiz</h4>
@@ -235,6 +231,35 @@
 
         </div>
 
+        <div class="modal fade" id="uploadDocumentModal" tabindex="-1" aria-labelledby="uploadDocumentModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="uploadDocumentModalLabel">Tải lên Tài liệu Mới</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <form id="uploadDocumentForm" action="${pageContext.request.contextPath}/documents/add" method="post" enctype="multipart/form-data">
+                        <div class="modal-body">
+                            <input type="hidden" id="subjectId" name="subjectId" value="${subject.id}">
+                            <input type="hidden" name="action" value="upload">
+                            <div class="mb-3">
+                                <label for="file" class="form-label">Chọn tệp tài liệu:</label>
+                                <input class="form-control" id="file" type="file" name="file" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="description" class="form-label">Mô tả (tùy chọn):</label>
+                                <textarea class="form-control" id="description" name="description" rows="3"></textarea>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary rounded-pill" data-bs-dismiss="modal">Hủy</button>
+                            <button type="submit" class="btn btn-primary rounded-pill">Tải lên</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    </body>
+        </body>
 </html>

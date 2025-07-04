@@ -78,6 +78,10 @@
     </filter-mapping>
     <filter-mapping>
         <filter-name>AuthFilter</filter-name>
+        <url-pattern>/subjects/*</url-pattern>
+    </filter-mapping>
+    <filter-mapping>
+        <filter-name>AuthFilter</filter-name>
         <url-pattern>/lessons/*</url-pattern>
     </filter-mapping>
     <filter-mapping>
