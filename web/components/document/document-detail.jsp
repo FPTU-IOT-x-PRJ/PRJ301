@@ -146,14 +146,14 @@
                             <span class="detail-label">Kích thước File:</span>
                             <span class="detail-value"><fmt:formatNumber value="${document.fileSize / 1024}" pattern="#,##0.00"/> KB</span>
                         </div>
-                        <div class="detail-item">
+<!--                        <div class="detail-item">
                             <span class="detail-label">Ngày tải lên:</span>
                             <span class="detail-value"><fmt:formatDate value="${document.uploadDate}" pattern="dd-MM-yyyy HH:mm"/></span>
-                        </div>
+                        </div>-->
                         
                         <div class="d-flex justify-content-end mt-4">
-                            <a href="${pageContext.request.contextPath}/documents/display" class="btn btn-secondary-custom me-2">
-                                <i class="fas fa-arrow-left me-2"></i>Quay lại Danh sách
+                            <a href="${requestScope.redirectUrl}" class="btn btn-secondary-custom me-2">
+                                <i class="fas fa-arrow-left me-2"></i>Quay lại
                             </a>
                             <a href="${pageContext.request.contextPath}/documents/edit?id=${document.id}" class="btn btn-primary-custom">
                                 <i class="fas fa-edit me-2"></i>Chỉnh sửa
