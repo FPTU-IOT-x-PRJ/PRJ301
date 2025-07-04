@@ -13,7 +13,24 @@ jobs:
     steps:
       - name: Checkout source
         uses: actions/checkout@v3
+        
+      - name: Set up Java
+        uses: actions/setup-java@v3
+        with:
+          java-version: '17'
+          distribution: 'temurin'
 
+      - name: Install Ant
+        run: sudo apt-get install ant -y
+
+      - name: Build with Ant
+        run: ant war
+        
+      - name: Debug WAR path
+        run: |
+          echo "Current dir: $(pwd)"
+          find . -name "*.war"
+          
       - name: Copy WAR to EC2
         uses: appleboy/scp-action@master
         with:
