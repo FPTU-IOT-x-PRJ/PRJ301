@@ -1,15 +1,14 @@
 package entity;
 
-import java.util.List;
-
 public class Quizzes {
+
     private int id;
     private int quizId;
     private String question;
-    private List<String> answers;
-    private List<String> options;
+    private String answers;
+    private String options;
 
-    public Quizzes(int id, int quizId, String question, List<String> answers, List<String> options) {
+    public Quizzes(int id, int quizId, String question, String answers, String options) {
         this.id = id;
         this.quizId = quizId;
         this.question = question;
@@ -44,30 +43,32 @@ public class Quizzes {
         this.question = question;
     }
 
-    public List<String> getAnswers() {
+    public String getAnswers() {
         return answers;
     }
 
-    public void setAnswers(List<String> answers) {
+    public void setAnswers(String answers) {
         this.answers = answers;
     }
 
-    public List<String> getOptions() {
+    public String getOptions() {
         return options;
     }
 
-    public void setOptions(List<String> options) {
+    public void setOptions(String options) {
         this.options = options;
     }
 
+    
+
     @Override
     public String toString() {
-        return "Quizzes{" +
-                "id=" + id +
-                ", quizId=" + quizId +
-                ", question='" + question + '\'' +
-                ", answers=" + answers +
-                ", options=" + options +
-                '}';
+        return "Quizzes{"
+                + "id=" + id
+                + ", quizId=" + quizId
+                + ", question='" + question + '\''
+                + ", answers=" + answers
+                + ", options=" + options
+                + '}';
     }
 }
