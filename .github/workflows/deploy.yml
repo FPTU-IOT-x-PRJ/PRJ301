@@ -54,16 +54,28 @@ jobs:
             dist/EduPlan.war
           target: "~"
 
-      - name: Upload .env to EC2
+      - name: Generate and upload .env to EC2
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ec2-user
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            echo "${{ secrets.ENV_FILE }}" > .env.tmp
             mkdir -p ~/eduplan-config/config
-            mv .env.tmp ~/eduplan-config/config/.env
+
+            cat <<EOF > ~/eduplan-config/config/.env
+            db.username=${{ secrets.DB_USERNAME }}
+            db.password=${{ secrets.DB_PASSWORD }}
+            db.url=${{ secrets.DB_URL }}
+            
+            mail.username=${{ secrets.MAIL_USERNAME }}
+            mail.password=${{ secrets.MAIL_PASSWORD }}
+
+            CLOUDINARY_CLOUD_NAME=${{ secrets.CLOUDINARY_CLOUD_NAME }}
+            CLOUDINARY_API_KEY=${{ secrets.CLOUDINARY_API_KEY }}
+            CLOUDINARY_API_SECRET=${{ secrets.CLOUDINARY_API_SECRET }}
+            EOF
+
 
       - name: Restart Tomcat
         uses: appleboy/ssh-action@master
