@@ -74,6 +74,6 @@ jobs:
           script: |
             sudo systemctl stop tomcat
             sudo rm -rf /opt/tomcat10/webapps/EduPlan /opt/tomcat10/webapps/EduPlan.war
-            sudo cp ~/EduPlan.war /opt/tomcat10/webapps/
+            sudo cp dist/EduPlan.war /opt/tomcat10/webapps/
             sudo cp -r ~/eduplan-config /opt/tomcat10/
             sudo systemctl start tomcat
