@@ -222,9 +222,9 @@
                                                 </td>
                                                 <td>
                                                     <div class="btn-group-actions">
-                                                        <a href="${pageContext.request.contextPath}/lessons?subjectId=${subject.id}"
+                                                        <a href="${pageContext.request.contextPath}/subjects/detail?id=${subject.id}"
                                                            class="btn btn-sm btn-outline-info"
-                                                           title="Xem buổi học" data-bs-toggle="tooltip">
+                                                           title="Xem chi tiết" data-bs-toggle="tooltip">
                                                             <i class="fas fa-eye"></i>
                                                         </a>
                                                         <a href="${pageContext.request.contextPath}/subjects/edit?id=${subject.id}"
