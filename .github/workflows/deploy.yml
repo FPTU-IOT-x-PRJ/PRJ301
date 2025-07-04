@@ -19,10 +19,11 @@ jobs:
         with:
           java-version: '17'
           distribution: 'temurin'
-
+      
       - name: Install Ant
         run: sudo apt-get install ant -y
-
+      - name: List Ant Targets
+        run: ant -p
       - name: Build with Ant
         run: ant war
         
