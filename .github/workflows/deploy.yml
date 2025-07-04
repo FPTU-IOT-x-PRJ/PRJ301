@@ -21,20 +21,21 @@ jobs:
       - name: Install Ant
         run: sudo apt-get install ant -y
 
-      - name: Download Tomcat (for build only)
+      - name: Download Tomcat (for Ant build)
         run: |
-          curl -O https://downloads.apache.org/tomcat/tomcat-10/v10.1.24/bin/apache-tomcat-10.1.24.tar.gz
+          curl -O https://dlcdn.apache.org/tomcat/tomcat-10/v10.1.42/bin/apache-tomcat-10.1.42.tar.gz
           mkdir tomcat10
-          tar xzvf apache-tomcat-10.1.24.tar.gz -C tomcat10 --strip-components=1
+          tar xzvf apache-tomcat-10.1.42.tar.gz -C tomcat10 --strip-components=1
 
       - name: Build with Ant
-        run: ant dist \
-          -Dlibs.CopyLibs.classpath=lib/CopyLibs/org-netbeans-modules-java-j2seproject-copylibstask.jar \
-          -Dj2ee.server.home=tomcat10
+        run: |
+          ant dist \
+            -Dlibs.CopyLibs.classpath=lib/CopyLibs/org-netbeans-modules-java-j2seproject-copylibstask.jar \
+            -Dj2ee.server.home=tomcat10
 
       - name: Debug WAR path
         run: |
-          echo "Current dir: $(pwd)"
+          echo "Current directory: $(pwd)"
           find . -name "*.war"
 
       - name: Copy WAR to EC2
