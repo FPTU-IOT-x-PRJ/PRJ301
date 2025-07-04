@@ -1,8 +1,6 @@
 name: Deploy WAR to Tomcat on EC2
 
 on:
-#  pull_request:
-#    branches: [ "main" ]
   push:
     branches: ["deploy"]
 
@@ -13,40 +11,39 @@ jobs:
     steps:
       - name: Checkout source
         uses: actions/checkout@v3
-        
+
       - name: Set up Java
         uses: actions/setup-java@v3
         with:
           java-version: '17'
           distribution: 'temurin'
-          
-      - name: Fake Tomcat dir
-        run: mkdir -p fake-tomcat
-      
+
       - name: Install Ant
         run: sudo apt-get install ant -y
-        
+
       - name: List Ant Targets
         run: ant -p
-        
+
       - name: Build with Ant
-        run: ant -Dj2ee.server.home=$(pwd)/fake-tomcat dist
-        
-      - name: Debug WAR path
+        run: ant dist -Dlibs.CopyLibs.classpath=lib/CopyLibs/org-netbeans-modules-java-j2seproject-copylibstask.jar
+
+      - name: Find WAR file path
+        id: find_war
         run: |
-          echo "Current dir: $(pwd)"
-          find . -name "*.war"
-          
+          WAR_PATH=$(find . -name "*.war" | head -n 1)
+          echo "WAR_PATH=$WAR_PATH" >> $GITHUB_ENV
+          echo "Found WAR file: $WAR_PATH"
+
       - name: Copy WAR to EC2
         uses: appleboy/scp-action@master
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ec2-user
           key: ${{ secrets.EC2_SSH_KEY }}
-          source: "target/EduPlan.war"
-          target: "/opt/tomcat10/webapps/"
+          source: "${{ env.WAR_PATH }}"
+          target: "/home/ec2-user/"
 
-      - name: Restart Tomcat
+      - name: Restart Tomcat and deploy WAR
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.EC2_HOST }}
@@ -54,6 +51,6 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
             sudo systemctl stop tomcat
-            sudo rm -rf /opt/tomcat10/webapps/EduPlan /opt/tomcat10/webapps/EduPlan.war
-            sudo cp ~/EduPlan.war /opt/tomcat10/webapps/
+            sudo rm -rf /opt/tomcat10/webapps/*.war /opt/tomcat10/webapps/*/
+            sudo cp /home/ec2-user/*.war /opt/tomcat10/webapps/
             sudo systemctl start tomcat
