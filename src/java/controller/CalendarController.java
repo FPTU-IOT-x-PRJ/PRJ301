@@ -64,6 +64,13 @@ public class CalendarController extends HttpServlet {
     private void displayCalendar(HttpServletRequest request, HttpServletResponse response, User user)
             throws ServletException, IOException {
         try {
+            Semester semester = semesterDao.getLatestSemester(user.getId());
+            if (semester == null) {
+                request.setAttribute("errorMessage", "Bạn chưa có kỳ học nào. Vui lòng thêm kỳ học mới.");
+                request.getRequestDispatcher("/components/subject/no-semester-found.jsp").forward(request, response);
+                return;
+            }
+                
             String semesterIdStr = request.getParameter("semesterId");
             int selectedSemesterId;
             Semester currentSemester = null;

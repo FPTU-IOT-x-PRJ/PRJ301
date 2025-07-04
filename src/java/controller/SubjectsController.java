@@ -5,6 +5,7 @@ import dao.LessonDAO;
 import dao.SemesterDAO;
 import dao.SubjectDAO;
 import entity.Document;
+import DTO.Subject.SubjectWithLessonsDTO;
 import entity.Lesson;
 import entity.Semester;
 import entity.Subject;
@@ -17,6 +18,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import java.sql.Date; // Giữ nguyên, có thể dùng ở các hàm khác
 import java.time.LocalDateTime; // Giữ nguyên
+import java.util.ArrayList;
 import java.util.HashMap; // Giữ nguyên
 import java.util.List;
 import java.util.Map; // Giữ nguyên
@@ -27,8 +29,8 @@ public class SubjectsController extends HttpServlet {
 
     private static final Logger LOGGER = Logger.getLogger(SubjectsController.class.getName());
     SubjectDAO subjectDao = new SubjectDAO();
-    SemesterDAO semesterDao = new SemesterDAO();
     LessonDAO lessonDao = new LessonDAO();
+    SemesterDAO semesterDao = new SemesterDAO();
     DocumentDAO documentDao = new DocumentDAO();
 
     @Override
@@ -142,17 +144,42 @@ public class SubjectsController extends HttpServlet {
                 return;
             }
         } else {
-            semesterId = Integer.parseInt(semesterIdStr);
+            try {
+                semesterId = Integer.parseInt(semesterIdStr);
+            } catch (NumberFormatException e) {
+                LOGGER.log(Level.WARNING, "Invalid semesterId format: " + semesterIdStr, e);
+                // Xử lý lỗi: chuyển hướng hoặc hiển thị lỗi cho người dùng
+                response.sendRedirect(request.getContextPath() + "/subjects"); // Chuyển hướng về trang mặc định
+                return;
+            }
         }
 
         int page = (pageStr != null && !pageStr.isEmpty()) ? Integer.parseInt(pageStr) : 1;
         int pageSize = 10;
         int offset = (page - 1) * pageSize;
-        Boolean isActive = (isActiveStr != null && !isActiveStr.isEmpty()) ? Boolean.parseBoolean(isActiveStr) : null;
+        Boolean isActive = null; // Mặc định là null (không lọc)
+        if (isActiveStr != null && !isActiveStr.isEmpty()) {
+            try {
+                isActive = Boolean.parseBoolean(isActiveStr);
+            } catch (IllegalArgumentException e) {
+                LOGGER.log(Level.WARNING, "Invalid isActive format: " + isActiveStr, e);
+                // Xử lý lỗi: có thể bỏ qua hoặc thiết lập giá trị mặc định
+            }
+        }
 
-        // Truyền teacherName vào phương thức DAO (không thay đổi)
+        // Lấy danh sách các môn học có phân trang
         List<Subject> subjects = subjectDao.getAllSubjects(search, semesterId, isActive, offset, pageSize, teacherName);
-        // Truyền teacherName vào phương thức getTotalSubjectCount (không thay đổi)
+        // --- Bắt đầu phần thay đổi để thêm Lessons vào Subject DTO ---
+        List<SubjectWithLessonsDTO> subjectsWithLessonsDTOList = new ArrayList<>();
+        for (Subject subject : subjects) {
+            // Lấy tất cả các buổi học cho từng môn học
+            List<Lesson> lessons = lessonDao.getAllLessonsBySubjectId(subject.getId()); 
+            // Tạo DTO mới với Subject và danh sách Lessons của nó
+            subjectsWithLessonsDTOList.add(new SubjectWithLessonsDTO(subject, lessons));
+        }
+        // --- Kết thúc phần thay đổi ---
+
+        // Lấy tổng số môn học để tính toán phân trang
         int totalSubjects = subjectDao.countSubjects(search, semesterId, teacherName);
         int totalPages = (int) Math.ceil((double) totalSubjects / pageSize);
 
@@ -164,11 +191,15 @@ public class SubjectsController extends HttpServlet {
         request.setAttribute("semesterId", semesterId);
         request.setAttribute("search", search);
         request.setAttribute("teacherName", teacherName); // Vẫn giữ lại giá trị teacherName trên form
+        request.setAttribute("isActive", isActiveStr); // Giữ lại giá trị isActive trên form
 
-        request.setAttribute("subjects", subjects);
+        // Gán danh sách DTO mới vào request attribute
+        request.setAttribute("subjects", subjectsWithLessonsDTOList); 
         request.setAttribute("totalPages", totalPages);
         request.setAttribute("currentPage", page);
-        //System.out.println("subjects: " + subjects);
+        
+        LOGGER.log(Level.INFO, "Subjects with lessons loaded: {0}", subjectsWithLessonsDTOList.size());
+        
         request.getRequestDispatcher("/components/subject/subject-dashboard.jsp").forward(request, response);
     }
 

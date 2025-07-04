@@ -9,17 +9,21 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import java.sql.SQLException;
+import java.util.Random;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.mindrot.jbcrypt.BCrypt;
+import utils.MailUtils;
 
 /**
- * Controller xử lý các tác vụ liên quan đến xác thực người dùng: Đăng ký, Đăng nhập, Đăng xuất.
+ * Controller xử lý các tác vụ liên quan đến xác thực người dùng: Đăng ký, Đăng
+ * nhập, Đăng xuất.
  */
 public class AuthController extends HttpServlet {
+
     UserDAO userDAO = new UserDAO();
     private static final Logger LOGGER = Logger.getLogger(AuthController.class.getName());
-    
+
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
@@ -34,6 +38,12 @@ public class AuthController extends HttpServlet {
                 break;
             case "/logout":
                 logoutUser(request, response);
+                break;
+            case "/forgot-password":
+                forgotPasswordForm(request, response);
+                break;
+            case "/verify-code":
+                verifyCodeForm(request, response);
                 break;
             default:
                 // Nếu không có action cụ thể, chuyển hướng về trang đăng nhập
@@ -57,6 +67,12 @@ public class AuthController extends HttpServlet {
             case "/login":
                 authenticateUser(request, response);
                 break;
+            case "/forgot-password":
+                sendVerifyCode(request, response);
+                break;
+            case "/reset-password":
+                resetPassword(request, response);
+                break;
             default:
                 // Nếu POST đến URL không xác định, có thể chuyển hướng về trang đăng nhập hoặc báo lỗi
                 response.sendError(HttpServletResponse.SC_NOT_FOUND, "Action không hợp lệ");
@@ -66,6 +82,7 @@ public class AuthController extends HttpServlet {
 
     /**
      * Hiển thị form đăng ký.
+     *
      * @param request HttpServletRequest
      * @param response HttpServletResponse
      * @throws ServletException
@@ -77,6 +94,7 @@ public class AuthController extends HttpServlet {
 
     /**
      * Hiển thị form đăng nhập. Kiểm tra nếu đã đăng nhập thì chuyển hướng.
+     *
      * @param request HttpServletRequest
      * @param response HttpServletResponse
      * @throws IOException
@@ -99,9 +117,10 @@ public class AuthController extends HttpServlet {
         }
         request.getRequestDispatcher("/components/auth/login.jsp").forward(request, response);
     }
-    
+
     /**
      * Xử lý logic đăng ký người dùng mới.
+     *
      * @param request HttpServletRequest
      * @param response HttpServletResponse
      * @throws ServletException
@@ -116,12 +135,12 @@ public class AuthController extends HttpServlet {
         String confirmPassword = request.getParameter("confirmPassword");
 
         // Basic Validation
-        if (firstName == null || firstName.trim().isEmpty() ||
-            lastName == null || lastName.trim().isEmpty() ||
-            username == null || username.trim().isEmpty() ||
-            email == null || email.trim().isEmpty() ||
-            password == null || password.trim().isEmpty() ||
-            confirmPassword == null || confirmPassword.trim().isEmpty()) {
+        if (firstName == null || firstName.trim().isEmpty()
+                || lastName == null || lastName.trim().isEmpty()
+                || username == null || username.trim().isEmpty()
+                || email == null || email.trim().isEmpty()
+                || password == null || password.trim().isEmpty()
+                || confirmPassword == null || confirmPassword.trim().isEmpty()) {
             request.setAttribute("errorMessage", "Vui lòng điền đầy đủ tất cả các trường.");
             forwardToRegisterPageWithInput(request, response, firstName, lastName, username, email);
             return;
@@ -156,11 +175,12 @@ public class AuthController extends HttpServlet {
             LOGGER.log(Level.SEVERE, "Lỗi khi đăng ký người dùng: " + e.getMessage(), e);
             request.setAttribute("errorMessage", "Đã xảy ra lỗi trong quá trình đăng ký. Vui lòng thử lại.");
             forwardToRegisterPageWithInput(request, response, firstName, lastName, username, email);
-        }        
+        }
     }
 
     /**
      * Chuyển tiếp đến trang đăng ký, giữ lại các giá trị đã nhập trên form.
+     *
      * @param request HttpServletRequest
      * @param response HttpServletResponse
      * @param firstName
@@ -171,17 +191,18 @@ public class AuthController extends HttpServlet {
      * @throws IOException
      */
     private void forwardToRegisterPageWithInput(HttpServletRequest request, HttpServletResponse response,
-                                       String firstName, String lastName, String username, String email)
+            String firstName, String lastName, String username, String email)
             throws ServletException, IOException {
         request.setAttribute("formFirstName", firstName);
         request.setAttribute("formLastName", lastName);
         request.setAttribute("formUsername", username);
         request.setAttribute("formEmail", email);
         request.getRequestDispatcher("/components/auth/register.jsp").forward(request, response);
-    }    
-    
+    }
+
     /**
      * Xử lý logic xác thực người dùng khi đăng nhập.
+     *
      * @param request HttpServletRequest
      * @param response HttpServletResponse
      * @throws ServletException
@@ -191,8 +212,8 @@ public class AuthController extends HttpServlet {
         String identifier = request.getParameter("identifier");
         String password = request.getParameter("password");
 
-        if (identifier == null || identifier.trim().isEmpty() ||
-            password == null || password.trim().isEmpty()) {
+        if (identifier == null || identifier.trim().isEmpty()
+                || password == null || password.trim().isEmpty()) {
             request.setAttribute("errorMessage", "Vui lòng nhập tên đăng nhập/email và mật khẩu.");
             request.getRequestDispatcher("/components/auth/login.jsp").forward(request, response);
             return;
@@ -216,11 +237,12 @@ public class AuthController extends HttpServlet {
             request.setAttribute("errorMessage", "Tên đăng nhập/email hoặc mật khẩu không chính xác.");
             request.setAttribute("formIdentifier", identifier);
             request.getRequestDispatcher("/components/auth/login.jsp").forward(request, response);
-        }        
+        }
     }
 
     /**
      * Xử lý đăng xuất người dùng.
+     *
      * @param request HttpServletRequest
      * @param response HttpServletResponse
      * @throws IOException
@@ -228,11 +250,131 @@ public class AuthController extends HttpServlet {
     private void logoutUser(HttpServletRequest request, HttpServletResponse response) throws IOException {
         HttpSession session = request.getSession(false);
         if (session != null) {
-            String username = (session.getAttribute("loggedInUser") != null) ?
-                                      ((User) session.getAttribute("loggedInUser")).getUsername() : "Unknown User";
+            String username = (session.getAttribute("loggedInUser") != null)
+                    ? ((User) session.getAttribute("loggedInUser")).getUsername() : "Unknown User";
             session.invalidate();
             LOGGER.log(Level.INFO, "User {0} logged out.", username);
         }
         response.sendRedirect(request.getContextPath() + "/auth/login?logout=true");
     }
+
+    private void forgotPasswordForm(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        request.getRequestDispatcher("/components/auth/forgot-password.jsp").forward(request, response);
+    }
+
+    private void sendVerifyCode(HttpServletRequest request, HttpServletResponse response) throws IOException, ServletException {
+        String email = (String) request.getSession().getAttribute("email");
+        String code = request.getParameter("code");
+
+        // Get the reset code from the session
+        String storedResetCode = (String) request.getSession().getAttribute("resetCode");
+        Long storedTimestamp = (Long) request.getSession().getAttribute("resetCodeTimestamp");
+
+        if (storedResetCode != null && storedTimestamp != null) {
+            // Check if the reset code is valid and not expired (e.g., 15 minutes validity)
+            long currentTime = System.currentTimeMillis();
+            if (currentTime - storedTimestamp < 15 * 60 * 1000 && storedResetCode.equals(code)) {
+                // Reset code is valid
+//                response.sendRedirect("/components/auth/re-password.jsp?email=" + email);
+                request.getRequestDispatcher("/components/auth/re-password.jsp?email=" + email).forward(request, response);
+
+            } else {
+                // Invalid or expired code
+                request.setAttribute("errorMessage", "Mã xác nhận không đúng hoặc đã hết hạn");
+                request.getRequestDispatcher("/components/auth/verify-code.jsp").forward(request, response);
+            }
+        } else {
+            // No reset code in session, possibly expired or not generated
+            response.getWriter().println("No reset code found.");
+        }
+
+    }
+
+    private void verifyCodeForm(HttpServletRequest request, HttpServletResponse response) throws IOException, ServletException {
+        String email = request.getParameter("email");
+
+        // Generate a reset code
+        String resetCode = generateResetCode();
+
+        // Store the reset code in the session (with an expiration time)
+        request.getSession().setAttribute("resetCode", resetCode);
+        request.getSession().setAttribute("resetCodeTimestamp", System.currentTimeMillis());
+        request.getSession().setAttribute("email", email);
+        // Send the reset code to the user's email
+        MailUtils.send(email, "Password Reset", "Your reset code is: " + resetCode);
+
+        // Redirect to enter code page
+//        response.sendRedirect("/components/auth/verify-code.jsp");
+        request.getRequestDispatcher("/components/auth/verify-code.jsp").forward(request, response);
+
+    }
+
+    private String generateResetCode() {
+        Random random = new Random();
+        int code = random.nextInt(900000) + 100000;  // 6-digit code
+        return String.valueOf(code);
+    }
+
+    /**
+     * Xử lý đặt lại mật khẩu mới.
+     * Phương thức này được gọi từ doPost("/auth/reset-password") sau khi submit form re-password.jsp
+     */
+    private void resetPassword(HttpServletRequest request, HttpServletResponse response) throws IOException, ServletException {
+        // Lấy email từ session (an toàn hơn hidden field)
+        HttpSession session = request.getSession();
+        String email = (String) session.getAttribute("email"); 
+
+        if (email == null) {
+            // Trường hợp không có email trong session (người dùng cố gắng truy cập trực tiếp hoặc session hết hạn)
+            request.setAttribute("errorMessage", "Phiên đặt lại mật khẩu đã hết hạn. Vui lòng bắt đầu lại quy trình.");
+            request.getRequestDispatcher("/components/auth/forgot-password.jsp").forward(request, response);
+            return;
+        }
+
+        String newPassword = request.getParameter("newPassword");
+        String confirmNewPassword = request.getParameter("confirmNewPassword");
+
+        if (newPassword == null || newPassword.trim().isEmpty() || confirmNewPassword == null || confirmNewPassword.trim().isEmpty()) {
+            request.setAttribute("errorMessage", "Vui lòng nhập đầy đủ mật khẩu mới và xác nhận mật khẩu.");
+            request.setAttribute("email", email); // Giữ email để truyền lại JSP
+            request.getRequestDispatcher("/components/auth/re-password.jsp").forward(request, response);
+            return;
+        }
+
+        if (!newPassword.equals(confirmNewPassword)) {
+            request.setAttribute("errorMessage", "Mật khẩu mới và mật khẩu xác nhận không khớp.");
+            request.setAttribute("email", email); // Giữ email để truyền lại JSP
+            request.getRequestDispatcher("/components/auth/re-password.jsp").forward(request, response);
+            return;
+        }
+        
+        if (newPassword.length() < 6) { // Ví dụ: yêu cầu mật khẩu tối thiểu 6 ký tự
+            request.setAttribute("errorMessage", "Mật khẩu phải có ít nhất 6 ký tự.");
+            request.setAttribute("email", email);
+            request.getRequestDispatcher("/components/auth/re-password.jsp").forward(request, response);
+            return;
+        }
+
+
+        try {
+            String hashedPassword = BCrypt.hashpw(newPassword, BCrypt.gensalt());
+            userDAO.updatePasswordByEmail(email, hashedPassword);
+
+            // Xóa mã và email khỏi session sau khi đặt lại mật khẩu thành công
+            session.removeAttribute("resetCode");
+            session.removeAttribute("resetCodeTimestamp");
+            session.removeAttribute("email");
+
+            request.setAttribute("successMessage", "Mật khẩu của bạn đã được đặt lại thành công. Vui lòng đăng nhập.");
+            request.getRequestDispatcher("/components/auth/login.jsp").forward(request, response);
+
+        } catch (ServletException | IOException e) {
+            LOGGER.log(Level.SEVERE, "Lỗi khi cập nhật mật khẩu cho email " + email + ": " + e.getMessage(), e);
+            request.setAttribute("errorMessage", "Đã xảy ra lỗi khi đặt lại mật khẩu. Vui lòng thử lại.");
+            request.setAttribute("email", email);
+            request.getRequestDispatcher("/components/auth/re-password.jsp").forward(request, response);
+        }
+    }
+
 }

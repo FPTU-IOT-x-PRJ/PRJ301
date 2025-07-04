@@ -186,6 +186,26 @@ public class UserDAO extends DBContext {
         }
         return rowUpdated;
     }
+    
+    private static final String UPDATE_USER_PASSWORD_BY_EMAIL_SQL = 
+        "UPDATE Users SET password = ? WHERE email = ?";
+
+    public boolean updatePasswordByEmail(String email, String newHashedPassword) {
+        boolean rowUpdated = false;
+
+        try (Connection con = getConnection(); 
+             PreparedStatement statement = con.prepareStatement(UPDATE_USER_PASSWORD_BY_EMAIL_SQL)) {
+
+            statement.setString(1, newHashedPassword);
+            statement.setString(2, email);
+
+            rowUpdated = statement.executeUpdate() > 0;
+        } catch (SQLException e) {
+            printSQLException(e); // hoặc e.printStackTrace();
+        }
+
+        return rowUpdated;
+    }
 
     /**
      * Cập nhật mật khẩu của người dùng. Mật khẩu MỚI NÊN được hash trước khi
