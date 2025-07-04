@@ -11,13 +11,13 @@
                
             </div>
             <div class="d-flex flex-wrap justify-content-end">
-                <a href="${pageContext.request.contextPath}/documents/view?id=${document.id}" class="btn btn-sm btn-outline-info me-2 mb-1 rounded-pill">
+                <a href="${pageContext.request.contextPath}/documents/detail?id=${document.id}" class="btn btn-sm btn-outline-info me-2 mb-1 rounded-pill">
                     <i class="fas fa-eye"></i> Xem
                 </a>
                 <a href="${pageContext.request.contextPath}/documents/download?id=${document.id}" class="btn btn-sm btn-outline-success me-2 mb-1 rounded-pill">
                     <i class="fas fa-download"></i> Tải xuống
                 </a>
-                <a href="${pageContext.request.contextPath}/documents/delete-confirm?id=${document.id}" class="btn btn-sm btn-outline-danger mb-1 rounded-pill">
+                <a href="${pageContext.request.contextPath}/documents/delete?id=${document.id}" class="btn btn-sm btn-outline-danger mb-1 rounded-pill">
                     <i class="fas fa-trash-alt"></i> Xóa
                 </a>
             </div>
