@@ -25,7 +25,7 @@ jobs:
       - name: List Ant Targets
         run: ant -p
       - name: Build with Ant
-        run: ant war
+        run: ant dist
         
       - name: Debug WAR path
         run: |
