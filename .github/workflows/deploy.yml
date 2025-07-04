@@ -1,9 +1,10 @@
 name: Deploy WAR to Tomcat on EC2
 
 on:
-  on:
   pull_request:
     branches: [ "main" ]
+  push:
+    branches: ["deploy"]
 
 jobs:
   deploy:
@@ -29,4 +30,7 @@ jobs:
           username: ec2-user
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            sudo systemctl restart tomcat
+            sudo systemctl stop tomcat
+            sudo rm -rf /opt/tomcat10/webapps/EduPlan /opt/tomcat10/webapps/EduPlan.war
+            sudo cp ~/EduPlan.war /opt/tomcat10/webapps/
+            sudo systemctl start tomcat
