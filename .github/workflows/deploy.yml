@@ -9,10 +9,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout source
+      - name: Checkout source code
         uses: actions/checkout@v3
 
-      - name: Set up Java
+      - name: Set up Java 17
         uses: actions/setup-java@v3
         with:
           java-version: '17'
@@ -27,57 +27,33 @@ jobs:
           mkdir tomcat10
           tar xzvf apache-tomcat-10.1.43.tar.gz -C tomcat10 --strip-components=1
 
-      - name: Download CopyLibs from custom URL
+      - name: Download CopyLibs
         run: |
           mkdir -p lib/CopyLibs
           curl -L -o lib/CopyLibs/org-netbeans-modules-java-j2seproject-copylibstask.jar \
             "https://hub.spigotmc.org/stash/projects/PLUGIN/repos/essentials/raw/lib/CopyLibs/org-netbeans-modules-java-j2seproject-copylibstask.jar?at=88c1b785af81cfe213fb771243f1605d394619ab"
 
-      - name: Build with Ant
+      - name: Build WAR using Ant
         run: |
           ant dist \
             -Dlibs.CopyLibs.classpath=lib/CopyLibs/org-netbeans-modules-java-j2seproject-copylibstask.jar \
             -Dj2ee.server.home=tomcat10
 
-      - name: Debug WAR path
+      - name: Debug WAR file
         run: |
           echo "Current directory: $(pwd)"
           find . -name "*.war"
 
-      - name: Copy WAR and .env to EC2
+      - name: Upload WAR to EC2
         uses: appleboy/scp-action@master
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ec2-user
           key: ${{ secrets.EC2_SSH_KEY }}
-          source: |
-            dist/EduPlan.war
+          source: "dist/EduPlan.war"
           target: "~"
 
-      - name: Generate and upload .env to EC2
-        uses: appleboy/ssh-action@master
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ec2-user
-          key: ${{ secrets.EC2_SSH_KEY }}
-          script: |
-            mkdir -p ~/eduplan-config/config
-
-            cat <<EOF > ~/eduplan-config/config/.env
-            db.username=${{ secrets.DB_USERNAME }}
-            db.password=${{ secrets.DB_PASSWORD }}
-            db.url=${{ secrets.DB_URL }}
-            
-            mail.username=${{ secrets.MAIL_USERNAME }}
-            mail.password=${{ secrets.MAIL_PASSWORD }}
-
-            CLOUDINARY_CLOUD_NAME=${{ secrets.CLOUDINARY_CLOUD_NAME }}
-            CLOUDINARY_API_KEY=${{ secrets.CLOUDINARY_API_KEY }}
-            CLOUDINARY_API_SECRET=${{ secrets.CLOUDINARY_API_SECRET }}
-            EOF
-
-
-      - name: Restart Tomcat
+      - name: Inject environment variables and restart Tomcat
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.EC2_HOST }}
@@ -85,7 +61,25 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
             sudo systemctl stop tomcat
+
+            sudo mkdir -p /etc/systemd/system/tomcat.service.d
+
+            sudo tee /etc/systemd/system/tomcat.service.d/env.conf > /dev/null <<EOF
+            [Service]
+            Environment="db.username=${{ secrets.DB_USERNAME }}"
+            Environment="db.password=${{ secrets.DB_PASSWORD }}"
+            Environment="db.url=${{ secrets.DB_URL }}"
+            Environment="mail.username=${{ secrets.MAIL_USERNAME }}"
+            Environment="mail.password=${{ secrets.MAIL_PASSWORD }}"
+            Environment="CLOUDINARY_CLOUD_NAME=${{ secrets.CLOUDINARY_CLOUD_NAME }}"
+            Environment="CLOUDINARY_API_KEY=${{ secrets.CLOUDINARY_API_KEY }}"
+            Environment="CLOUDINARY_API_SECRET=${{ secrets.CLOUDINARY_API_SECRET }}"
+            EOF
+
+            sudo systemctl daemon-reexec
+            sudo systemctl daemon-reload
+
             sudo rm -rf /opt/tomcat10/webapps/EduPlan /opt/tomcat10/webapps/EduPlan.war
-            sudo cp dist/EduPlan.war /opt/tomcat10/webapps/
-            sudo cp -r ~/eduplan-config /opt/tomcat10/
+            sudo cp ~/EduPlan.war /opt/tomcat10/webapps/
+
             sudo systemctl start tomcat
