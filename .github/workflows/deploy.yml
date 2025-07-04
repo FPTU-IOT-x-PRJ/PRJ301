@@ -80,6 +80,6 @@ jobs:
             sudo systemctl daemon-reload
 
             sudo rm -rf /opt/tomcat10/webapps/EduPlan /opt/tomcat10/webapps/EduPlan.war
-            sudo cp ~/EduPlan.war /opt/tomcat10/webapps/
+            sudo cp dist/EduPlan.war /opt/tomcat10/webapps/
 
             sudo systemctl start tomcat
