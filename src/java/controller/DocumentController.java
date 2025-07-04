@@ -371,16 +371,24 @@ public class DocumentController extends HttpServlet {
 
             if (success) {
                 LOGGER.log(Level.INFO, "Tài liệu {0} đã được tải lên thành công bởi người dùng {1}.", new Object[]{fileName, userId});
-                response.sendRedirect(request.getContextPath() + "/documents/display?message=uploadSuccess");
+                String redirectUrl;
+                if (lessonId != null) {
+                    redirectUrl = request.getContextPath() + "/lessons/detail?id=" + lessonId;
+                } else if (subjectId != null) {
+                    redirectUrl = request.getContextPath() + "/subjects/detail?id=" + subjectId;
+                } else {
+                    redirectUrl = request.getContextPath() + "/documents/display?message=uploadSuccess";
+                }
+                response.sendRedirect(redirectUrl);
             } else {
                 LOGGER.log(Level.WARNING, "Không thể thêm tài liệu {0} vào DB cho người dùng {1}.", new Object[]{fileName, userId});
                 request.setAttribute("errorMessage", "Lỗi khi lưu thông tin tài liệu vào cơ sở dữ liệu.");
-                displayAddForm(request, response, userId);
+//                displayAddForm(request, response, userId);
             }
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Lỗi khi tải lên tài liệu.", e);
             request.setAttribute("errorMessage", "Đã xảy ra lỗi không mong muốn khi tải lên tài liệu: " + e.getMessage());
-            displayAddForm(request, response, userId);
+//            displayAddForm(request, response, userId);
         }
     }
 

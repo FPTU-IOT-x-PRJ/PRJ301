@@ -1,9 +1,11 @@
 package controller;
 
-import DTO.Subject.SubjectWithLessonsDTO;
+import dao.DocumentDAO;
 import dao.LessonDAO;
 import dao.SemesterDAO;
 import dao.SubjectDAO;
+import entity.Document;
+import DTO.Subject.SubjectWithLessonsDTO;
 import entity.Lesson;
 import entity.Semester;
 import entity.Subject;
@@ -28,8 +30,8 @@ public class SubjectsController extends HttpServlet {
     private static final Logger LOGGER = Logger.getLogger(SubjectsController.class.getName());
     SubjectDAO subjectDao = new SubjectDAO();
     LessonDAO lessonDao = new LessonDAO();
-    // Khai báo SemesterDAO ở đây để dùng chung
     SemesterDAO semesterDao = new SemesterDAO();
+    DocumentDAO documentDao = new DocumentDAO();
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
@@ -62,6 +64,9 @@ public class SubjectsController extends HttpServlet {
                 break;
             case "/delete-confirm":
                 displayDeleteSubjectConfirm(request, response);
+                break;
+            case "/detail":
+                displaySubjectDetail(request, response, user);
                 break;
             default:
                 displaySubjects(request, response, user);
@@ -118,7 +123,7 @@ public class SubjectsController extends HttpServlet {
             response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Có lỗi xảy ra khi lấy thông tin môn học.");
         }
     }
-    
+
     private void displaySubjects(HttpServletRequest request, HttpServletResponse response, User user)
             throws ServletException, IOException {
         String search = request.getParameter("search");
@@ -164,7 +169,6 @@ public class SubjectsController extends HttpServlet {
 
         // Lấy danh sách các môn học có phân trang
         List<Subject> subjects = subjectDao.getAllSubjects(search, semesterId, isActive, offset, pageSize, teacherName);
-        
         // --- Bắt đầu phần thay đổi để thêm Lessons vào Subject DTO ---
         List<SubjectWithLessonsDTO> subjectsWithLessonsDTOList = new ArrayList<>();
         for (Subject subject : subjects) {
@@ -197,6 +201,45 @@ public class SubjectsController extends HttpServlet {
         LOGGER.log(Level.INFO, "Subjects with lessons loaded: {0}", subjectsWithLessonsDTOList.size());
         
         request.getRequestDispatcher("/components/subject/subject-dashboard.jsp").forward(request, response);
+    }
+
+    private void displaySubjectDetail(HttpServletRequest request, HttpServletResponse response, User user)
+            throws ServletException, IOException {
+        try {
+            int subjectId = Integer.parseInt(request.getParameter("id"));
+            Subject subject = subjectDao.getSubjectById(subjectId);
+
+            if (subject == null) {
+                LOGGER.log(Level.WARNING, "Subject with ID {0} not found for detail view.", subjectId);
+                response.sendError(HttpServletResponse.SC_NOT_FOUND, "Không tìm thấy môn học.");
+                return;
+            }
+
+            // Kiểm tra quyền: Đảm bảo môn học thuộc về một kỳ học mà người dùng sở hữu
+            Semester semester = semesterDao.getSemesterById(subject.getSemesterId(), user.getId());
+            if (semester == null) {
+                LOGGER.log(Level.WARNING, "User {0} attempted to access subject {1} from unauthorized semester {2}.", new Object[]{user.getUsername(), subjectId, subject.getSemesterId()});
+                response.sendError(HttpServletResponse.SC_FORBIDDEN, "Bạn không có quyền truy cập vào môn học này.");
+                return;
+            }
+
+            List<Lesson> lessons = lessonDao.getAllLessonsBySubjectId(subjectId, null, null, 1, Integer.MAX_VALUE); // Lấy tất cả buổi học
+            List<Document> documents = documentDao.getDocumentsBySubjectId(subjectId, user.getId()); // Lấy tất cả tài liệu của môn học này
+
+            request.setAttribute("subject", subject);
+            request.setAttribute("lessons", lessons);
+            request.setAttribute("documents", documents);
+            request.setAttribute("currentSemester", semester); // Đẩy semester vào để dùng cho link quay lại
+
+            request.getRequestDispatcher("/components/subject/subject-detail.jsp").forward(request, response);
+            return;
+        } catch (NumberFormatException e) {
+            LOGGER.log(Level.WARNING, "Invalid subject ID format for detail view: {0}", request.getParameter("id"));
+            response.sendError(HttpServletResponse.SC_BAD_REQUEST, "ID môn học không hợp lệ.");
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error in displaySubjectDetail", e);
+            response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Đã xảy ra lỗi hệ thống khi cố gắng hiển thị chi tiết môn học.");
+        }
     }
 
     private void addSubject(HttpServletRequest request, HttpServletResponse response)
@@ -281,7 +324,7 @@ public class SubjectsController extends HttpServlet {
 
             request.getRequestDispatcher("/components/subject/subject-add.jsp").forward(request, response);
         } else {
-            response.sendRedirect(request.getContextPath() + "/subjects?semesterId=" + semesterId);
+            response.sendRedirect(request.getContextPath() + "/subjects/detail?id=" + subject.getId());
         }
     }
 
@@ -363,7 +406,7 @@ public class SubjectsController extends HttpServlet {
 
             request.getRequestDispatcher("/components/subject/subject-edit.jsp").forward(request, response);
         } else {
-            response.sendRedirect(request.getContextPath() + "/subjects?semesterId=" + semesterId);
+            response.sendRedirect(request.getContextPath() + "/subjects/detail?id=" + subject.getId());
         }
     }
 
