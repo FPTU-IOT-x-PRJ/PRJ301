@@ -27,11 +27,11 @@ jobs:
           mkdir tomcat10
           tar xzvf apache-tomcat-10.1.42.tar.gz -C tomcat10 --strip-components=1
 
-      - name: Download correct CopyLibs JAR
+      - name: Download CopyLibs from custom URL
         run: |
           mkdir -p lib/CopyLibs
           curl -L -o lib/CopyLibs/org-netbeans-modules-java-j2seproject-copylibstask.jar \
-            https://github.com/phoenixnap/springboot-github-actions-demo/raw/main/lib/CopyLibs/org-netbeans-modules-java-j2seproject-copylibstask.jar
+            "https://hub.spigotmc.org/stash/projects/PLUGIN/repos/essentials/raw/lib/CopyLibs/org-netbeans-modules-java-j2seproject-copylibstask.jar?at=88c1b785af81cfe213fb771243f1605d394619ab"
 
       - name: Build with Ant
         run: |
