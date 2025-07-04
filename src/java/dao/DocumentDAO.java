@@ -306,10 +306,12 @@ public class DocumentDAO extends DBContext { // Kế thừa DBContext
         String fileType = rs.getString("fileType");
         long fileSize = rs.getLong("fileSize");
         int uploadedBy = rs.getInt("uploadedBy");
+        // Sửa lỗi: Kiểm tra null trước khi gọi toLocalDateTime()
         LocalDateTime uploadDate = rs.getTimestamp("uploadDate") != null ? rs.getTimestamp("uploadDate").toLocalDateTime() : null;
         String description = rs.getString("description");
-        int subjectId = rs.getInt("subjectId");
-        int lessonId = rs.getInt("lessonId");
+        // Lấy subjectId và lessonId, kiểm tra null nếu chúng là cột nullable
+        Integer subjectId = rs.getObject("subjectId") != null ? rs.getInt("subjectId") : null;
+        Integer lessonId = rs.getObject("lessonId") != null ? rs.getInt("lessonId") : null;
         return new Document(id, fileName, storedFileName, filePath, fileType, fileSize, uploadedBy, uploadDate, description, subjectId, lessonId);
     }
 
