@@ -1,8 +1,8 @@
 name: Deploy WAR to Tomcat on EC2
 
 on:
-  pull_request:
-    branches: [ "main" ]
+#  pull_request:
+#    branches: [ "main" ]
   push:
     branches: ["deploy"]
 
@@ -19,13 +19,18 @@ jobs:
         with:
           java-version: '17'
           distribution: 'temurin'
+          
+      - name: Fake Tomcat dir
+        run: mkdir -p fake-tomcat
       
       - name: Install Ant
         run: sudo apt-get install ant -y
+        
       - name: List Ant Targets
         run: ant -p
+        
       - name: Build with Ant
-        run: ant dist
+        run: ant -Dj2ee.server.home=$(pwd)/fake-tomcat dist
         
       - name: Debug WAR path
         run: |
