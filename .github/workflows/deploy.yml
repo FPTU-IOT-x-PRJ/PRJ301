@@ -23,9 +23,9 @@ jobs:
 
       - name: Download Tomcat (for Ant build)
         run: |
-          curl -O https://dlcdn.apache.org/tomcat/tomcat-10/v10.1.42/bin/apache-tomcat-10.1.42.tar.gz
+          curl -O https://dlcdn.apache.org/tomcat/tomcat-10/v10.1.43/bin/apache-tomcat-10.1.43.tar.gz
           mkdir tomcat10
-          tar xzvf apache-tomcat-10.1.42.tar.gz -C tomcat10 --strip-components=1
+          tar xzvf apache-tomcat-10.1.43.tar.gz -C tomcat10 --strip-components=1
 
       - name: Download CopyLibs from custom URL
         run: |
@@ -64,3 +64,4 @@ jobs:
             sudo rm -rf /opt/tomcat10/webapps/EduPlan /opt/tomcat10/webapps/EduPlan.war
             sudo cp dist/EduPlan.war /opt/tomcat10/webapps/
             sudo systemctl start tomcat
+            tail -f /opt/tomcat10/logs/catalina.out
