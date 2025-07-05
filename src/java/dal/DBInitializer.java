@@ -14,6 +14,7 @@ import java.time.format.DateTimeFormatter; // Để format ngày tháng nếu c�
 import org.mindrot.jbcrypt.BCrypt;
 
 public class DBInitializer {
+
     private static final Logger LOGGER = Logger.getLogger(DBInitializer.class.getName());
     private DBContext dbContext;
 
@@ -23,6 +24,7 @@ public class DBInitializer {
 
     /**
      * Kiểm tra xem một bảng có tồn tại trong cơ sở dữ liệu hay không.
+     *
      * @param tableName Tên của bảng cần kiểm tra.
      * @return true nếu bảng tồn tại, ngược lại là false.
      */
@@ -39,6 +41,7 @@ public class DBInitializer {
 
     /**
      * Thực hiện xóa một bảng.
+     *
      * @param conn Đối tượng Connection.
      * @param tableName Tên của bảng cần xóa.
      */
@@ -53,22 +56,22 @@ public class DBInitializer {
     }
 
 // Trong lớp DBContext hoặc lớp tương tự nơi bạn định nghĩa các hàm tạo bảng
-
     /**
      * Tạo bảng Users nếu nó chưa tồn tại.
+     *
      * @param conn Đối tượng Connection.
      */
-    private void createUsersTable(Connection conn) { 
-        String sql = "CREATE TABLE Users (\n" + 
-                     "    id INT PRIMARY KEY IDENTITY(1,1),\n" +
-                     "    username VARCHAR(50) NOT NULL UNIQUE,\n" +
-                     "    email VARCHAR(100) NOT NULL UNIQUE,\n" +
-                     "    password VARCHAR(255) NOT NULL,\n" + 
-                     "    firstName NVARCHAR(50),\n" +
-                     "    lastName NVARCHAR(50),\n" +
-                     "    role VARCHAR(20) NOT NULL DEFAULT 'user',\n" +
-                     "    createdAt DATE DEFAULT GETDATE()\n" +
-                     ");";
+    private void createUsersTable(Connection conn) {
+        String sql = "CREATE TABLE Users (\n"
+                + "    id INT PRIMARY KEY IDENTITY(1,1),\n"
+                + "    username VARCHAR(50) NOT NULL UNIQUE,\n"
+                + "    email VARCHAR(100) NOT NULL UNIQUE,\n"
+                + "    password VARCHAR(255) NOT NULL,\n"
+                + "    firstName NVARCHAR(50),\n"
+                + "    lastName NVARCHAR(50),\n"
+                + "    role VARCHAR(20) NOT NULL DEFAULT 'user',\n"
+                + "    createdAt DATE DEFAULT GETDATE()\n"
+                + ");";
         try (Statement stmt = conn.createStatement()) {
             stmt.execute(sql);
             LOGGER.log(Level.INFO, "Table 'Users' created successfully.");
@@ -76,25 +79,26 @@ public class DBInitializer {
             LOGGER.log(Level.SEVERE, "Error creating Users table", e);
         }
     }
-    
+
     /**
-     * Tạo bảng Semesters nếu nó chưa tồn tại.
-     * Khi một Users bị xóa, các Semesters thuộc về User đó cũng sẽ bị xóa.
+     * Tạo bảng Semesters nếu nó chưa tồn tại. Khi một Users bị xóa, các
+     * Semesters thuộc về User đó cũng sẽ bị xóa.
+     *
      * @param conn Đối tượng Connection.
      */
-    private void createSemestersTable(Connection conn) { 
-        String sql = "CREATE TABLE Semesters (\n" + 
-                     "    id INT PRIMARY KEY IDENTITY(1,1),\n" +
-                     "    name NVARCHAR(100) NOT NULL,\n" +
-                     "    startDate DATE NOT NULL,\n" +
-                     "    endDate DATE NOT NULL,\n" +
-                     "    description NVARCHAR(MAX),\n" +
-                     "    status VARCHAR(50) NOT NULL,\n" +
-                     "    createdAt DATETIME DEFAULT GETDATE(),\n" +
-                     "    updatedAt DATETIME DEFAULT GETDATE(),\n" +
-                     "    userId INT,\n" +
-                     "    FOREIGN KEY (userId) REFERENCES Users(id) ON DELETE CASCADE\n" + 
-                     ");";
+    private void createSemestersTable(Connection conn) {
+        String sql = "CREATE TABLE Semesters (\n"
+                + "    id INT PRIMARY KEY IDENTITY(1,1),\n"
+                + "    name NVARCHAR(100) NOT NULL,\n"
+                + "    startDate DATE NOT NULL,\n"
+                + "    endDate DATE NOT NULL,\n"
+                + "    description NVARCHAR(MAX),\n"
+                + "    status VARCHAR(50) NOT NULL,\n"
+                + "    createdAt DATETIME DEFAULT GETDATE(),\n"
+                + "    updatedAt DATETIME DEFAULT GETDATE(),\n"
+                + "    userId INT,\n"
+                + "    FOREIGN KEY (userId) REFERENCES Users(id) ON DELETE CASCADE\n"
+                + ");";
         try (Statement stmt = conn.createStatement()) {
             stmt.execute(sql);
             LOGGER.log(Level.INFO, "Table 'Semesters' created successfully.");
@@ -104,25 +108,26 @@ public class DBInitializer {
     }
 
     /**
-     * Tạo bảng Subjects nếu nó chưa tồn tại.
-     * Khi một Semesters bị xóa, các Subjects thuộc về Semester đó cũng sẽ bị xóa.
+     * Tạo bảng Subjects nếu nó chưa tồn tại. Khi một Semesters bị xóa, các
+     * Subjects thuộc về Semester đó cũng sẽ bị xóa.
+     *
      * @param conn Đối tượng Connection.
      */
-    private void createSubjectsTable(Connection conn) { 
-        String sql = "CREATE TABLE Subjects (\n" + 
-                     "    id INT PRIMARY KEY IDENTITY(1,1),\n" +
-                     "    semesterId INT NOT NULL,\n" +
-                     "    name NVARCHAR(255) NOT NULL,\n" +
-                     "    code VARCHAR(50) NOT NULL,\n" +
-                     "    description NVARCHAR(MAX),\n" +
-                     "    credits INT NOT NULL,\n" +
-                     "    teacherName NVARCHAR(100),\n" +
-                     "    isActive BIT DEFAULT 1,\n" +
-                     "    prerequisites NVARCHAR(MAX),\n" +
-                     "    createdAt DATETIME DEFAULT GETDATE(),\n" +
-                     "    updatedAt DATETIME DEFAULT GETDATE(),\n" +
-                     "    FOREIGN KEY (semesterId) REFERENCES Semesters(id) ON DELETE CASCADE\n" + 
-                     ");";
+    private void createSubjectsTable(Connection conn) {
+        String sql = "CREATE TABLE Subjects (\n"
+                + "    id INT PRIMARY KEY IDENTITY(1,1),\n"
+                + "    semesterId INT NOT NULL,\n"
+                + "    name NVARCHAR(255) NOT NULL,\n"
+                + "    code VARCHAR(50) NOT NULL,\n"
+                + "    description NVARCHAR(MAX),\n"
+                + "    credits INT NOT NULL,\n"
+                + "    teacherName NVARCHAR(100),\n"
+                + "    isActive BIT DEFAULT 1,\n"
+                + "    prerequisites NVARCHAR(MAX),\n"
+                + "    createdAt DATETIME DEFAULT GETDATE(),\n"
+                + "    updatedAt DATETIME DEFAULT GETDATE(),\n"
+                + "    FOREIGN KEY (semesterId) REFERENCES Semesters(id) ON DELETE CASCADE\n"
+                + ");";
         try (Statement stmt = conn.createStatement()) {
             stmt.execute(sql);
             LOGGER.log(Level.INFO, "Table 'Subjects' created successfully.");
@@ -132,22 +137,23 @@ public class DBInitializer {
     }
 
     /**
-     * Tạo bảng Lessons nếu nó chưa tồn tại.
-     * Khi một Subjects bị xóa, các Lessons thuộc về Subject đó cũng sẽ bị xóa.
+     * Tạo bảng Lessons nếu nó chưa tồn tại. Khi một Subjects bị xóa, các
+     * Lessons thuộc về Subject đó cũng sẽ bị xóa.
+     *
      * @param conn Đối tượng Connection.
      */
-    private void createLessonsTable(Connection conn) { 
-        String sql = "CREATE TABLE Lessons (\n" + 
-                     "    id INT PRIMARY KEY IDENTITY(1,1),\n" +
-                     "    subjectId INT NOT NULL,\n" +
-                     "    name NVARCHAR(255) NOT NULL,\n" +
-                     "    lessonDate DATE NOT NULL,\n" +
-                     "    description NVARCHAR(MAX),\n" +
-                     "    status VARCHAR(50) NOT NULL,\n" +
-                     "    createdAt DATETIME DEFAULT GETDATE(),\n" +
-                     "    updatedAt DATETIME DEFAULT GETDATE(),\n" +
-                     "    FOREIGN KEY (subjectId) REFERENCES Subjects(id) ON DELETE CASCADE\n" + 
-                     ");";
+    private void createLessonsTable(Connection conn) {
+        String sql = "CREATE TABLE Lessons (\n"
+                + "    id INT PRIMARY KEY IDENTITY(1,1),\n"
+                + "    subjectId INT NOT NULL,\n"
+                + "    name NVARCHAR(255) NOT NULL,\n"
+                + "    lessonDate DATE NOT NULL,\n"
+                + "    description NVARCHAR(MAX),\n"
+                + "    status VARCHAR(50) NOT NULL,\n"
+                + "    createdAt DATETIME DEFAULT GETDATE(),\n"
+                + "    updatedAt DATETIME DEFAULT GETDATE(),\n"
+                + "    FOREIGN KEY (subjectId) REFERENCES Subjects(id) ON DELETE CASCADE\n"
+                + ");";
         try (Statement stmt = conn.createStatement()) {
             stmt.execute(sql);
             LOGGER.log(Level.INFO, "Table 'Lessons' created successfully.");
@@ -157,24 +163,25 @@ public class DBInitializer {
     }
 
     /**
-     * Tạo bảng Documents nếu nó chưa tồn tại.
-     * Các bản ghi Documents sẽ bị xóa nếu User, Subject hoặc Lesson liên quan bị xóa.
+     * Tạo bảng Documents nếu nó chưa tồn tại. Các bản ghi Documents sẽ bị xóa
+     * nếu User, Subject hoặc Lesson liên quan bị xóa.
+     *
      * @param conn Đối tượng Connection.
      */
     private void createDocumentsTable(Connection conn) {
-        String sql = "CREATE TABLE Documents (\n" +
-                     "    id INT PRIMARY KEY IDENTITY(1,1),\n" +
-                     "    fileName NVARCHAR(255) NOT NULL,    \n" +
-                     "    storedFileName VARCHAR(255) NOT NULL UNIQUE,\n" +
-                     "    filePath NVARCHAR(MAX) NOT NULL,     \n" +
-                     "    fileType VARCHAR(100),             \n" +
-                     "    fileSize BIGINT,                     \n" +
-                     "    uploadedBy INT,                      \n" +
-                     "    uploadDate DATETIME DEFAULT GETDATE(), \n" +
-                     "    description NVARCHAR(MAX), \n" +
-                     "    subjectId INT,\n" +
-                     "    lessonId INT,\n" +
-                     ");";
+        String sql = "CREATE TABLE Documents (\n"
+                + "    id INT PRIMARY KEY IDENTITY(1,1),\n"
+                + "    fileName NVARCHAR(255) NOT NULL,    \n"
+                + "    storedFileName VARCHAR(255) NOT NULL UNIQUE,\n"
+                + "    filePath NVARCHAR(MAX) NOT NULL,     \n"
+                + "    fileType VARCHAR(100),             \n"
+                + "    fileSize BIGINT,                     \n"
+                + "    uploadedBy INT,                      \n"
+                + "    uploadDate DATETIME DEFAULT GETDATE(), \n"
+                + "    description NVARCHAR(MAX), \n"
+                + "    subjectId INT,\n"
+                + "    lessonId INT,\n"
+                + ");";
         try (Statement stmt = conn.createStatement()) {
             stmt.execute(sql);
             LOGGER.log(Level.INFO, "Table 'Documents' created successfully.");
@@ -184,14 +191,39 @@ public class DBInitializer {
     }
 
     /**
+     * Tạo bảng Notes nếu nó chưa tồn tại. Các bản ghi Notes sẽ bị xóa nếu
+     * Subject hoặc Lesson liên quan bị xóa.
+     *
+     * @param conn Đối tượng Connection.
+     */
+    private void createNotesTable(Connection conn) {
+        String sql = "CREATE TABLE Notes (\n"
+                + "    id INT PRIMARY KEY IDENTITY(1,1),\n"
+                + "    title NVARCHAR(255) NOT NULL,\n"
+                + "    content NVARCHAR(MAX),\n"
+                + "    createdAt DATETIME DEFAULT GETDATE(),\n"
+                + "    updatedAt DATETIME DEFAULT GETDATE(),\n"
+                + "    subjectId INT,\n"
+                + "    lessonId INT\n"
+                + ");";
+        try (Statement stmt = conn.createStatement()) {
+            stmt.execute(sql);
+            LOGGER.log(Level.INFO, "Table 'Notes' created successfully.");
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Error creating Notes table", e);
+        }
+    }
+
+    /**
      * Thêm dữ liệu giả vào các bảng.
+     *
      * @param conn Đối tượng Connection.
      */
     private void insertFakeData(Connection conn) {
         // --- 1. Insert Admin User ---
         int adminUserId = -1;
         String adminUsername = "admin";
-        String adminPasswordPlain = "123456"; 
+        String adminPasswordPlain = "123456";
         String hashedPassword = BCrypt.hashpw(adminPasswordPlain, BCrypt.gensalt(12));
 
         String insertUserSql = "INSERT INTO Users (username, email, password, firstName, lastName, role, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?)";
@@ -207,7 +239,7 @@ public class DBInitializer {
                     ps.setString(4, "Admin");
                     ps.setString(5, "User");
                     ps.setString(6, "Admin");
-                    ps.setDate(7, Date.valueOf(LocalDate.now())); 
+                    ps.setDate(7, Date.valueOf(LocalDate.now()));
                     ps.executeUpdate();
 
                     try (ResultSet rs = ps.getGeneratedKeys()) {
@@ -238,9 +270,9 @@ public class DBInitializer {
 
             // --- 2. Insert Semesters for Admin User ---
             String insertSemesterSql = "INSERT INTO Semesters (name, startDate, endDate, description, status, userId) VALUES (?, ?, ?, ?, ?, ?)";
-            
+
             // Chỉ thêm nếu bảng Semesters rỗng để tránh trùng lặp khi initializeDatabase(false)
-            if (countTableRows(conn, "Semesters") == 0) { 
+            if (countTableRows(conn, "Semesters") == 0) {
                 LOGGER.log(Level.INFO, "Inserting fake Semesters data...");
                 try (PreparedStatement ps = conn.prepareStatement(insertSemesterSql, Statement.RETURN_GENERATED_KEYS)) {
                     // Semester 1: Fall 2024
@@ -277,7 +309,7 @@ public class DBInitializer {
 
                     // --- 3. Insert Subjects for Semesters ---
                     String insertSubjectSql = "INSERT INTO Subjects (semesterId, name, code, description, credits, teacherName, isActive, prerequisites) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
-                    
+
                     // Chỉ thêm nếu bảng Subjects rỗng
                     if (countTableRows(conn, "Subjects") == 0) {
                         LOGGER.log(Level.INFO, "Inserting fake Subjects data...");
@@ -327,7 +359,7 @@ public class DBInitializer {
                             psSubject.setString(8, "Mathematics, Algorithms");
                             psSubject.executeUpdate();
                             int ai201Id = getGeneratedId(psSubject);
-                            
+
                             // Subjects for Summer 2025
                             psSubject.setInt(1, summer2025Id);
                             psSubject.setString(2, "Phát triển Ứng dụng Di động");
@@ -344,7 +376,7 @@ public class DBInitializer {
 
                             // --- 4. Insert Lessons for Subjects ---
                             String insertLessonSql = "INSERT INTO Lessons (subjectId, name, lessonDate, description, status) VALUES (?, ?, ?, ?, ?)";
-                            
+
                             // Chỉ thêm nếu bảng Lessons rỗng
                             if (countTableRows(conn, "Lessons") == 0) {
                                 LOGGER.log(Level.INFO, "Inserting fake Lessons data...");
@@ -363,7 +395,7 @@ public class DBInitializer {
                                     psLesson.setString(4, "Tìm hiểu cách Servlet xử lý request và response.");
                                     psLesson.setString(5, "Completed");
                                     psLesson.executeUpdate();
-                                    
+
                                     psLesson.setInt(1, prj301Id);
                                     psLesson.setString(2, "Filters and Listeners");
                                     psLesson.setDate(3, Date.valueOf(LocalDate.of(2024, 9, 19)));
@@ -393,7 +425,7 @@ public class DBInitializer {
                                     psLesson.setString(4, "Cách thu thập và phân tích yêu cầu từ khách hàng.");
                                     psLesson.setString(5, "Active");
                                     psLesson.executeUpdate();
-                                    
+
                                     // Lessons for AI201 (spring2025Id)
                                     psLesson.setInt(1, ai201Id);
                                     psLesson.setString(2, "Giới thiệu học máy");
@@ -401,7 +433,7 @@ public class DBInitializer {
                                     psLesson.setString(4, "Khái niệm cơ bản về Machine Learning.");
                                     psLesson.setString(5, "Active");
                                     psLesson.executeUpdate();
-                                    
+
                                     // Lessons for MOB401 (summer2025Id)
                                     psLesson.setInt(1, mob401Id);
                                     psLesson.setString(2, "Giới thiệu Android Studio");
@@ -432,11 +464,13 @@ public class DBInitializer {
     }
 
     /**
-     * Helper method to get the ID of the last inserted row.
-     * Works for IDENTITY columns in SQL Server.
-     * @param ps PreparedStatement used for insertion with RETURN_GENERATED_KEYS.
+     * Helper method to get the ID of the last inserted row. Works for IDENTITY
+     * columns in SQL Server.
+     *
+     * @param ps PreparedStatement used for insertion with
+     * RETURN_GENERATED_KEYS.
      * @return The generated ID, or -1 if not found.
-     * @throws SQLException 
+     * @throws SQLException
      */
     private int getGeneratedId(PreparedStatement ps) throws SQLException {
         try (ResultSet rs = ps.getGeneratedKeys()) {
@@ -449,6 +483,7 @@ public class DBInitializer {
 
     /**
      * Kiểm tra xem một người dùng có tồn tại dựa trên username hay không.
+     *
      * @param conn Đối tượng Connection.
      * @param username Tên người dùng cần kiểm tra.
      * @return true nếu người dùng tồn tại, ngược lại là false.
@@ -467,17 +502,17 @@ public class DBInitializer {
         }
         return false;
     }
-    
+
     /**
      * Đếm số hàng trong một bảng.
+     *
      * @param conn Đối tượng Connection.
      * @param tableName Tên bảng.
      * @return Số hàng trong bảng.
      */
     private int countTableRows(Connection conn, String tableName) {
         String sql = "SELECT COUNT(*) FROM " + tableName;
-        try (Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery(sql)) {
+        try (Statement stmt = conn.createStatement(); ResultSet rs = stmt.executeQuery(sql)) {
             if (rs.next()) {
                 return rs.getInt(1);
             }
@@ -487,11 +522,11 @@ public class DBInitializer {
         return 0;
     }
 
-
     /**
-     * Khởi tạo cơ sở dữ liệu: kiểm tra và tạo/xóa/tạo lại các bảng.
-     * Nếu enforceReset là true, tất cả các bảng sẽ bị xóa và tạo lại.
-     * Nếu không, chỉ những bảng thiếu mới được tạo.
+     * Khởi tạo cơ sở dữ liệu: kiểm tra và tạo/xóa/tạo lại các bảng. Nếu
+     * enforceReset là true, tất cả các bảng sẽ bị xóa và tạo lại. Nếu không,
+     * chỉ những bảng thiếu mới được tạo.
+     *
      * @param enforceReset Nếu true, sẽ xóa tất cả các bảng hiện có và tạo lại.
      */
     public void initializeDatabase(boolean enforceReset) {
@@ -502,35 +537,48 @@ public class DBInitializer {
             }
 
             // Đảm bảo thứ tự drop và create chính xác theo phụ thuộc khóa ngoại
-            String[] tableNames = {"Documents", "Lessons", "Subjects", "Semesters", "Users"}; 
+            String[] tableNames = {"Notes", "Documents", "Lessons", "Subjects", "Semesters", "Users"};
 
             if (enforceReset) {
                 LOGGER.log(Level.INFO, "Enforce reset is true. Dropping all tables...");
                 for (int i = tableNames.length - 1; i >= 0; i--) {
                     dropTable(conn, tableNames[i]);
                 }
-                
+
                 // Sau khi drop, tạo lại bảng theo đúng thứ tự phụ thuộc
                 LOGGER.log(Level.INFO, "Creating tables after reset...");
-                createUsersTable(conn); 
-                createSemestersTable(conn); 
-                createSubjectsTable(conn); 
+                createUsersTable(conn);
+                createSemestersTable(conn);
+                createSubjectsTable(conn);
                 createLessonsTable(conn);
-                createDocumentsTable(conn); // Thêm tạo bảng Documents ở đây
+                createDocumentsTable(conn);
+                createNotesTable(conn); // 🔥 Thêm tạo bảng Notes ở đây
 
             } else {
                 // Nếu không reset, chỉ tạo các bảng nếu chúng chưa tồn tại
                 LOGGER.log(Level.INFO, "Enforce reset is false. Creating missing tables...");
-                if (!tableExists(conn, "Users")) createUsersTable(conn);
-                if (!tableExists(conn, "Semesters")) createSemestersTable(conn);
-                if (!tableExists(conn, "Subjects")) createSubjectsTable(conn);
-                if (!tableExists(conn, "Lessons")) createLessonsTable(conn);
-                if (!tableExists(conn, "Documents")) createDocumentsTable(conn); // Thêm tạo bảng Documents ở đây
+                if (!tableExists(conn, "Users")) {
+                    createUsersTable(conn);
+                }
+                if (!tableExists(conn, "Semesters")) {
+                    createSemestersTable(conn);
+                }
+                if (!tableExists(conn, "Subjects")) {
+                    createSubjectsTable(conn);
+                }
+                if (!tableExists(conn, "Lessons")) {
+                    createLessonsTable(conn);
+                }
+                if (!tableExists(conn, "Documents")) {
+                    createDocumentsTable(conn);
+                }
+                if (!tableExists(conn, "Notes")) {
+                    createNotesTable(conn); // 🔥 Thêm tạo bảng Notes ở đây
+                }
             }
-            
+
             LOGGER.log(Level.INFO, "Inserting fake data...");
             insertFakeData(conn); // Luôn chạy insertFakeData để đảm bảo dữ liệu giả
-                                     // (với kiểm tra trùng lặp bên trong)
 
             LOGGER.log(Level.INFO, "Database initialization completed.");
 
@@ -538,12 +586,12 @@ public class DBInitializer {
             LOGGER.log(Level.SEVERE, "Database initialization failed.", e);
         }
     }
-    
+
     // Phương thức main để kiểm tra
     public static void main(String[] args) {
         DBInitializer initializer = new DBInitializer();
         // Để reset hoàn toàn DB (xóa và tạo lại tất cả bảng), truyền true
         // Để chỉ tạo các bảng thiếu và thêm dữ liệu giả nếu chưa có, truyền false
-        initializer.initializeDatabase(true); 
+        initializer.initializeDatabase(true);
     }
 }
