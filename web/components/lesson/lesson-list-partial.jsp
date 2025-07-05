@@ -10,14 +10,14 @@
                 <h6 class="card-subtitle mb-2 text-muted">
                     <fmt:formatDate value="${lesson.lessonDate}" pattern="dd/MM/yyyy"/>
                     <c:choose>
-                        <c:when test="${lesson.status eq 'Planned'}">
-                            <span class="badge badge-planned ms-2">${lesson.status}</span>
+                        <c:when test="${lesson.status eq 'Active'}">
+                            <span class="badge bg-secondary ms-2">Chưa học</span>
                         </c:when>
                         <c:when test="${lesson.status eq 'Completed'}">
-                            <span class="badge badge-completed ms-2">${lesson.status}</span>
+                            <span class="badge badge-completed ms-2">Hoàn thành</span>
                         </c:when>
-                        <c:when test="${lesson.status eq 'Cancelled'}">
-                            <span class="badge badge-cancelled ms-2">${lesson.status}</span>
+                        <c:when test="${lesson.status eq 'Inactive'}">
+                            <span class="badge badge-cancelled ms-2">Vắng</span>
                         </c:when>
                         <c:otherwise>
                             <span class="badge bg-secondary ms-2">${lesson.status}</span>
