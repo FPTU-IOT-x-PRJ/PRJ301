@@ -8,6 +8,7 @@
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>${subject.name} - Chi tiết Môn học</title>
+        <link rel="shortcut icon" href="${pageContext.request.contextPath}/public/favicon.ico" type="image/x-icon">
         <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
         <style>
@@ -153,10 +154,10 @@
                                     <p><strong>Trạng thái:</strong>
                                         <c:choose>
                                             <c:when test="${subject.isActive}">
-                                                <span class="badge bg-success">Hoạt động</span>
+                                                <span class="badge bg-warning">Đang học</span>
                                             </c:when>
                                             <c:otherwise>
-                                                <span class="badge bg-danger">Không hoạt động</span>
+                                                <span class="badge bg-success">Đã hoàn thành</span>
                                             </c:otherwise>
                                         </c:choose>
                                     </p>

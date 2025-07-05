@@ -11,6 +11,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="shortcut icon" href="${pageContext.request.contextPath}/public/favicon.ico" type="image/x-icon">
     <title>Chỉnh Sửa Môn Học - EduPlan</title>
     <link href="${pageContext.request.contextPath}/css/common.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" rel="stylesheet">
@@ -98,8 +99,8 @@
                             </div>
 
                             <div class="d-flex justify-content-end">
-                                <a href="${pageContext.request.contextPath}/subjects?semesterId=${subject.semesterId}" class="btn btn-secondary me-2">
-                                    <i class="fas fa-times me-2"></i>Hủy
+                                <a href="${pageContext.request.contextPath}/subjects/detail?id=${subject.id}" class="btn btn-secondary me-2">
+                                    <i class="fas fa-times me-2"></i>Huỷ
                                 </a>
                                 <button type="submit" class="btn btn-primary">
                                     <i class="fas fa-save me-2"></i>Lưu thay đổi

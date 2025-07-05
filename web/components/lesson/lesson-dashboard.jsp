@@ -6,6 +6,7 @@
     <head>
         <meta charset="UTF-8">
         <title>Quản lý Buổi học - EduPlan</title>
+        <link rel="shortcut icon" href="${pageContext.request.contextPath}/public/favicon.ico" type="image/x-icon">
         <%-- Link tới common.css nếu có --%>
         <link href="${pageContext.request.contextPath}/css/common.css" rel="stylesheet">
         <%-- Bootstrap 5.3.2 từ CDN (đã cập nhật) --%>
