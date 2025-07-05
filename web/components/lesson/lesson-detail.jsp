@@ -53,7 +53,7 @@
             .btn-outline-secondary {
                 border-radius: 8px;
             }
-            .document-item, .note-item { /* Added .note-item */
+            .document-item {
                 border: 1px solid #e9ecef;
                 border-radius: 10px;
                 padding: 15px;
@@ -61,15 +61,15 @@
                 background-color: #ffffff;
                 transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
             }
-            .document-item:hover, .note-item:hover { /* Added .note-item */
+            .document-item:hover {
                 transform: translateY(-3px);
                 box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
             }
-            .document-item .doc-title, .note-item .note-title { /* Added .note-item */
+            .document-item .doc-title {
                 font-weight: 500;
                 color: #007bff;
             }
-            .document-item .doc-date, .note-item .note-date { /* Added .note-item */
+            .document-item .doc-date {
                 font-size: 0.85rem;
                 color: #6c757d;
             }
@@ -198,51 +198,35 @@
                 </div>
             </div>
 
+<!--            <div class="row">
+                <div class="col-md-12">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <i class="fas fa-clipboard me-2"></i>Ghi chú cá nhân
+                            <button type="button" class="btn btn-light btn-sm rounded-pill">
+                                <i class="fas fa-plus-circle me-2"></i>Thêm ghi chú mới
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <div class="alert alert-info text-center" role="alert">
+                                Tính năng Ghi chú sẽ được triển khai trong giai đoạn tiếp theo!
+                            </div>
+                            </div>
+                    </div>
+                </div>
+            </div>-->
             <div class="row">
                 <div class="col-md-12">
                     <div class="card">
                         <div class="card-header d-flex justify-content-between align-items-center">
                             <i class="fas fa-clipboard me-2"></i>Ghi chú cá nhân
-                            <button type="button" class="btn btn-light btn-sm rounded-pill" data-bs-toggle="modal" data-bs-target="#noteModal" id="addNoteBtn">
+                            <button type="button" class="btn btn-light btn-sm rounded-pill" data-bs-toggle="modal" data-bs-target="#addNoteModal">
                                 <i class="fas fa-plus-circle me-2"></i>Thêm ghi chú mới
                             </button>
                         </div>
                         <div class="card-body">
-                            <div id="notes-list-container">
-                                <c:if test="${empty notes}">
-                                    <div class="alert alert-info text-center" role="alert">
-                                        Chưa có ghi chú nào cho buổi học này.
-                                    </div>
-                                </c:if>
-                                <div class="row">
-                                    <c:forEach var="note" items="${notes}">
-                                        <div class="col-md-6 col-lg-4 mb-3">
-                                            <div class="note-item d-flex align-items-center justify-content-between">
-                                                <div>
-                                                    <h6 class="note-title mb-1">${note.title}</h6>
-                                                    <p class="text-muted mb-0" style="font-size: 0.85rem;">${note.content}</p>
-                                                    <small class="note-date text-muted">
-                                                        Tạo lúc: <fmt:formatDate value="${note.createdAt}" pattern="HH:mm dd/MM/yyyy"/>
-                                                        <c:if test="${note.updatedAt ne null}">
-                                                            | Cập nhật: <fmt:formatDate value="${note.updatedAt}" pattern="HH:mm dd/MM/yyyy"/>
-                                                        </c:if>
-                                                    </small>
-                                                </div>
-                                                <div>
-                                                    <button type="button" class="btn btn-outline-primary btn-sm me-2"
-                                                            onclick="editNote(${note.id}, '${note.title.replace(/'/g, "\\'")}', '${note.content.replace(/'/g, "\\'")}')">
-                                                        <i class="fas fa-edit"></i>
-                                                    </button>
-                                                    <button type="button" class="btn btn-outline-danger btn-sm"
-                                                            onclick="deleteNote(${note.id})">
-                                                        <i class="fas fa-trash-alt"></i>
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </c:forEach>
-                                </div>
-                            </div>
+                            <%-- Nhúng partial hiển thị danh sách ghi chú --%>
+                            <jsp:include page="/components/note/note-list-partial.jsp"/>
                         </div>
                     </div>
                 </div>
@@ -278,23 +262,21 @@
                 </div>
             </div>
         </div>
-
-        <div class="modal fade" id="noteModal" tabindex="-1" aria-labelledby="noteModalLabel" aria-hidden="true">
+        <%-- Modal Thêm Ghi chú Mới (MỚI) --%>
+        <div class="modal fade" id="addNoteModal" tabindex="-1" aria-labelledby="addNoteModalLabel" aria-hidden="true">
             <div class="modal-dialog">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title" id="noteModalLabel">Thêm ghi chú mới</h5>
+                        <h5 class="modal-title" id="addNoteModalLabel">Thêm Ghi chú Mới</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
-                    <form id="noteForm">
+                    <form id="addNoteForm" action="${pageContext.request.contextPath}/notes/add" method="post">
                         <div class="modal-body">
-                            <input type="hidden" id="noteId" name="id" value="">
                             <input type="hidden" name="subjectId" value="${lesson.subjectId}">
                             <input type="hidden" name="lessonId" value="${lesson.id}">
-
                             <div class="mb-3">
                                 <label for="noteTitle" class="form-label">Tiêu đề ghi chú:</label>
-                                <input type="text" class="form-control" id="noteTitle" name="title" required>
+                                <input type="text" class="form-control" id="noteTitle" name="title" required maxlength="255">
                             </div>
                             <div class="mb-3">
                                 <label for="noteContent" class="form-label">Nội dung ghi chú:</label>
@@ -311,115 +293,5 @@
         </div>
 
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-        <script>
-            document.addEventListener('DOMContentLoaded', function () {
-                const noteModal = new bootstrap.Modal(document.getElementById('noteModal'));
-                const noteForm = document.getElementById('noteForm');
-                const noteIdInput = document.getElementById('noteId');
-                const noteTitleInput = document.getElementById('noteTitle');
-                const noteContentInput = document.getElementById('noteContent');
-                const addNoteBtn = document.getElementById('addNoteBtn');
-
-                // Mở modal để thêm ghi chú mới
-                addNoteBtn.addEventListener('click', function () {
-                    noteIdInput.value = ''; // Clear ID for new note
-                    noteTitleInput.value = '';
-                    noteContentInput.value = '';
-                    document.getElementById('noteModalLabel').innerText = 'Thêm ghi chú mới';
-                });
-
-                // Xử lý submit form ghi chú (Thêm/Sửa)
-                noteForm.addEventListener('submit', async function (event) {
-                    event.preventDefault();
-
-                    const id = noteIdInput.value;
-                    const title = noteTitleInput.value;
-                    const content = noteContentInput.value;
-                    const subjectId = document.querySelector('input[name="subjectId"]').value;
-                    const lessonId = document.querySelector('input[name="lessonId"]').value;
-
-                    const noteData = {
-                        id: id,
-                        title: title,
-                        content: content,
-                        subjectId: subjectId,
-                        lessonId: lessonId
-                    };
-
-                    let url = '';
-                    let method = '';
-
-                    if (id) {
-                        // Chỉnh sửa ghi chú hiện có
-                        url = '${pageContext.request.contextPath}/notes/edit';
-                        method = 'POST'; // Hoặc 'PUT' nếu bạn cấu hình servlet hỗ trợ PUT
-                    } else {
-                        // Thêm ghi chú mới
-                        url = '${pageContext.request.contextPath}/notes/add';
-                        method = 'POST';
-                    }
-
-                    try {
-                        const response = await fetch(url, {
-                            method: method,
-                            headers: {
-                                'Content-Type': 'application/json'
-                            },
-                            body: JSON.stringify(noteData)
-                        });
-
-                        const result = await response.json();
-
-                        if (response.ok) {
-                            alert(result.message); // Hiển thị thông báo thành công từ server
-                            noteModal.hide(); // Đóng modal
-                            window.location.reload(); // Tải lại trang để cập nhật danh sách ghi chú
-                        } else {
-                            alert('Lỗi: ' + result.message); // Hiển thị lỗi từ server
-                        }
-                    } catch (error) {
-                        console.error('Lỗi khi gửi yêu cầu ghi chú:', error);
-                        alert('Đã xảy ra lỗi không mong muốn. Vui lòng thử lại.');
-                    }
-                });
-            });
-
-            // Hàm mở modal để chỉnh sửa ghi chú
-            function editNote(id, title, content) {
-                const noteModal = new bootstrap.Modal(document.getElementById('noteModal'));
-                document.getElementById('noteId').value = id;
-                document.getElementById('noteTitle').value = title;
-                document.getElementById('noteContent').value = content;
-                document.getElementById('noteModalLabel').innerText = 'Sửa ghi chú';
-                noteModal.show();
-            }
-
-            // Hàm xóa ghi chú
-            async function deleteNote(id) {
-                if (confirm('Bạn có chắc chắn muốn xóa ghi chú này không?')) {
-                    try {
-                        const response = await fetch('${pageContext.request.contextPath}/notes/delete', {
-                            method: 'POST', // Hoặc 'DELETE' nếu bạn cấu hình servlet hỗ trợ DELETE
-                            headers: {
-                                'Content-Type': 'application/json'
-                            },
-                            body: JSON.stringify({ id: id })
-                        });
-
-                        const result = await response.json();
-
-                        if (response.ok) {
-                            alert(result.message);
-                            window.location.reload(); // Tải lại trang để cập nhật danh sách ghi chú
-                        } else {
-                            alert('Lỗi: ' + result.message);
-                        }
-                    } catch (error) {
-                        console.error('Lỗi khi xóa ghi chú:', error);
-                        alert('Đã xảy ra lỗi không mong muốn khi xóa ghi chú. Vui lòng thử lại.');
-                    }
-                }
-            }
-        </script>
     </body>
 </html>

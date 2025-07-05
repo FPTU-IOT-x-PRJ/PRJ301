@@ -8,7 +8,6 @@ import entity.Lesson;
 import entity.Subject;
 import entity.User;
 import jakarta.servlet.ServletException;
-import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -21,13 +20,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import com.google.gson.Gson; // Import Gson
-import utils.ConfigManager; // Giả định này nếu bạn có cấu hình đặc biệt cho ghi chú
+import com.google.gson.Gson;
 
 /**
  * Controller xử lý các thao tác liên quan đến ghi chú (Note).
  */
-@WebServlet(name = "NoteController", urlPatterns = {"/notes/*"})
 public class NoteController extends HttpServlet {
 
     private static final Logger LOGGER = Logger.getLogger(NoteController.class.getName());
@@ -41,7 +38,6 @@ public class NoteController extends HttpServlet {
         noteDao = new NoteDAO();
         subjectDao = new SubjectDAO();
         lessonDao = new LessonDAO();
-        // Không cần Cloudinary cho ghi chú văn bản thông thường
     }
 
     @Override
@@ -107,6 +103,9 @@ public class NoteController extends HttpServlet {
                     break;
                 case "/edit":
                     editNote(request, response, user.getId());
+                    break;
+                case "/delete":
+                    deleteNote(request, response, user.getId());
                     break;
                 default:
                     response.sendError(HttpServletResponse.SC_NOT_FOUND, "Action không hợp lệ.");
