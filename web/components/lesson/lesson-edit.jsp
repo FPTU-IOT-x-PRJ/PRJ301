@@ -84,7 +84,7 @@
                             </div>
 
                             <div class="d-flex justify-content-end">
-                                <a href="${pageContext.request.contextPath}/subjects/detail?id=${lesson.subjectId}" class="btn btn-secondary me-2">
+                                <a href="${pageContext.request.contextPath}/lessons/detail?id=${lesson.id}" class="btn btn-secondary me-2">
                                     <i class="fas fa-times me-2"></i>Hủy
                                 </a>
                                 <button type="submit" class="btn btn-primary">

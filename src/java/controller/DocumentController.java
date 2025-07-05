@@ -444,6 +444,9 @@ public class DocumentController extends HttpServlet {
                 }
                 response.sendRedirect(redirectUrl);
             } else {
+                if (storedFileName != null) {
+                    cloudinary.uploader().destroy(storedFileName, ObjectUtils.emptyMap());
+                }
                 LOGGER.log(Level.WARNING, "Không thể thêm tài liệu {0} vào DB cho người dùng {1}.", new Object[]{fileName, userId});
                 request.setAttribute("errorMessage", "Lỗi khi lưu thông tin tài liệu vào cơ sở dữ liệu.");
 //                displayAddForm(request, response, userId);

@@ -120,8 +120,7 @@
 
                         <hr class="my-4">
                         <div class="d-flex justify-content-end">
-                            <%-- Đã sửa: Sử dụng subject.id để quay lại đúng trang lessons của môn học đó --%>
-                            <a href="${pageContext.request.contextPath}/lessons?subjectId=${subject.id}" class="btn btn-secondary me-2">
+                            <a href="${pageContext.request.contextPath}/subjects/detail?id=${subject.id}" class="btn btn-secondary me-2">
                                 <i class="fas fa-arrow-left me-2"></i>Quay lại
                             </a>
                             <button type="submit" class="btn btn-primary">
