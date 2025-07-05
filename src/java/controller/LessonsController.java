@@ -515,8 +515,7 @@ public class LessonsController extends HttpServlet {
             // Nếu mọi thứ hợp lệ, đặt các thuộc tính vào request
             request.setAttribute("lesson", lesson);
             request.setAttribute("subject", subject); // Để hiển thị tên môn học và link quay lại
-            List<Note> notes = noteDao.getNotesByLessonAndSubjectId(user.getId(), lesson.getId(), lesson.getSubjectId());
-
+            List<Note> notes = noteDao.getNotesByLessonOrSubjectId(lesson.getId(), lesson.getSubjectId());
             request.setAttribute("notes", notes);
 
             // Lấy danh sách tài liệu cho buổi học này (sử dụng getFilteredDocuments)

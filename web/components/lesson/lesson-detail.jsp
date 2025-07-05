@@ -197,24 +197,6 @@
                     </div>
                 </div>
             </div>
-
-<!--            <div class="row">
-                <div class="col-md-12">
-                    <div class="card">
-                        <div class="card-header d-flex justify-content-between align-items-center">
-                            <i class="fas fa-clipboard me-2"></i>Ghi chú cá nhân
-                            <button type="button" class="btn btn-light btn-sm rounded-pill">
-                                <i class="fas fa-plus-circle me-2"></i>Thêm ghi chú mới
-                            </button>
-                        </div>
-                        <div class="card-body">
-                            <div class="alert alert-info text-center" role="alert">
-                                Tính năng Ghi chú sẽ được triển khai trong giai đoạn tiếp theo!
-                            </div>
-                            </div>
-                    </div>
-                </div>
-            </div>-->
             <div class="row">
                 <div class="col-md-12">
                     <div class="card">
@@ -272,7 +254,6 @@
                     </div>
                     <form id="addNoteForm" action="${pageContext.request.contextPath}/notes/add" method="post">
                         <div class="modal-body">
-                            <input type="hidden" name="subjectId" value="${lesson.subjectId}">
                             <input type="hidden" name="lessonId" value="${lesson.id}">
                             <div class="mb-3">
                                 <label for="noteTitle" class="form-label">Tiêu đề ghi chú:</label>

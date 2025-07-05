@@ -14,10 +14,9 @@ import java.util.logging.Logger;
 
 /**
  * Lớp DAO quản lý các thao tác CRUD và các truy vấn liên quan đến đối tượng
- * Note trong cơ sở dữ liệu.
- * KHÔNG CÓ userId TRỰC TIẾP TRONG BẢNG NOTES.
- * Quyền truy cập được quản lý ở tầng Controller thông qua Subject/Lesson ID.
- * Author: Dung Ann
+ * Note trong cơ sở dữ liệu. KHÔNG CÓ userId TRỰC TIẾP TRONG BẢNG NOTES. Quyền
+ * truy cập được quản lý ở tầng Controller thông qua Subject/Lesson ID. Author:
+ * Dung Ann
  */
 public class NoteDAO extends DBContext {
 
@@ -65,8 +64,7 @@ public class NoteDAO extends DBContext {
     // Phương thức thêm ghi chú
     public boolean addNote(Note note) throws SQLException {
         boolean rowAffected = false;
-        try (Connection connection = getConnection();
-                PreparedStatement preparedStatement = connection.prepareStatement(INSERT_NOTE_SQL)) {
+        try (Connection connection = getConnection(); PreparedStatement preparedStatement = connection.prepareStatement(INSERT_NOTE_SQL)) {
             preparedStatement.setString(1, note.getTitle());
             preparedStatement.setString(2, note.getContent());
             if (note.getSubjectId() != null) {
@@ -90,8 +88,7 @@ public class NoteDAO extends DBContext {
     // Phương thức lấy ghi chú theo ID và UserID
     public Note getNoteById(int id, int userId) throws SQLException {
         Note note = null;
-        try (Connection connection = getConnection();
-                PreparedStatement preparedStatement = connection.prepareStatement(SELECT_NOTE_BY_ID_AND_USER_SQL)) {
+        try (Connection connection = getConnection(); PreparedStatement preparedStatement = connection.prepareStatement(SELECT_NOTE_BY_ID_AND_USER_SQL)) {
             preparedStatement.setInt(1, id);
             preparedStatement.setInt(2, userId); // Thêm userId vào điều kiện WHERE
             ResultSet rs = preparedStatement.executeQuery();
@@ -107,39 +104,61 @@ public class NoteDAO extends DBContext {
 
     // Phương thức mới: Lấy ghi chú dựa trên lessonId, subjectId và userId (từ semester)
     // Phương thức này đã có sẵn trong đoạn code bạn cung cấp và phù hợp
-    public List<Note> getNotesByLessonAndSubjectId(int userId, int lessonId, int subjectId) throws SQLException {
+    public List<Note> getNotesByLessonOrSubjectId(Integer lessonId, Integer subjectId) throws SQLException {
         List<Note> notes = new ArrayList<>();
-        // SELECT_NOTES_BY_LESSON_AND_SUBJECT_SQL đã được định nghĩa trong code bạn cung cấp
-        String SELECT_NOTES_BY_LESSON_AND_SUBJECT_SQL =
-                "SELECT n.id, n.title, n.content, n.createdAt, n.updatedAt, n.subjectId, n.lessonId " +
-                "FROM Notes n " +
-                "INNER JOIN Lessons l ON n.lessonId = l.id " +
-                "INNER JOIN Subjects s ON n.subjectId = s.id " +
-                "INNER JOIN Semesters sem ON s.semesterId = sem.id " +
-                "WHERE n.lessonId = ? AND n.subjectId = ? AND sem.userId = ? " + // Lọc theo userId của Semester
-                "ORDER BY n.createdAt DESC";
 
-        try (Connection connection = getConnection();
-                PreparedStatement preparedStatement = connection.prepareStatement(SELECT_NOTES_BY_LESSON_AND_SUBJECT_SQL)) {
-            preparedStatement.setInt(1, lessonId);
-            preparedStatement.setInt(2, subjectId);
-            preparedStatement.setInt(3, userId);
-            ResultSet rs = preparedStatement.executeQuery();
-            while (rs.next()) {
-                notes.add(extractNoteFromResultSet(rs));
+        StringBuilder sqlBuilder = new StringBuilder();
+        sqlBuilder.append("SELECT n.id, n.title, n.content, n.createdAt, n.updatedAt, n.subjectId, n.lessonId ");
+        sqlBuilder.append("FROM Notes n ");
+
+        List<Object> params = new ArrayList<>();
+        boolean hasCondition = false;
+
+        
+        sqlBuilder.append("WHERE ");
+        if (lessonId != null) {
+            sqlBuilder.append("n.lessonId = ? ");
+            params.add(lessonId);
+        }
+
+        if (subjectId != null) {
+            sqlBuilder.append("n.subjectId = ? ");
+            params.add(subjectId);
+        }
+
+
+        sqlBuilder.append("ORDER BY n.createdAt DESC");
+
+        // Logging
+        LOGGER.log(Level.INFO, "SQL Query for getNotesByLessonOrSubjectId: {0}", sqlBuilder.toString());
+        LOGGER.log(Level.INFO, "Parameters: {0}", params);
+
+        try (Connection connection = getConnection(); PreparedStatement preparedStatement = connection.prepareStatement(sqlBuilder.toString())) {
+
+            for (int i = 0; i < params.size(); i++) {
+                preparedStatement.setObject(i + 1, params.get(i));
+            }
+
+            try (ResultSet rs = preparedStatement.executeQuery()) {
+                int count = 0;
+                while (rs.next()) {
+                    count++;
+                    notes.add(extractNoteFromResultSet(rs));
+                }
+                LOGGER.log(Level.INFO, "Number of notes fetched: {0}", count);
             }
         } catch (SQLException e) {
             printSQLException(e);
             throw e;
         }
+
         return notes;
     }
 
     // Đổi tên từ updateNote thành editNote để phù hợp với Controller
     public boolean editNote(Note note, int userId) throws SQLException {
         boolean rowAffected = false;
-        try (Connection connection = getConnection();
-                PreparedStatement preparedStatement = connection.prepareStatement(UPDATE_NOTE_SQL)) {
+        try (Connection connection = getConnection(); PreparedStatement preparedStatement = connection.prepareStatement(UPDATE_NOTE_SQL)) {
             preparedStatement.setString(1, note.getTitle());
             preparedStatement.setString(2, note.getContent());
             if (note.getSubjectId() != null) {
@@ -165,8 +184,7 @@ public class NoteDAO extends DBContext {
     // Phương thức xóa ghi chú theo ID và UserID
     public boolean deleteNote(int id, int userId) throws SQLException {
         boolean rowAffected = false;
-        try (Connection connection = getConnection();
-                PreparedStatement preparedStatement = connection.prepareStatement(DELETE_NOTE_SQL)) {
+        try (Connection connection = getConnection(); PreparedStatement preparedStatement = connection.prepareStatement(DELETE_NOTE_SQL)) {
             preparedStatement.setInt(1, id);
             preparedStatement.setInt(2, userId); // userId cho subquery kiểm tra quyền sở hữu
             rowAffected = preparedStatement.executeUpdate() > 0;
@@ -178,7 +196,8 @@ public class NoteDAO extends DBContext {
     }
 
     /**
-     * Phương thức lấy danh sách ghi chú của một người dùng, có thể lọc theo môn học và buổi học.
+     * Phương thức lấy danh sách ghi chú của một người dùng, có thể lọc theo môn
+     * học và buổi học.
      *
      * @param userId ID của người dùng.
      * @param subjectId ID môn học để lọc (có thể là null).
@@ -199,8 +218,7 @@ public class NoteDAO extends DBContext {
         }
         sql.append("ORDER BY n.createdAt DESC");
 
-        try (Connection connection = getConnection();
-                PreparedStatement preparedStatement = connection.prepareStatement(sql.toString())) {
+        try (Connection connection = getConnection(); PreparedStatement preparedStatement = connection.prepareStatement(sql.toString())) {
 
             int paramIndex = 1;
             preparedStatement.setInt(paramIndex++, userId);
@@ -226,6 +244,7 @@ public class NoteDAO extends DBContext {
 
     /**
      * Trích xuất một đối tượng Note từ ResultSet.
+     *
      * @param rs ResultSet chứa dữ liệu Note.
      * @return Đối tượng Note.
      * @throws SQLException Nếu có lỗi khi truy cập dữ liệu từ ResultSet.
@@ -245,6 +264,7 @@ public class NoteDAO extends DBContext {
 
     /**
      * Hàm tiện ích để ghi chi tiết lỗi SQL vào logger.
+     *
      * @param ex Ngoại lệ SQLException cần ghi.
      */
     private void printSQLException(SQLException ex) {

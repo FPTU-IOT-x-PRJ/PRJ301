@@ -74,9 +74,18 @@
                 padding: 0.4em 0.6em;
                 border-radius: 0.5rem;
             }
-            .badge-planned { background-color: #ffc107; color: #343a40; } /* Yellow */
-            .badge-completed { background-color: #28a745; color: white; } /* Green */
-            .badge-cancelled { background-color: #dc3545; color: white; } /* Red */
+            .badge-planned {
+                background-color: #ffc107;
+                color: #343a40;
+            } /* Yellow */
+            .badge-completed {
+                background-color: #28a745;
+                color: white;
+            } /* Green */
+            .badge-cancelled {
+                background-color: #dc3545;
+                color: white;
+            } /* Red */
 
             .document-item {
                 border: 1px solid #e9ecef;
@@ -219,6 +228,22 @@
                     </div>
                 </div>
             </div>
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <i class="fas fa-clipboard me-2"></i>Ghi chú cá nhân
+                            <button type="button" class="btn btn-light btn-sm rounded-pill" data-bs-toggle="modal" data-bs-target="#addNoteModal">
+                                <i class="fas fa-plus-circle me-2"></i>Thêm ghi chú mới
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <%-- Nhúng partial hiển thị danh sách ghi chú --%>
+                            <jsp:include page="/components/note/note-list-partial.jsp"/>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
             <div class="row">
                 <div class="col-md-12">
@@ -260,7 +285,35 @@
                 </div>
             </div>
         </div>
+        <%-- Modal Thêm Ghi chú Mới (MỚI) --%>
+        <div class="modal fade" id="addNoteModal" tabindex="-1" aria-labelledby="addNoteModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="addNoteModalLabel">Thêm Ghi chú Mới</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <form id="addNoteForm" action="${pageContext.request.contextPath}/notes/add" method="post">
+                        <div class="modal-body">
+                            <input type="hidden" name="subjectId" value="${subject.id}">
+                            <div class="mb-3">
+                                <label for="noteTitle" class="form-label">Tiêu đề ghi chú:</label>
+                                <input type="text" class="form-control" id="noteTitle" name="title" required maxlength="255">
+                            </div>
+                            <div class="mb-3">
+                                <label for="noteContent" class="form-label">Nội dung ghi chú:</label>
+                                <textarea class="form-control" id="noteContent" name="content" rows="5" required></textarea>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary rounded-pill" data-bs-dismiss="modal">Hủy</button>
+                            <button type="submit" class="btn btn-primary rounded-pill">Lưu ghi chú</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
 
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-        </body>
+    </body>
 </html>

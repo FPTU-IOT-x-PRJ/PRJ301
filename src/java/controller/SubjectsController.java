@@ -6,7 +6,9 @@ import dao.SemesterDAO;
 import dao.SubjectDAO;
 import entity.Document;
 import DTO.Subject.SubjectWithLessonsDTO;
+import dao.NoteDAO;
 import entity.Lesson;
+import entity.Note;
 import entity.Semester;
 import entity.Subject;
 import entity.User;
@@ -28,10 +30,11 @@ import java.util.logging.Logger;
 public class SubjectsController extends HttpServlet {
 
     private static final Logger LOGGER = Logger.getLogger(SubjectsController.class.getName());
-    SubjectDAO subjectDao = new SubjectDAO();
-    LessonDAO lessonDao = new LessonDAO();
-    SemesterDAO semesterDao = new SemesterDAO();
-    DocumentDAO documentDao = new DocumentDAO();
+    private SubjectDAO subjectDao = new SubjectDAO();
+    private LessonDAO lessonDao = new LessonDAO();
+    private SemesterDAO semesterDao = new SemesterDAO();
+    private DocumentDAO documentDao = new DocumentDAO();
+    private NoteDAO noteDao = new NoteDAO();
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
@@ -173,7 +176,7 @@ public class SubjectsController extends HttpServlet {
         List<SubjectWithLessonsDTO> subjectsWithLessonsDTOList = new ArrayList<>();
         for (Subject subject : subjects) {
             // Lấy tất cả các buổi học cho từng môn học
-            List<Lesson> lessons = lessonDao.getAllLessonsBySubjectId(subject.getId()); 
+            List<Lesson> lessons = lessonDao.getAllLessonsBySubjectId(subject.getId());
             // Tạo DTO mới với Subject và danh sách Lessons của nó
             subjectsWithLessonsDTOList.add(new SubjectWithLessonsDTO(subject, lessons));
         }
@@ -194,12 +197,12 @@ public class SubjectsController extends HttpServlet {
         request.setAttribute("isActive", isActiveStr); // Giữ lại giá trị isActive trên form
 
         // Gán danh sách DTO mới vào request attribute
-        request.setAttribute("subjects", subjectsWithLessonsDTOList); 
+        request.setAttribute("subjects", subjectsWithLessonsDTOList);
         request.setAttribute("totalPages", totalPages);
         request.setAttribute("currentPage", page);
-        
+
         LOGGER.log(Level.INFO, "Subjects with lessons loaded: {0}", subjectsWithLessonsDTOList.size());
-        
+
         request.getRequestDispatcher("/components/subject/subject-dashboard.jsp").forward(request, response);
     }
 
@@ -225,7 +228,8 @@ public class SubjectsController extends HttpServlet {
 
             List<Lesson> lessons = lessonDao.getAllLessonsBySubjectId(subjectId, null, null, 1, Integer.MAX_VALUE); // Lấy tất cả buổi học
             List<Document> documents = documentDao.getDocumentsBySubjectId(subjectId, user.getId()); // Lấy tất cả tài liệu của môn học này
-
+            List<Note> notes = noteDao.getNotesByLessonOrSubjectId(null, subjectId);
+            request.setAttribute("notes", notes);
             request.setAttribute("subject", subject);
             request.setAttribute("lessons", lessons);
             request.setAttribute("documents", documents);
