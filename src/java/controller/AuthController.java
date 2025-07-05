@@ -4,11 +4,11 @@ import dao.UserDAO;
 import entity.User;
 import java.io.IOException;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
-import java.sql.SQLException;
 import java.util.Random;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -211,6 +211,7 @@ public class AuthController extends HttpServlet {
     private void authenticateUser(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         String identifier = request.getParameter("identifier");
         String password = request.getParameter("password");
+        String rememberMe = request.getParameter("rememberMe");
 
         if (identifier == null || identifier.trim().isEmpty()
                 || password == null || password.trim().isEmpty()) {
@@ -228,6 +229,41 @@ public class AuthController extends HttpServlet {
 
             LOGGER.log(Level.INFO, "User logged in: {0} with role {1}", new Object[]{user.getUsername(), user.getRole()});
 
+            if ("on".equals(rememberMe)) {
+                // Tạo cookies để lưu trữ identifier và password
+                // CẢNH BÁO: VIỆC LƯU MẬT KHẨU TRỰC TIẾP TRONG COOKIE LÀ KHÔNG AN TOÀN.
+                // Đối với dự án thực tế, bạn nên sử dụng cơ chế token bảo mật hơn.
+                Cookie identifierCookie = new Cookie("rememberIdentifier", identifier);
+                Cookie passwordCookie = new Cookie("rememberPassword", password); // KHÔNG NÊN LƯU MẬT KHẨU PLAIN TEXT
+
+                // Đặt thời gian sống cho cookie (ví dụ: 7 ngày)
+                int sevenDays = 60 * 60 * 24 * 7;
+                identifierCookie.setMaxAge(sevenDays);
+                passwordCookie.setMaxAge(sevenDays);
+                
+                // Đặt path để cookie có sẵn trên toàn bộ ứng dụng
+                identifierCookie.setPath(request.getContextPath() + "/");
+                passwordCookie.setPath(request.getContextPath() + "/");
+
+                // Thêm cookie vào response
+                response.addCookie(identifierCookie);
+                response.addCookie(passwordCookie);
+                LOGGER.log(Level.INFO, "Remember Me: Cookies set for {0}", identifier);
+            } else {
+                // Nếu "Remember Me" không được chọn, xóa cookies cũ (nếu có)
+                // Điều này quan trọng để người dùng bỏ chọn "Remember Me" thì lần sau không tự đăng nhập
+                Cookie identifierCookie = new Cookie("rememberIdentifier", "");
+                identifierCookie.setMaxAge(0); // Đặt MaxAge = 0 để xóa cookie
+                identifierCookie.setPath(request.getContextPath() + "/");
+                response.addCookie(identifierCookie);
+
+                Cookie passwordCookie = new Cookie("rememberPassword", "");
+                passwordCookie.setMaxAge(0);
+                passwordCookie.setPath(request.getContextPath() + "/");
+                response.addCookie(passwordCookie);
+                LOGGER.log(Level.INFO, "Remember Me: Cookies removed.");
+            }
+            
             if ("Admin".equalsIgnoreCase(user.getRole())) {
                 response.sendRedirect(request.getContextPath() + "/user/dashboard");
             } else {

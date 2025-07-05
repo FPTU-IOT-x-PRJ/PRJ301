@@ -6,36 +6,35 @@
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Đăng nhập - EduPlan</title>
+        <link rel="shortcut icon" href="${pageContext.request.contextPath}/public/favicon.ico" type="image/x-icon">
         <link href="${pageContext.request.contextPath}/css/common.css" rel="stylesheet">
         <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" rel="stylesheet">
         <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
         <style>
             body {
                 background-color: var(--light-color); /* Nền trắng nhạt theo common.css */
-                /* Loại bỏ display: flex, justify-content, align-items từ body */
-                margin: 0; /* Đảm bảo không có margin mặc định trên body */
-                padding: 0; /* Đảm bảo không có padding mặc định trên body */
-                min-height: 100vh; /* Vẫn giữ min-height để footer có thể ở cuối trang nếu có */
-                display: flex; /* Sử dụng flexbox cho body để xếp chồng navigation và main content */
-                flex-direction: column; /* Xếp các phần tử con theo chiều dọc */
+                margin: 0;
+                padding: 0;
+                min-height: 100vh;
+                display: flex;
+                flex-direction: column;
             }
 
             .main-content-wrapper {
-                flex-grow: 1; /* Cho phép main-content-wrapper mở rộng để chiếm không gian còn lại */
-                display: flex; /* Kích hoạt Flexbox cho wrapper này */
-                justify-content: center; /* Căn giữa form theo chiều ngang */
-                align-items: center; /* Căn giữa form theo chiều dọc */
-                padding: 20px; /* Thêm padding để tránh form dính sát mép trên/dưới trên màn hình nhỏ */
-                box-sizing: border-box; /* Đảm bảo padding không làm tràn */
-                width: 100%; /* Đảm bảo chiếm toàn bộ chiều rộng */
+                flex-grow: 1;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                padding: 20px;
+                box-sizing: border-box;
+                width: 100%;
             }
 
             .login-card-wrapper {
-                max-width: 400px; /* Giới hạn chiều rộng tối đa của card */
-                width: 100%; /* Đảm bảo nó co giãn trên màn hình nhỏ */
+                max-width: 400px;
+                width: 100%;
             }
 
-            /* Đảm bảo các alert hiển thị đúng style của common.css */
             .alert {
                 margin-bottom: 1rem;
             }
@@ -76,7 +75,7 @@
                             <div class="mb-3">
                                 <label for="identifier" class="form-label">Tên đăng nhập / Email</label>
                                 <input type="text" class="form-control" id="identifier" name="identifier" 
-                                       value="${param.from == null ? requestScope.formIdentifier : ''}" required
+                                       value="${not empty cookie.rememberIdentifier.value ? cookie.rememberIdentifier.value : (param.from == null ? requestScope.formIdentifier : '')}" required
                                        placeholder="Nhập tên đăng nhập hoặc email của bạn">
                                 <div class="invalid-feedback">Vui lòng nhập tên đăng nhập hoặc email.</div>
                             </div>
@@ -85,6 +84,7 @@
 
                                 <div class="input-group">
                                     <input type="password" class="form-control" id="password" name="password" required
+                                           value="${not empty cookie.rememberPassword.value ? cookie.rememberPassword.value : ''}"
                                            placeholder="Nhập mật khẩu của bạn">
                                     <button class="btn btn-outline-secondary" type="button" id="togglePassword">
                                         <i class="fas fa-eye"></i>
@@ -92,6 +92,15 @@
                                 </div>
                                 <div class="invalid-feedback">Vui lòng nhập mật khẩu.</div>
                             </div>
+                            
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="checkbox" id="rememberMe" name="rememberMe"
+                                       <c:if test="${not empty cookie.rememberIdentifier.value}">checked</c:if>>
+                                <label class="form-check-label" for="rememberMe">
+                                    Ghi nhớ tôi
+                                </label>
+                            </div>
+
                             <div class="mt-2 text-end">
                                 <a href="${pageContext.request.contextPath}/auth/forgot-password" class="text-decoration-none text-primary fw-semibold">
                                     <i class="fas fa-unlock-alt me-1"></i>Quên mật khẩu?

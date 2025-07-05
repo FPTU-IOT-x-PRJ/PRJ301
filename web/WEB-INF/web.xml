@@ -32,6 +32,10 @@
         <servlet-name>CalendarController</servlet-name>
         <servlet-class>controller.CalendarController</servlet-class>
     </servlet>
+    <servlet>
+        <servlet-name>GoogleLogin</servlet-name>
+        <servlet-class>controller.GoogleLogin</servlet-class>
+    </servlet>
     <servlet-mapping>
         <servlet-name>TestDB</servlet-name>
         <url-pattern>/TestDB</url-pattern>
@@ -91,12 +95,15 @@
     <filter-mapping>
         <filter-name>AuthFilter</filter-name>
         <url-pattern>/subjects/*</url-pattern>
-    </filter-mapping>    
+    </filter-mapping>
     <filter-mapping>
         <filter-name>AuthFilter</filter-name>
         <url-pattern>/calendar/*</url-pattern>
     </filter-mapping>
-    
+    <servlet-mapping>
+        <servlet-name>GoogleLogin</servlet-name>
+        <url-pattern>/google-login</url-pattern>
+    </servlet-mapping>
     <error-page>
         <error-code>404</error-code>
         <location>/components/error404.jsp</location>
@@ -104,5 +111,5 @@
     <error-page>
         <exception-type>java.lang.Throwable</exception-type>
         <location>/errorGeneral.jsp</location>
-    </error-page>    
+    </error-page>
 </web-app>

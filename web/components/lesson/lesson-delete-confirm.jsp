@@ -12,6 +12,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Xác Nhận Xóa Buổi Học - EduPlan</title>
+    <link rel="shortcut icon" href="${pageContext.request.contextPath}/public/favicon.ico" type="image/x-icon">
     <link href="${pageContext.request.contextPath}/css/common.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
@@ -42,7 +43,7 @@
                     </div>
                     <div class="card-footer d-flex justify-content-center">
                         <%-- Nút Hủy bỏ, quay về danh sách buổi học của môn đó --%>
-                        <a href="${pageContext.request.contextPath}/lessons?subjectId=${lessonToDelete.subjectId}" class="btn btn-secondary me-3">
+                        <a href="${pageContext.request.contextPath}/subjects/detail?id=${lessonToDelete.subjectId}" class="btn btn-secondary me-3">
                             <i class="fas fa-times me-2"></i>Hủy bỏ
                         </a>
                         <c:if test="${not empty lessonToDelete}">
