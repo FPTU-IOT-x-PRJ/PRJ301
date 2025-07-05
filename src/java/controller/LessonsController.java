@@ -467,7 +467,9 @@ public class LessonsController extends HttpServlet {
 
             if (success) {
                 LOGGER.log(Level.INFO, "Lesson with ID {0} updated successfully.", new Object[]{lessonId});
-                response.sendRedirect(request.getContextPath() + "/lessons?subjectId=" + subjectId + "&message=editSuccess");
+                String redirectURL = request.getContextPath() + "/subjects/detail?id=" + subjectId;
+
+                response.sendRedirect(redirectURL);
             } else {
                 errors.put("general", "Có lỗi xảy ra khi cập nhật buổi học.");
                 request.setAttribute("errors", errors);
@@ -533,7 +535,7 @@ public class LessonsController extends HttpServlet {
 
             if (success) {
                 LOGGER.log(Level.INFO, "Lesson with ID {0} deleted successfully.", new Object[]{deleteId});
-                response.sendRedirect(request.getContextPath() + "/lessons?subjectId=" + subjectId + "&message=deleteSuccess");
+                response.sendRedirect(request.getContextPath() + "/subjects/detail?id=" + subjectId + "&message=deleteSuccess");
             } else {
                 LOGGER.log(Level.WARNING, "Failed to delete lesson with ID {0}. It might not exist or be linked to other data.", new Object[]{deleteId});
                 request.setAttribute("errorMessage", "Không thể xóa buổi học. Có thể buổi học không tồn tại hoặc có dữ liệu liên quan.");

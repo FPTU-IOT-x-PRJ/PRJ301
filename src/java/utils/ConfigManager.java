@@ -7,6 +7,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class ConfigManager {
+
     private static final Logger LOGGER = Logger.getLogger(ConfigManager.class.getName());
     private static ConfigManager instance;
     private Properties properties;
@@ -42,12 +43,16 @@ public class ConfigManager {
     }
 
     public String getProperty(String key) {
-        String envValue = System.getenv(key);
+        // Ưu tiên lấy từ biến môi trường (map key -> UPPER_CASE_WITH_UNDERSCORES)
+        String envKey = key.toUpperCase().replace('.', '_');
+        String envValue = System.getenv(envKey);
+
         if (envValue != null) {
-            LOGGER.log(Level.INFO, "Loaded from ENV: {0} = {1}", new Object[]{key, maskIfSensitive(key, envValue)});
+            LOGGER.log(Level.INFO, "Loaded from ENV: {0} = {1}", new Object[]{envKey, maskIfSensitive(envKey, envValue)});
             return envValue;
         }
 
+        // Fallback về file .env
         String fileValue = properties.getProperty(key);
         if (fileValue != null) {
             LOGGER.log(Level.INFO, "Loaded from .env file: {0} = {1}", new Object[]{key, maskIfSensitive(key, fileValue)});
