@@ -120,8 +120,7 @@ public class NoteDAO extends DBContext {
             sqlBuilder.append("n.lessonId = ? ");
             params.add(lessonId);
         }
-
-        if (subjectId != null) {
+        else if (subjectId != null) {
             sqlBuilder.append("n.subjectId = ? ");
             params.add(subjectId);
         }

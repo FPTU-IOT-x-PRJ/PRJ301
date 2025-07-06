@@ -290,11 +290,6 @@ public class NoteController extends HttpServlet {
                 }
             }
 
-            if (lessonId != null && subjectId == null) {
-                request.setAttribute("errorMessage", "Một ghi chú gắn với buổi học phải có môn học tương ứng.");
-                displayAddForm(request, response, userId);
-                return;
-            }
 
             Note newNote = new Note(title, content, userId, subjectId, lessonId);
             boolean success = noteDao.addNote(newNote);
@@ -304,7 +299,7 @@ public class NoteController extends HttpServlet {
                 String redirectUrl;
                 if (lessonId != null) {
                     redirectUrl = request.getContextPath() + "/lessons/detail?id=" + lessonId;
-                } else if (subjectId != null) {
+                } else if (subjectId != null) {     
                     redirectUrl = request.getContextPath() + "/subjects/detail?id=" + subjectId;
                 } else {
                     redirectUrl = request.getContextPath() + "/notes/display?message=addSuccess";
@@ -364,12 +359,6 @@ public class NoteController extends HttpServlet {
                     displayEditForm(request, response, userId);
                     return;
                 }
-            }
-
-            if (lessonId != null && subjectId == null) {
-                request.setAttribute("errorMessage", "Một ghi chú gắn với buổi học phải có môn học tương ứng.");
-                displayEditForm(request, response, userId);
-                return;
             }
 
             Note existingNote = noteDao.getNoteById(id, userId);
