@@ -34,9 +34,9 @@ import java.util.ArrayList;
 import utils.ConfigManager;
 
 @MultipartConfig(
-        fileSizeThreshold = 1024 * 1024 * 2, // 2MB
-        maxFileSize = 1024 * 1024 * 10, // 10MB
-        maxRequestSize = 1024 * 1024 * 50 // 50MB
+        fileSizeThreshold = 1024 * 1024 * 2,
+        maxFileSize = 1024 * 1024 * 100, // Tăng lên 100MB
+        maxRequestSize = 1024 * 1024 * 200 // Tăng lên 200MB
 )
 /**
  * Controller xử lý các thao tác liên quan đến tài liệu (Document).
@@ -297,7 +297,7 @@ public class DocumentController extends HttpServlet {
             displayDocuments(request, response, userId);
         }
     }
-    
+
     /**
      * Xử lý yêu cầu tải xuống tài liệu.
      *
@@ -332,8 +332,7 @@ public class DocumentController extends HttpServlet {
 
                 // Lấy InputStream từ URL của file trên Cloudinary
                 URL url = new URL(filePath);
-                try (InputStream in = url.openStream();
-                     OutputStream out = response.getOutputStream()) {
+                try (InputStream in = url.openStream(); OutputStream out = response.getOutputStream()) {
 
                     byte[] buffer = new byte[4096]; // Kích thước buffer
                     int bytesRead;
@@ -374,6 +373,7 @@ public class DocumentController extends HttpServlet {
         try {
             Part filePart = request.getPart("file");
             String fileName = getFileName(filePart);
+
             String description = request.getParameter("description");
 
             Integer subjectId = null;
@@ -414,11 +414,14 @@ public class DocumentController extends HttpServlet {
             String filePath = null;
             String fileType = filePart.getContentType();
             long fileSize = filePart.getSize();
+            LOGGER.log(Level.INFO, "Đang xử lý file: {0}, Tên file: {1}, Loại file (MIME): {2}, Kích thước: {3} bytes",
+                    new Object[]{filePart.getName(), fileName, fileType, fileSize});
 
             try (InputStream fileContent = filePart.getInputStream()) {
                 Map uploadResult = cloudinary.uploader().upload(fileContent.readAllBytes(), ObjectUtils.asMap(
                         "public_id", storedFileName,
-                        "access_mode", "public"
+                        "access_mode", "public",
+                        "resource_type", "raw"
                 ));
                 filePath = (String) uploadResult.get("secure_url");
                 LOGGER.log(Level.INFO, "Đã tải file lên Cloudinary: {0}", filePath);
