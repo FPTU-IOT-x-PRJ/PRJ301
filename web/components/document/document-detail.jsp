@@ -1,14 +1,13 @@
 <%@page contentType="text/html" pageEncoding="UTF-8"%>
 <%@taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core"%>
+<%@taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
 <!DOCTYPE html>
 <html>
     <head>
         <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
         <title>Chi tiết Tài liệu</title>
         <link rel="shortcut icon" href="${pageContext.request.contextPath}/public/favicon.ico" type="image/x-icon">
-        <!-- Bootstrap CSS -->
         <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-        <!-- Font Awesome for icons -->
         <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
         <style>
             body {
@@ -81,6 +80,19 @@
                 color: #721c24;
                 border-color: #f5c6cb;
             }
+            .document-viewer {
+                margin-top: 2rem;
+                border: 1px solid #dee2e6;
+                border-radius: 0.5rem;
+                padding: 1rem;
+                background-color: #ffffff;
+                text-align: center; /* Để căn giữa iframe/video/img */
+            }
+            .document-viewer iframe, .document-viewer img, .document-viewer video {
+                max-width: 100%;
+                height: auto;
+                border: none; /* Bỏ border mặc định cho iframe */
+            }
         </style>
     </head>
     <body>
@@ -147,11 +159,36 @@
                             <span class="detail-label">Kích thước File:</span>
                             <span class="detail-value"><fmt:formatNumber value="${document.fileSize / 1024}" pattern="#,##0.00"/> KB</span>
                         </div>
-<!--                        <div class="detail-item">
-                            <span class="detail-label">Ngày tải lên:</span>
-                            <span class="detail-value"><fmt:formatDate value="${document.uploadDate}" pattern="dd-MM-yyyy HH:mm"/></span>
-                        </div>-->
                         
+
+                        <%-- PHẦN XEM TÀI LIỆU TÍCH HỢP --%>
+                        <h3 class="mt-4 mb-3 text-secondary">Nội dung Tài liệu</h3>
+                        <div class="document-viewer">
+                            <c:choose>
+                                <c:when test="${document.fileType.startsWith('image/')}">
+                                    <img src="${document.filePath}" alt="${document.fileName}" class="img-fluid"/>
+                                </c:when>
+                                <c:when test="${document.fileType.startsWith('video/')}">
+                                    <video controls class="w-100">
+                                        <source src="${document.filePath}" type="${document.fileType}">
+                                        Trình duyệt của bạn không hỗ trợ xem video này.
+                                    </video>
+                                </c:when>
+                                <c:when test="${document.fileType == 'application/pdf'}">
+                                    <%-- Sử dụng Google Docs Viewer cho PDF --%>
+                                    <iframe src="https://docs.google.com/viewer?url=${document.filePath}&embedded=true" style="width:100%; height:600px;" allowfullscreen webkitallowfullscreen></iframe>
+                                </c:when>
+                                <c:otherwise>
+                                    <div class="alert alert-warning" role="alert">
+                                        <i class="fas fa-exclamation-circle me-2"></i>
+                                        Không thể xem trực tiếp định dạng file này (${document.fileType}).
+                                        Vui lòng <a href="${pageContext.request.contextPath}/documents/download?id=${document.id}" class="alert-link">tải xuống</a> để xem.
+                                    </div>
+                                </c:otherwise>
+                            </c:choose>
+                        </div>
+                        <%-- KẾT THÚC PHẦN XEM TÀI LIỆU TÍCH HỢP --%>
+
                         <div class="d-flex justify-content-end mt-4">
                             <a href="${requestScope.redirectUrl}" class="btn btn-secondary-custom me-2">
                                 <i class="fas fa-arrow-left me-2"></i>Quay lại
@@ -164,12 +201,11 @@
                 </div>
             </c:if>
             <c:if test="${document == null && empty requestScope.errorMessage}">
-                 <div class="alert alert-info text-center" role="alert">
-                    <i class="fas fa-info-circle me-2"></i>Không tìm thấy tài liệu.
-                </div>
+                   <div class="alert alert-info text-center" role="alert">
+                       <i class="fas fa-info-circle me-2"></i>Không tìm thấy tài liệu.
+                   </div>
             </c:if>
         </div>
-        <!-- Bootstrap Bundle with Popper -->
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     </body>
 </html>

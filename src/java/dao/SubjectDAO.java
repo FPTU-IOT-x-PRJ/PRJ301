@@ -62,7 +62,7 @@ public class SubjectDAO extends DBContext {
         }
         return rowInserted;
     }
-     
+
     /**
      * Lấy một môn học bằng ID.
      *
@@ -144,6 +144,82 @@ public class SubjectDAO extends DBContext {
             }
         } catch (SQLException e) {
             printSQLException(e);
+        }
+        return subjects;
+    }
+
+    /**
+     * Truy xuất danh sách các môn học cho một người dùng cụ thể, với các tùy
+     * chọn lọc, sắp xếp và phân trang.
+     *
+     * @param userId ID của người dùng.
+     * @param searchKeyword Từ khóa tùy chọn để tìm kiếm trong tên môn học, mã,
+     * mô tả hoặc tên giáo viên.
+     * @param sortBy Cột tùy chọn để sắp xếp (ví dụ: "name", "code",
+     * "createdAt").
+     * @param sortOrder Thứ tự sắp xếp tùy chọn ("ASC" hoặc "DESC").
+     * @param offset Vị trí bắt đầu cho phân trang.
+     * @param pageSize Số lượng bản ghi cần truy xuất trên mỗi trang.
+     * @param semesterId ID học kỳ tùy chọn để lọc môn học.
+     * @return Một danh sách các đối tượng Subject.
+     */
+    public List<Subject> getAllSubjectsByUserId(int userId, String searchKeyword, String sortBy, String sortOrder, int offset, int pageSize, Integer semesterId) {
+        List<Subject> subjects = new ArrayList<>();
+        // Xây dựng truy vấn SQL động
+        StringBuilder queryBuilder = new StringBuilder("SELECT s.* FROM Subjects s JOIN Semesters sem ON s.semesterId = sem.id WHERE sem.userId = ?");
+
+        // Thêm bộ lọc từ khóa tìm kiếm
+        if (searchKeyword != null && !searchKeyword.trim().isEmpty()) {
+            queryBuilder.append(" AND (s.name LIKE ? OR s.code LIKE ? OR s.description LIKE ? OR s.teacherName LIKE ?)");
+        }
+
+        // Thêm bộ lọc theo semesterId
+        if (semesterId != null) {
+            queryBuilder.append(" AND s.semesterId = ?");
+        }
+
+        // Thêm sắp xếp
+        if (sortBy != null && !sortBy.trim().isEmpty()) {
+            queryBuilder.append(" ORDER BY ").append(sortBy);
+            if (sortOrder != null && (sortOrder.equalsIgnoreCase("ASC") || sortOrder.equalsIgnoreCase("DESC"))) {
+                queryBuilder.append(" ").append(sortOrder);
+            } else {
+                queryBuilder.append(" ASC"); // Mặc định sắp xếp tăng dần
+            }
+        } else {
+            queryBuilder.append(" ORDER BY s.name ASC"); // Sắp xếp mặc định theo tên nếu không có sortBy được cung cấp
+        }
+
+        // Thêm phân trang
+        queryBuilder.append(" OFFSET ? ROWS FETCH NEXT ? ROWS ONLY");
+
+        try (Connection con = getConnection(); PreparedStatement ps = con.prepareStatement(queryBuilder.toString())) {
+
+            int paramIndex = 1;
+            ps.setInt(paramIndex++, userId); // Đặt userId
+
+            if (searchKeyword != null && !searchKeyword.trim().isEmpty()) {
+                String likeKeyword = "%" + searchKeyword + "%";
+                ps.setString(paramIndex++, likeKeyword);
+                ps.setString(paramIndex++, likeKeyword);
+                ps.setString(paramIndex++, likeKeyword);
+                ps.setString(paramIndex++, likeKeyword);
+            }
+
+            if (semesterId != null) {
+                ps.setInt(paramIndex++, semesterId);
+            }
+
+            ps.setInt(paramIndex++, offset); // Đặt offset
+            ps.setInt(paramIndex++, pageSize); // Đặt pageSize
+
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    subjects.add(extractSubjectFromResultSet(rs)); // Trích xuất và thêm đối tượng Subject
+                }
+            }
+        } catch (SQLException e) {
+            printSQLException(e); // Ghi log lỗi SQL
         }
         return subjects;
     }
@@ -280,6 +356,25 @@ public class SubjectDAO extends DBContext {
             }
         } catch (SQLException e) {
             printSQLException(e);
+        }
+        return exists;
+    }
+
+    public boolean existsSubjectForUser(int subjectId, int userId) {
+        boolean exists = false;
+        // Truy vấn SQL để kiểm tra sự tồn tại của môn học dựa trên ID môn học và ID người dùng liên quan đến học kỳ.
+        String query = "SELECT COUNT(*) FROM Subjects s JOIN Semesters sem ON s.semesterId = sem.id WHERE s.id = ? AND sem.userId = ?;";
+        try (Connection con = getConnection(); // Lấy kết nối từ DBContext
+                 PreparedStatement ps = con.prepareStatement(query)) {
+            ps.setInt(1, subjectId); // Đặt tham số subjectId
+            ps.setInt(2, userId);    // Đặt tham số userId
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    exists = rs.getInt(1) > 0; // Nếu số lượng lớn hơn 0, môn học tồn tại cho người dùng này
+                }
+            }
+        } catch (SQLException e) {
+            printSQLException(e); // Ghi log lỗi SQL
         }
         return exists;
     }
