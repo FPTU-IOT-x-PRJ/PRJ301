@@ -23,6 +23,11 @@
                                 data-quiz-id="${quiz.id}">
                             <i class="fas fa-play me-1"></i> Làm bài
                         </button>
+                        <%-- Nút "Lịch sử làm bài" mới được thêm vào --%>
+                        <a href="${pageContext.request.contextPath}/quizzes/submissions?id=${quiz.id}" 
+                           class="btn btn-info btn-sm rounded-pill me-2">
+                            <i class="fas fa-history me-1"></i> Lịch sử
+                        </a>
                         <%-- Các nút hiện có --%>
                         <a href="${pageContext.request.contextPath}/quizzes/detail?id=${quiz.id}" class="btn btn-outline-info btn-sm rounded-pill me-2">Chi tiết</a>
                         <a href="${pageContext.request.contextPath}/quizzes/edit?id=${quiz.id}" class="btn btn-outline-warning btn-sm rounded-pill me-2">Sửa</a>
@@ -56,6 +61,10 @@
     .quiz-card .card-footer {
         padding-top: 5px; /* Giảm padding trên của footer */
         padding-bottom: 15px; /* Giữ padding dưới của footer */
+        /* Sử dụng flexbox gap để dãn cách đều các nút */
+        display: flex;
+        justify-content: end;
+        gap: 8px; /* Điều chỉnh giá trị này để thay đổi khoảng cách, 8px tương ứng với Bootstrap's g-2 hoặc me-2 */
     }
 </style>
 

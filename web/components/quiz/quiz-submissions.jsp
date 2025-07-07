@@ -53,8 +53,8 @@
             <h2 class="text-center mb-4"><i class="fas fa-history me-2"></i>Lịch sử làm bài: ${quiz.title}</h2>
             <p class="text-muted text-center mb-4">Mô tả: ${quiz.description}</p>
 
-            <a href="${pageContext.request.contextPath}/quizzes/detail?id=${quiz.id}" class="btn btn-outline-secondary mb-3">
-                <i class="fas fa-arrow-left me-2"></i>Quay lại chi tiết Quiz
+            <a href="${pageContext.request.contextPath}/subjects/detail?id=${quiz.subjectId}" class="btn btn-outline-secondary mb-3">
+                <i class="fas fa-arrow-left me-2"></i>Quay lại môn học 
             </a>
 
             <c:if test="${empty submissions}">
@@ -74,7 +74,7 @@
                                 </p>
                                 <p class="mb-0 text-muted">
                                     Nộp lúc: 
-                                    <strong><fmt:formatDate value="${submission.submissionTime}" pattern="HH:mm dd/MM/yyyy"/></strong>
+                                    ${submission.submissionTime}
                                 </p>
                             </div>
                             <div>

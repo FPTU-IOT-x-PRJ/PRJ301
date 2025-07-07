@@ -174,7 +174,7 @@
                     submitQuizBtn.disabled = true;
                     clearInterval(timerInterval);
                     if (!isNaN(timeLeft) && timeLeft <= 0) {
-                        alert("Đã hết thời gian làm bài. Hệ thống sẽ tự động nộp bài của bạn.");
+//                        alert("Đã hết thời gian làm bài. Hệ thống sẽ tự động nộp bài của bạn.");
                         quizForm.submit();
                     }
                 } else {
