@@ -17,7 +17,8 @@
         </a>
         <h2 class="mt-2">${quiz.title}</h2>
         <p class="text-muted">${quiz.description}</p>
-        <a href="${pageContext.request.contextPath}/quizzes/edit?id=${quiz.id}" class="btn btn-warning">Sửa Quiz này</a>
+        <a href="${pageContext.request.contextPath}/quizzes/edit?id=${quiz.id}" class="btn btn-warning">Sửa Quiz</a>
+        <a href="${pageContext.request.contextPath}/quizzes/delete-confirm?id=${quiz.id}" class="btn btn-danger">Xóa Quiz</a>
         <hr>
         
         <h3>Danh sách câu hỏi</h3>
