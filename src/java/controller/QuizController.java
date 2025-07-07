@@ -1,10 +1,15 @@
+// src/java/controller/QuizController.java
 package controller;
 
+import dao.AnswerOptionDAO;
+import dao.LessonDAO;
+import dao.QuestionDAO;
 import dao.QuizDAO;
-import dao.SubjectDAO;
-import entity.Quizz;
-import entity.Quizzes;
-import entity.Subject;
+import entity.AnswerOption;
+import entity.Lesson;
+import entity.Question;
+import entity.Quiz;
+import entity.User;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -12,151 +17,263 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-
-@WebServlet(name = "QuizController", urlPatterns = {"/quizzes", "/quizzes/*"})
+@WebServlet(name = "QuizController", urlPatterns = {"/quizzes/*"})
 public class QuizController extends HttpServlet {
+
     private static final Logger LOGGER = Logger.getLogger(QuizController.class.getName());
-    private QuizDAO quizDao = new QuizDAO();
-    private SubjectDAO subjectDao = new SubjectDAO(); // Để lấy thông tin môn học
+
+    private final QuizDAO quizDao = new QuizDAO();
+    private final LessonDAO lessonDao = new LessonDAO();
+    private final QuestionDAO questionDao = new QuestionDAO();
+    private final AnswerOptionDAO answerOptionDao = new AnswerOptionDAO();
 
     @Override
-    protected void doGet(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException {
+    protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         String action = request.getPathInfo();
         HttpSession session = request.getSession(false);
-
         if (session == null || session.getAttribute("loggedInUser") == null) {
             response.sendRedirect(request.getContextPath() + "/auth/login");
             return;
         }
+        User user = (User) session.getAttribute("loggedInUser");
 
         try {
-            if (action == null || action.equals("/")) {
-                displayQuizzes(request, response);
-            } else if (action.equals("/add")) {
-                showAddForm(request, response);
-            } else if (action.equals("/detail")) {
-                showQuizDetail(request, response);
-            } else {
-                response.sendError(HttpServletResponse.SC_NOT_FOUND, "Action Not Found");
+            switch (action == null ? "" : action) {
+                case "/add":
+                    showAddQuizForm(request, response, user);
+                    break;
+                case "/detail":
+                    showQuizDetail(request, response, user);
+                    break;
+                case "/edit":
+                    showEditQuizForm(request, response, user);
+                    break;
+                case "/delete-confirm":
+                    showDeleteConfirm(request, response, user);
+                    break;
+                default:
+                    response.sendError(HttpServletResponse.SC_NOT_FOUND);
+                    break;
             }
         } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Error in QuizController doGet: " + action, e);
-            request.setAttribute("errorMessage", "Đã xảy ra lỗi hệ thống.");
-            request.getRequestDispatcher("/error.jsp").forward(request, response);
+            LOGGER.log(Level.SEVERE, "Error in QuizController doGet", e);
+            request.setAttribute("errorMessage", "Đã có lỗi xảy ra. Vui lòng thử lại.");
+            request.getRequestDispatcher("/components/errorGeneral.jsp").forward(request, response);
         }
     }
 
     @Override
-    protected void doPost(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException {
+    protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         String action = request.getPathInfo();
         HttpSession session = request.getSession(false);
-
         if (session == null || session.getAttribute("loggedInUser") == null) {
             response.sendRedirect(request.getContextPath() + "/auth/login");
             return;
         }
+        User user = (User) session.getAttribute("loggedInUser");
 
         try {
-            if (action == null || action.equals("/") || action.equals("/add")) {
-                addQuiz(request, response);
-            } else {
-                response.sendError(HttpServletResponse.SC_NOT_FOUND, "Action Not Found");
+            switch (action != null ? action : "") {
+                case "/add":
+                    processAddQuiz(request, response, user);
+                    break;
+                case "/edit":
+                    processEditQuiz(request, response, user);
+                    break;
+                case "/delete":
+                    processDeleteQuiz(request, response, user);
+                    break;
+                default:
+                    response.sendError(HttpServletResponse.SC_BAD_REQUEST);
+                    break;
             }
         } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Error in QuizController doPost: " + action, e);
-            request.setAttribute("errorMessage", "Đã xảy ra lỗi hệ thống.");
-            request.getRequestDispatcher("/error.jsp").forward(request, response);
+            LOGGER.log(Level.SEVERE, "Error in QuizController doPost", e);
+            request.setAttribute("errorMessage", "Thao tác thất bại do lỗi hệ thống.");
+            request.getRequestDispatcher("/components/errorGeneral.jsp").forward(request, response);
         }
     }
 
-    private void displayQuizzes(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException {
-        String subjectIdStr = request.getParameter("subjectId");
-        try {
-            int subjectId = Integer.parseInt(subjectIdStr);
-            Subject subject = subjectDao.getSubjectById(subjectId);
-            request.setAttribute("subject", subject);
-            // Bạn có thể thêm getAllQuizBySubjectId nếu cần
-            request.getRequestDispatcher("/components/quiz/quiz-list.jsp").forward(request, response);
-        } catch (NumberFormatException e) {
-            LOGGER.warning("Invalid subject ID for quiz list");
-            response.sendError(HttpServletResponse.SC_BAD_REQUEST, "ID môn học không hợp lệ.");
-        }
-    }
-
-    private void showAddForm(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException {
-        String subjectId = request.getParameter("subjectId");
-        Subject subject = subjectDao.getSubjectById(Integer.parseInt(subjectId));
-        request.setAttribute("subjectId", subjectId);
-        request.setAttribute("currentSubject", subject);
+    private void showAddQuizForm(HttpServletRequest request, HttpServletResponse response, User user) throws ServletException, IOException {
+        int lessonId = Integer.parseInt(request.getParameter("lessonId"));
+        Lesson lesson = lessonDao.getLessonById(lessonId);
+        // TODO: Check ownership
+        request.setAttribute("lesson", lesson);
         request.getRequestDispatcher("/components/quiz/quiz-add.jsp").forward(request, response);
     }
 
-    private void showQuizDetail(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException {
-        try {
-            int quizId = Integer.parseInt(request.getParameter("id"));
-            Quizz quiz = quizDao.getQuizById(quizId);
-            if (quiz != null) {
-                List<Quizzes> questions = quizDao.getQuestionsByQuizId(quizId);
-                request.setAttribute("quiz", quiz);
-                request.setAttribute("questions", questions);
-                request.getRequestDispatcher("/components/quiz/quiz-detail.jsp").forward(request, response);
-            } else {
-                response.sendError(HttpServletResponse.SC_NOT_FOUND, "Quiz không tồn tại.");
-            }
-        } catch (NumberFormatException e) {
-            LOGGER.warning("Invalid quiz ID for detail view");
-            response.sendError(HttpServletResponse.SC_BAD_REQUEST, "ID quiz không hợp lệ.");
+    private void showQuizDetail(HttpServletRequest request, HttpServletResponse response, User user) throws ServletException, IOException {
+        int quizId = Integer.parseInt(request.getParameter("id"));
+        Quiz quiz = quizDao.getQuizById(quizId);
+        // TODO: Check ownership
+        if (quiz == null) {
+            response.sendError(HttpServletResponse.SC_NOT_FOUND);
+            return;
         }
+
+        List<Question> questions = questionDao.getQuestionsByQuizId(quizId);
+        for (Question q : questions) {
+            q.setAnswerOptions(answerOptionDao.getAnswerOptionsByQuestionId(q.getId()));
+        }
+
+        request.setAttribute("quiz", quiz);
+        request.setAttribute("questions", questions);
+        request.getRequestDispatcher("/components/quiz/quiz-detail.jsp").forward(request, response);
+    }
+    
+    private void showEditQuizForm(HttpServletRequest request, HttpServletResponse response, User user) throws ServletException, IOException {
+        int quizId = Integer.parseInt(request.getParameter("id"));
+        Quiz quiz = quizDao.getQuizById(quizId);
+        if (quiz == null) {
+            response.sendError(HttpServletResponse.SC_NOT_FOUND);
+            return;
+        }
+        // TODO: Check ownership
+
+        List<Question> questions = questionDao.getQuestionsByQuizId(quizId);
+        for (Question q : questions) {
+            q.setAnswerOptions(answerOptionDao.getAnswerOptionsByQuestionId(q.getId()));
+        }
+
+        request.setAttribute("quiz", quiz);
+        request.setAttribute("questions", questions);
+        request.getRequestDispatcher("/components/quiz/quiz-edit.jsp").forward(request, response);
+    }
+    
+    private void showDeleteConfirm(HttpServletRequest request, HttpServletResponse response, User user) throws ServletException, IOException {
+        int quizId = Integer.parseInt(request.getParameter("id"));
+        Quiz quiz = quizDao.getQuizById(quizId);
+        if (quiz == null) {
+            response.sendError(HttpServletResponse.SC_NOT_FOUND);
+            return;
+        }
+        // TODO: Check ownership
+        request.setAttribute("quizToDelete", quiz);
+        request.getRequestDispatcher("/components/quiz/quiz-delete-confirm.jsp").forward(request, response);
     }
 
-    private void addQuiz(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException {
-        try {
-            int subjectId = Integer.parseInt(request.getParameter("subjectId"));
-            String title = request.getParameter("title");
-            String description = request.getParameter("description");
+    private void processAddQuiz(HttpServletRequest request, HttpServletResponse response, User user) throws IOException {
+        int lessonId = Integer.parseInt(request.getParameter("lessonId"));
+        String title = request.getParameter("title");
+        String description = request.getParameter("description");
+        // TODO: Check ownership
 
-            Quizz quiz = new Quizz();
-            quiz.setSubjectId(subjectId);
-            quiz.setTitle(title);
-            quiz.setDescription(description);
+        // Step 1: Add Quiz to get ID
+        Quiz newQuiz = new Quiz(lessonId, title, description);
+        int quizId = quizDao.addQuiz(newQuiz);
 
-            if (quizDao.addQuiz(quiz)) {
-                // Lấy dữ liệu từ form
-                List<Quizzes> questions = new ArrayList<>();
-                int numQuestions = Integer.parseInt(request.getParameter("numQuestions"));
+        if (quizId > 0) {
+            // Step 2: Add Questions and Options
+            saveQuestionsAndOptions(request, quizId);
+            LOGGER.log(Level.INFO, "Quiz added with ID: {0}", quizId);
+            response.sendRedirect(request.getContextPath() + "/quizzes/detail?id=" + quizId);
+        } else {
+            response.sendRedirect(request.getContextPath() + "/lessons/detail?id=" + lessonId + "&error=addFailed");
+        }
+    }
+    
+    private void processEditQuiz(HttpServletRequest request, HttpServletResponse response, User user) throws IOException {
+        int quizId = Integer.parseInt(request.getParameter("quizId"));
+        String title = request.getParameter("title");
+        String description = request.getParameter("description");
+        
+        Quiz quiz = quizDao.getQuizById(quizId);
+        if (quiz == null) {
+            response.sendError(HttpServletResponse.SC_NOT_FOUND);
+            return;
+        }
+        // TODO: Check ownership
+        
+        // Step 1: Update Quiz info
+        quiz.setTitle(title);
+        quiz.setDescription(description);
+        quizDao.updateQuiz(quiz);
 
-                for (int i = 1; i <= numQuestions; i++) {
-                    String question = request.getParameter("question_" + i);
-                    String options = request.getParameter("options_" + i); // dạng "A|B|C|D"
-                    String answers = request.getParameter("answers_" + i); // dạng "1|2" hoặc "2"
+        // Step 2: Delete all old questions and options
+        // This is the simplest strategy. For complex apps, you might track changes.
+        List<Question> oldQuestions = questionDao.getQuestionsByQuizId(quizId);
+        for(Question q : oldQuestions) {
+            answerOptionDao.deleteAnswerOptionsByQuestionId(q.getId());
+        }
+        questionDao.deleteQuestionsByQuizId(quizId);
 
-                    Quizzes q = new Quizzes();
-                    q.setQuizId(quiz.getId());
-                    q.setQuestion(question);
-                    q.setOptions(options);
-                    q.setAnswers(answers);
-                    questions.add(q);
+        // Step 3: Add the questions and options from the form as if they are new
+        saveQuestionsAndOptions(request, quizId);
+        
+        LOGGER.log(Level.INFO, "Quiz updated with ID: {0}", quizId);
+        response.sendRedirect(request.getContextPath() + "/quizzes/detail?id=" + quizId);
+    }
+
+    private void processDeleteQuiz(HttpServletRequest request, HttpServletResponse response, User user) throws IOException {
+        int quizId = Integer.parseInt(request.getParameter("id"));
+        Quiz quiz = quizDao.getQuizById(quizId);
+        if (quiz == null) {
+            response.sendError(HttpServletResponse.SC_NOT_FOUND);
+            return;
+        }
+        // TODO: Check ownership
+        
+        // The DB is set to ON DELETE CASCADE, so this is enough.
+        // If not using cascade, you must delete children first:
+        // List<Question> questions = questionDao.getQuestionsByQuizId(quizId);
+        // for (Question q : questions) {
+        //     answerOptionDao.deleteAnswerOptionsByQuestionId(q.getId());
+        // }
+        // questionDao.deleteQuestionsByQuizId(quizId);
+        
+        quizDao.deleteQuiz(quizId);
+        
+        LOGGER.log(Level.INFO, "Quiz deleted with ID: {0}", quizId);
+        response.sendRedirect(request.getContextPath() + "/lessons/detail?id=" + quiz.getLessonId());
+    }
+    
+    /**
+     * Helper method to parse dynamic form data and save questions/options.
+     * This is used by both add and edit actions.
+     */
+    private void saveQuestionsAndOptions(HttpServletRequest request, int quizId) {
+        String[] questionTexts = request.getParameterValues("questionText");
+
+        if (questionTexts == null || questionTexts.length == 0) {
+            return; // No questions to add
+        }
+
+        for (int i = 0; i < questionTexts.length; i++) {
+            String qText = questionTexts[i];
+            if (qText == null || qText.trim().isEmpty()) {
+                continue; // Skip empty question blocks
+            }
+            
+            // Step 2a: Add the question to get its ID
+            Question newQuestion = new Question(quizId, qText, "MULTIPLE_CHOICE");
+            int questionId = questionDao.addQuestion(newQuestion);
+
+            if (questionId > 0) {
+                // Step 2b: Get options and correct answer for this question
+                // The name of the option text inputs is "optionText_q" + (i)
+                String[] optionTexts = request.getParameterValues("optionText_q" + i);
+                // The name of the radio button for the correct answer is "isCorrect_q" + (i)
+                String correctOptionIndexStr = request.getParameter("isCorrect_q" + i);
+                int correctOptionIndex = -1;
+                if(correctOptionIndexStr != null) {
+                    correctOptionIndex = Integer.parseInt(correctOptionIndexStr);
                 }
 
-                quizDao.addQuestions(quiz.getId(), questions);
+                if (optionTexts != null) {
+                    for (int j = 0; j < optionTexts.length; j++) {
+                        String oText = optionTexts[j];
+                        if (oText != null && !oText.trim().isEmpty()) {
+                            boolean isCorrect = (j == correctOptionIndex);
+                            AnswerOption newOption = new AnswerOption(questionId, oText, isCorrect);
+                            answerOptionDao.addAnswerOption(newOption);
+                        }
+                    }
+                }
             }
-
-            response.sendRedirect(request.getContextPath() + "/quizzes?subjectId=" + subjectId);
-        } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Error adding quiz", e);
-            request.setAttribute("errorMessage", "Lỗi khi thêm quiz.");
-            request.getRequestDispatcher("/error.jsp").forward(request, response);
         }
     }
 }
