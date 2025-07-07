@@ -97,7 +97,8 @@
 
                         const optionIndex = optionsContainer.children.length; // Chỉ số cho lựa chọn
                         // Hoặc thử cách này:
-                        const optionHtml = '<div class="input-group mb-2">' +
+                        const optionHtml = 
+                                '<div class="input-group mb-2">' +
                                 '<div class="input-group-prepend">' +
                                 '<div class="input-group-text">' +
                                 '<input type="radio" name="isCorrect_q' + currentQuestionIndex + '" value="' + optionIndex + '" required>' +

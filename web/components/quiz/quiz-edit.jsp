@@ -83,47 +83,49 @@
             document.addEventListener('DOMContentLoaded', function () {
                 const questionsContainer = document.getElementById('questions-container');
                 const addQuestionBtn = document.getElementById('add-question-btn');
-                let questionIndex = ${questions.size()}; // Bắt đầu index từ số câu hỏi đã có
+                
+                // Khởi tạo questionIndex dựa trên số lượng câu hỏi hiện có
+                let questionIndex = questionsContainer.querySelectorAll('.question-block').length; 
 
                 addQuestionBtn.addEventListener('click', function () {
-                    // Tăng questionIndex trước khi sử dụng để đảm bảo chỉ số mới
-                    questionIndex++;
-                    const questionHtml = `
-                        <div class="card mb-3 question-block" id="question-${questionIndex}">
-                            <div class="card-header d-flex justify-content-between">
-                                <span>Câu hỏi ${questionIndex}</span>
-                                <button type="button" class="btn btn-danger btn-sm remove-question-btn">Xóa</button>
-                            </div>
-                            <div class="card-body">
-                                <div class="form-group">
-                                    <label>Nội dung câu hỏi</label>
-                                    <textarea class="form-control" name="questionText_${questionIndex}" required></textarea>
-                                </div>
-                                <div class="form-group">
-                                    <label>Loại câu hỏi</label>
-                                    <select class="form-control" name="questionType_${questionIndex}">
-                                        <option value="MULTIPLE_CHOICE">Trắc nghiệm nhiều lựa chọn</option>
-                                    </select>
-                                </div>
-                                <h5>Các lựa chọn trả lời</h5>
-                                <div class="options-container">
-                                <%-- Nơi chứa các lựa chọn --%>
-                                </div>
-                                <button type="button" class="btn btn-info btn-sm add-option-btn">Thêm lựa chọn</button>
-                            </div>
-                        </div>
-                    `;
+                    // Cập nhật chỉ số hiển thị của câu hỏi mới
+                    const currentQuestionDisplayIndex = questionsContainer.querySelectorAll('.question-block').length + 1;
+                    
+                    const questionHtml =
+                            '<div class="card mb-3 question-block" id="question-' + questionIndex + '">' +
+                            '<div class="card-header d-flex justify-content-between">' +
+                            '<span>Câu hỏi ' + currentQuestionDisplayIndex + '</span>' +
+                            '<button type="button" class="btn btn-danger btn-sm remove-question-btn">Xóa</button>' +
+                            '</div>' +
+                            '<div class="card-body">' +
+                            '<div class="form-group">' +
+                            '<label>Nội dung câu hỏi</label>' +
+                            '<textarea class="form-control" name="questionText_' + questionIndex + '" required></textarea>' +
+                            '</div>' +
+                            '<div class="form-group">' +
+                            '<label>Loại câu hỏi</label>' +
+                            '<select class="form-control" name="questionType_' + questionIndex + '"> ' +
+                            '<option value="MULTIPLE_CHOICE">Trắc nghiệm nhiều lựa chọn</option>' +
+                            '</select>' +
+                            '</div>' +
+                            '<h5>Các lựa chọn trả lời</h5>' +
+                            '<div class="options-container">' +
+                            '</div>' +
+                            '<button type="button" class="btn btn-info btn-sm add-option-btn">Thêm lựa chọn</button>' +
+                            '</div>' +
+                            '</div>';
                     questionsContainer.insertAdjacentHTML('beforeend', questionHtml);
-                    // Cập nhật lại số thứ tự cho các câu hỏi sau khi thêm/xóa để hiển thị đúng
-                    updateQuestionNumbers();
+                    
+                    // Tăng questionIndex cho câu hỏi tiếp theo
+                    questionIndex++; 
+                    updateQuestionNumbers(); // Cập nhật lại số thứ tự và name attributes
                 });
 
                 // Event listener để xóa câu hỏi (delegation)
                 questionsContainer.addEventListener('click', function (e) {
                     if (e.target.classList.contains('remove-question-btn')) {
                         e.target.closest('.question-block').remove();
-                        // Cập nhật lại số thứ tự cho các câu hỏi sau khi thêm/xóa để hiển thị đúng
-                        updateQuestionNumbers();
+                        updateQuestionNumbers(); // Cập nhật lại số thứ tự và name attributes
                     }
                 });
 
@@ -133,32 +135,39 @@
                         const optionsContainer = e.target.previousElementSibling;
                         const optionIndex = optionsContainer.children.length; // Chỉ số cho lựa chọn mới
 
-                        // Lấy chỉ số câu hỏi từ thẻ cha `.question-block`
                         const currentQuestionBlock = e.target.closest('.question-block');
-                        const currentQuestionId = currentQuestionBlock.id.replace('question-', ''); // Lấy "X" từ "question-X"
+                        const currentQuestionDOMIndex = Array.from(questionsContainer.children).indexOf(currentQuestionBlock); // Lấy index trong DOM
                         
-                        // ĐÃ SỬA: Chỉ thêm HTML cho lựa chọn, không bao gồm thẻ select loại câu hỏi
-                        const optionHtml = `
-                            <div class="input-group mb-2">
-                                <div class="input-group-prepend">
-                                    <div class="input-group-text">
-                                        <input type="radio" name="isCorrect_q${currentQuestionId}" value="${optionIndex}" required>
-                                    </div>
-                                </div>
-                                <input type="text" class="form-control" name="optionText_q${currentQuestionId}" placeholder="Nội dung lựa chọn" required>
-                                <div class="input-group-append">
-                                    <button class="btn btn-outline-danger remove-option-btn" type="button">Xóa</button>
-                                </div>
-                            </div>
-                        `;
+                        const optionHtml =
+                                '<div class="input-group mb-2">' +
+                                '<div class="input-group-prepend">' +
+                                '<div class="input-group-text">' +
+                                '<input type="radio" name="isCorrect_q' + currentQuestionDOMIndex + '" value="' + optionIndex + '" required>' +
+                                '</div>' +
+                                '</div>' +
+                                '<input type="text" class="form-control" name="optionText_q' + currentQuestionDOMIndex + '" placeholder="Nội dung lựa chọn" required>' +
+                                '<div class="input-group-append">' +
+                                '<button class="btn btn-outline-danger remove-option-btn" type="button">Xóa</button>' +
+                                '</div>' +
+                                '</div>';
                         optionsContainer.insertAdjacentHTML('beforeend', optionHtml);
                     }
                 });
-                
+
                 // Event listener để xóa lựa chọn (delegation)
                 questionsContainer.addEventListener('click', function (e) {
                     if (e.target.classList.contains('remove-option-btn')) {
-                        e.target.closest('.input-group').remove();
+                        const optionGroup = e.target.closest('.input-group');
+                        const optionsContainer = optionGroup.closest('.options-container');
+                        optionGroup.remove();
+                        // Sau khi xóa một lựa chọn, cần cập nhật lại giá trị 'value' của các radio button còn lại
+                        // để đảm bảo chúng vẫn liên tục (0, 1, 2, ...)
+                        Array.from(optionsContainer.children).forEach((child, index) => {
+                            const radioInput = child.querySelector('input[type="radio"]');
+                            if (radioInput) {
+                                radioInput.value = index;
+                            }
+                        });
                     }
                 });
 
@@ -166,88 +175,48 @@
                 function updateQuestionNumbers() {
                     const questionBlocks = questionsContainer.querySelectorAll('.question-block');
                     questionBlocks.forEach((block, index) => {
-                        const newIndex = index; // Bắt đầu từ 0 cho chỉ mục, tương ứng với qLoop.index
-                        const displayIndex = index + 1; // Bắt đầu từ 1 cho hiển thị
-                        
+                        const newIndex = index; // Chỉ mục mới dựa trên vị trí trong DOM
+                        const displayIndex = index + 1; // Số thứ tự hiển thị
+
                         // Cập nhật ID của block câu hỏi
-                        block.id = `question-${newIndex}`;
+                        block.id = 'question-' + newIndex;
 
                         // Cập nhật số hiển thị của câu hỏi
                         const headerSpan = block.querySelector('.card-header span');
                         if (headerSpan) {
-                            headerSpan.textContent = `Câu hỏi ${displayIndex}`;
+                            headerSpan.textContent = 'Câu hỏi ' + displayIndex;
                         }
 
-                        // Cập nhật name attributes bên trong câu hỏi
+                        // Cập nhật name attributes của textarea và select
                         const questionTextarea = block.querySelector('textarea[name^="questionText_"]');
                         if (questionTextarea) {
-                            questionTextarea.name = `questionText_${newIndex}`;
+                            questionTextarea.name = 'questionText_' + newIndex;
                         }
 
                         const questionTypeSelect = block.querySelector('select[name^="questionType_"]');
                         if (questionTypeSelect) {
-                            questionTypeSelect.name = `questionType_${newIndex}`;
+                            questionTypeSelect.name = 'questionType_' + newIndex;
                         }
-                        
-                        // Cập nhật name attributes cho các lựa chọn trả lời
-                        // Lấy tất cả các input radio và text option trong options-container của từng câu hỏi
-                        const optionInputs = block.querySelectorAll('.options-container input[type="radio"], .options-container input[type="text"]');
-                        let optionCounter = 0; // Đếm chỉ mục cho các lựa chọn trong câu hỏi hiện tại
-                        optionInputs.forEach(input => {
-                            if (input.type === 'radio') {
-                                input.name = `isCorrect_q${newIndex}`;
-                                input.value = optionCounter; // Cập nhật lại value cho radio button để phản ánh đúng index mới
-                            } else if (input.type === 'text') {
-                                input.name = `optionText_q${newIndex}`;
-                            }
-                            // Tăng bộ đếm chỉ mục nếu là radio hoặc text option (chỉ 1 trong 2 được tăng mỗi lần lặp qua 1 cặp input)
-                            if (input.type === 'radio') { // Hoặc input.name.startsWith('optionText_')
-                                optionCounter++;
-                            }
+
+                        // Cập nhật name attributes và value cho các lựa chọn trả lời
+                        const optionRadioInputs = block.querySelectorAll('.options-container input[type="radio"]');
+                        optionRadioInputs.forEach((radioInput, optionIdx) => {
+                            radioInput.name = 'isCorrect_q' + newIndex;
+                            radioInput.value = optionIdx; // Cập nhật lại value cho radio button
+                        });
+
+                        const optionTextInputs = block.querySelectorAll('.options-container input[type="text"]');
+                        optionTextInputs.forEach(textInput => {
+                            textInput.name = 'optionText_q' + newIndex;
                         });
                     });
-                    // Đặt lại questionIndex cho lần thêm câu hỏi tiếp theo
-                    // Tìm index lớn nhất hiện có hoặc bằng tổng số câu hỏi
+                    // Điều chỉnh questionIndex sau khi cập nhật tất cả các khối
                     questionIndex = questionBlocks.length > 0 ? parseInt(questionBlocks[questionBlocks.length - 1].id.replace('question-', '')) + 1 : 0;
                 }
-                // Gọi lần đầu để đảm bảo tính nhất quán sau khi DOM được tải
+
+                // Gọi lần đầu để đảm bảo các name attributes của câu hỏi ban đầu là đúng (nếu có)
+                // và thiết lập questionIndex chính xác.
                 updateQuestionNumbers();
-                
-                const quizForm = document.getElementById('quizForm');
-                if (quizForm) {
-                    quizForm.addEventListener('submit', function(e) {
-                        console.log('=== EDIT QUIZ FORM SUBMIT DEBUG ===');
-
-                        const formData = new FormData(quizForm);
-                        console.log('Form data:');
-                        for (let [key, value] of formData.entries()) {
-                            console.log(`${key}: ${value}`);
-                        }
-
-                        // Kiểm tra câu hỏi
-                        const questionBlocks = document.querySelectorAll('.question-block');
-                        console.log(`Total questions: ${questionBlocks.length}`);
-
-                        questionBlocks.forEach((block, index) => {
-                            const questionId = block.id.replace('question-', '');
-                            const questionText = block.querySelector(`textarea[name="questionText_${questionId}"]`);
-                            const options = block.querySelectorAll(`input[name="optionText_q${questionId}"]`);
-                            const correctAnswer = block.querySelector(`input[name="isCorrect_q${questionId}"]:checked`);
-
-                            console.log(`Question ${index + 1} (ID: ${questionId}):`);
-                            console.log(`- Text: ${questionText ? questionText.value : 'NOT FOUND'}`);
-                            console.log(`- Options: ${options.length}`);
-                            console.log(`- Correct answer: ${correctAnswer ? correctAnswer.value : 'NONE'}`);
-
-                            // Kiểm tra tất cả radio buttons
-                            const allRadios = block.querySelectorAll(`input[name="isCorrect_q${questionId}"]`);
-                            allRadios.forEach((radio, radioIndex) => {
-                                console.log(`  Radio ${radioIndex}: value=${radio.value}, checked=${radio.checked}`);
-                            });
-                        });
-                        console.log('=== END DEBUG ===');
-                    });
-                }
             });
         </script>
     </body>
