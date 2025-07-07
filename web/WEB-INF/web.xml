@@ -40,6 +40,10 @@
         <servlet-name>NoteController</servlet-name>
         <servlet-class>controller.NoteController</servlet-class>
     </servlet>
+    <servlet>
+        <servlet-name>QuizController</servlet-name>
+        <servlet-class>controller.QuizController</servlet-class>
+    </servlet>
 
     <servlet-mapping>
         <servlet-name>TestDB</servlet-name>
@@ -80,6 +84,10 @@
     <servlet-mapping>
         <servlet-name>GoogleLogin</servlet-name>
         <url-pattern>/google-login</url-pattern>
+    </servlet-mapping>
+    <servlet-mapping>
+        <servlet-name>QuizController</servlet-name>
+        <url-pattern>/quizzes/*</url-pattern>
     </servlet-mapping>
 
     <filter>

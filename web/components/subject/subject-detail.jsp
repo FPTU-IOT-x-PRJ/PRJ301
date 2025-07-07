@@ -102,17 +102,10 @@
                 font-size: 0.85rem;
                 color: #6c757d;
             }
-            .quiz-section {
-                background-color: #e2f0ff;
-                border: 1px dashed #007bff;
-                padding: 30px;
-                border-radius: 15px;
-                text-align: center;
-                color: #007bff;
-            }
-            .quiz-section h4 {
-                font-weight: bold;
-                margin-bottom: 15px;
+            /* Thêm CSS cho quiz-item để tạo hiệu ứng hover nhẹ */
+            .quiz-item:hover, .list-group-item:hover { /* Áp dụng cho cả quiz-item nếu bạn không dùng list-group-item */
+                transform: translateY(-2px);
+                box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08);
             }
         </style>
     </head>
@@ -208,6 +201,25 @@
                 </div>
             </div>
 
+            <%-- ======================= PHẦN QUIZ ĐÃ ĐƯỢC CẬP NHẬT ======================= --%>
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <span><i class="fas fa-question-circle me-2"></i>Quiz</span>
+                            <a href="${pageContext.request.contextPath}/quizzes/add?subjectId=${subject.id}" class="btn btn-light btn-sm rounded-pill">
+                                <i class="fas fa-plus-circle me-2"></i>Thêm Quiz mới
+                            </a>
+                        </div>
+                        <div class="card-body">
+                            <%-- Nhúng partial hiển thị danh sách quiz --%>
+                            <jsp:include page="../../components/quiz/quiz-list-partial.jsp"/>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <%-- ======================= KẾT THÚC PHẦN QUIZ ======================= --%>
+
             <div class="row">
                 <div class="col-md-12">
                     <div class="card">
@@ -244,17 +256,6 @@
                     </div>
                 </div>
             </div>
-
-            <div class="row">
-                <div class="col-md-12">
-                    <div class="card quiz-section">
-                        <h4><i class="fas fa-hourglass-half me-2"></i>Tính năng Quiz</h4>
-                        <p class="lead">Sắp ra mắt: Tạo và quản lý các bài kiểm tra (quiz) cho môn học này!</p>
-                        <p class="text-muted">Hãy theo dõi các bản cập nhật tiếp theo.</p>
-                    </div>
-                </div>
-            </div>
-
         </div>
 
         <div class="modal fade" id="uploadDocumentModal" tabindex="-1" aria-labelledby="uploadDocumentModalLabel" aria-hidden="true">
