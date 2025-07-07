@@ -4,6 +4,8 @@
 <!DOCTYPE html>
 <html>
     <head>
+        <jsp:include page="../navigation/navigation.jsp"/>
+
         <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
         <title>Chi tiết Tài liệu</title>
         <link rel="shortcut icon" href="${pageContext.request.contextPath}/public/favicon.ico" type="image/x-icon">
@@ -159,7 +161,7 @@
                             <span class="detail-label">Kích thước File:</span>
                             <span class="detail-value"><fmt:formatNumber value="${document.fileSize / 1024}" pattern="#,##0.00"/> KB</span>
                         </div>
-                        
+
 
                         <%-- PHẦN XEM TÀI LIỆU TÍCH HỢP --%>
                         <h3 class="mt-4 mb-3 text-secondary">Nội dung Tài liệu</h3>
@@ -177,8 +179,8 @@
                                 <c:when test="${document.fileType == 'application/pdf'}">
                                     <%-- Sử dụng Google Docs Viewer cho PDF --%>
                                     <iframe src="https://docs.google.com/viewer?url=${document.filePath}&embedded=true" style="width:100%; height:600px;" allowfullscreen webkitallowfullscreen></iframe>
-                                </c:when>
-                                <c:otherwise>
+                                    </c:when>
+                                    <c:otherwise>
                                     <div class="alert alert-warning" role="alert">
                                         <i class="fas fa-exclamation-circle me-2"></i>
                                         Không thể xem trực tiếp định dạng file này (${document.fileType}).
@@ -201,9 +203,9 @@
                 </div>
             </c:if>
             <c:if test="${document == null && empty requestScope.errorMessage}">
-                   <div class="alert alert-info text-center" role="alert">
-                       <i class="fas fa-info-circle me-2"></i>Không tìm thấy tài liệu.
-                   </div>
+                <div class="alert alert-info text-center" role="alert">
+                    <i class="fas fa-info-circle me-2"></i>Không tìm thấy tài liệu.
+                </div>
             </c:if>
         </div>
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>

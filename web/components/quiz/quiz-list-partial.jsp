@@ -17,6 +17,13 @@
                         <h5 class="card-title mb-0">${quiz.title}</h5>
                     </div>
                     <div class="card-footer d-flex justify-content-end bg-transparent border-top-0">
+                        <%-- Nút "Làm bài" mới, kích hoạt modal --%>
+                        <button type="button" class="btn btn-success btn-sm rounded-pill me-2" 
+                                data-bs-toggle="modal" data-bs-target="#quizDurationModal" 
+                                data-quiz-id="${quiz.id}">
+                            <i class="fas fa-play me-1"></i> Làm bài
+                        </button>
+                        <%-- Các nút hiện có --%>
                         <a href="${pageContext.request.contextPath}/quizzes/detail?id=${quiz.id}" class="btn btn-outline-info btn-sm rounded-pill me-2">Chi tiết</a>
                         <a href="${pageContext.request.contextPath}/quizzes/edit?id=${quiz.id}" class="btn btn-outline-warning btn-sm rounded-pill me-2">Sửa</a>
                         <a href="${pageContext.request.contextPath}/quizzes/delete-confirm?id=${quiz.id}" class="btn btn-outline-danger btn-sm rounded-pill">Xóa</a>
@@ -51,3 +58,49 @@
         padding-bottom: 15px; /* Giữ padding dưới của footer */
     }
 </style>
+
+<div class="modal fade" id="quizDurationModal" tabindex="-1" aria-labelledby="quizDurationModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form id="startQuizForm" action="${pageContext.request.contextPath}/quizzes/take" method="GET">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="quizDurationModalLabel">Chọn thời gian làm bài</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" name="id" id="modalQuizId">
+                    <div class="mb-3">
+                        <label for="quizDurationSelect" class="form-label">Thời gian (phút):</label>
+                        <select class="form-select" id="quizDurationSelect" name="duration" required>
+                            <option value="5">5 phút</option>
+                            <option value="10" selected>10 phút</option>
+                            <option value="15">15 phút</option>
+                            <option value="20">20 phút</option>
+                            <option value="30">30 phút</option>
+                            <option value="45">45 phút</option>
+                            <option value="60">60 phút</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-primary">Bắt đầu Quiz</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    const quizDurationModal = document.getElementById('quizDurationModal');
+    quizDurationModal.addEventListener('show.bs.modal', event => {
+        // Button that triggered the modal
+        const button = event.relatedTarget;
+        // Extract info from data-bs-* attributes
+        const quizId = button.getAttribute('data-quiz-id');
+        // Update the modal's content.
+        const modalQuizIdInput = quizDurationModal.querySelector('#modalQuizId');
+        modalQuizIdInput.value = quizId;
+    });
+</script>
