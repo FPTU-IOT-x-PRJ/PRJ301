@@ -7,8 +7,10 @@ import dao.SubjectDAO;
 import entity.Document;
 import DTO.Subject.SubjectWithLessonsDTO;
 import dao.NoteDAO;
+import dao.QuizDAO;
 import entity.Lesson;
 import entity.Note;
+import entity.Quiz;
 import entity.Semester;
 import entity.Subject;
 import entity.User;
@@ -35,6 +37,7 @@ public class SubjectsController extends HttpServlet {
     private SemesterDAO semesterDao = new SemesterDAO();
     private DocumentDAO documentDao = new DocumentDAO();
     private NoteDAO noteDao = new NoteDAO();
+    private QuizDAO quizDao = new QuizDAO(); 
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
@@ -229,6 +232,8 @@ public class SubjectsController extends HttpServlet {
             List<Lesson> lessons = lessonDao.getAllLessonsBySubjectId(subjectId, null, null, 1, Integer.MAX_VALUE); // Lấy tất cả buổi học
             List<Document> documents = documentDao.getDocumentsBySubjectId(subjectId, user.getId()); // Lấy tất cả tài liệu của môn học này
             List<Note> notes = noteDao.getNotesByLessonOrSubjectId(null, subjectId);
+            List<Quiz> quizzes = quizDao.getQuizzesBySubjectId(subjectId);
+            request.setAttribute("quizzes", quizzes);
             request.setAttribute("notes", notes);
             request.setAttribute("subject", subject);
             request.setAttribute("lessons", lessons);

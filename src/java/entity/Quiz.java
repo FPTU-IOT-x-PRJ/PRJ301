@@ -5,7 +5,7 @@ import java.time.LocalDateTime;
 
 public class Quiz {
     private int id;
-    private int lessonId;
+    private int subjectId;
     private String title;
     private String description;
     private LocalDateTime createdAt;
@@ -14,15 +14,15 @@ public class Quiz {
     // Constructors
     public Quiz() {}
 
-    public Quiz(int lessonId, String title, String description) {
-        this.lessonId = lessonId;
+    public Quiz(int subjectId, String title, String description) {
+        this.subjectId = subjectId;
         this.title = title;
         this.description = description;
     }
 
-    public Quiz(int id, int lessonId, String title, String description, LocalDateTime createdAt, LocalDateTime updatedAt) {
+    public Quiz(int id, int subjectId, String title, String description, LocalDateTime createdAt, LocalDateTime updatedAt) {
         this.id = id;
-        this.lessonId = lessonId;
+        this.subjectId = subjectId;
         this.title = title;
         this.description = description;
         this.createdAt = createdAt;
@@ -32,8 +32,8 @@ public class Quiz {
     // Getters and Setters
     public int getId() { return id; }
     public void setId(int id) { this.id = id; }
-    public int getLessonId() { return lessonId; }
-    public void setLessonId(int lessonId) { this.lessonId = lessonId; }
+    public int getSubjectId() { return subjectId; }
+    public void setSubjectId(int subjectId) { this.subjectId = subjectId; }
     public String getTitle() { return title; }
     public void setTitle(String title) { this.title = title; }
     public String getDescription() { return description; }
@@ -45,6 +45,6 @@ public class Quiz {
 
     @Override
     public String toString() {
-        return "Quiz{" + "id=" + id + ", lessonId=" + lessonId + ", title=" + title + '}';
+        return "Quiz{" + "id=" + id + ", subjectId=" + subjectId + ", title=" + title + '}';
     }
 }

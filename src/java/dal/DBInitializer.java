@@ -55,7 +55,6 @@ public class DBInitializer {
         }
     }
 
-// Trong lớp DBContext hoặc lớp tương tự nơi bạn định nghĩa các hàm tạo bảng
     /**
      * Tạo bảng Users nếu nó chưa tồn tại.
      *
@@ -211,6 +210,76 @@ public class DBInitializer {
             LOGGER.log(Level.INFO, "Table 'Notes' created successfully.");
         } catch (SQLException e) {
             LOGGER.log(Level.SEVERE, "Error creating Notes table", e);
+        }
+    }
+    
+    /**
+     * Tạo bảng Quizzes nếu nó chưa tồn tại. Khi một Subject bị xóa, các
+     * Quizzes thuộc về Subject đó cũng sẽ bị xóa.
+     *
+     * @param conn Đối tượng Connection.
+     */
+    private void createQuizzesTable(Connection conn) {
+        String sql = "CREATE TABLE Quizzes (\n"
+                + "    id INT PRIMARY KEY IDENTITY(1,1),\n"
+                + "    subjectId INT NOT NULL,\n"
+                + "    title NVARCHAR(255) NOT NULL,\n"
+                + "    description NVARCHAR(MAX),\n"
+                + "    createdAt DATETIME2 DEFAULT GETDATE(),\n"
+                + "    updatedAt DATETIME2 DEFAULT GETDATE(),\n"
+                + "    CONSTRAINT FK_Quizzes_Subjects FOREIGN KEY (subjectId) REFERENCES Subjects(id) ON DELETE CASCADE\n"
+                + ");";
+        try (Statement stmt = conn.createStatement()) {
+            stmt.execute(sql);
+            LOGGER.log(Level.INFO, "Table 'Quizzes' created successfully.");
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Error creating Quizzes table", e);
+        }
+    }
+
+    /**
+     * Tạo bảng Questions nếu nó chưa tồn tại. Khi một Quiz bị xóa, các
+     * Questions thuộc về Quiz đó cũng sẽ bị xóa.
+     *
+     * @param conn Đối tượng Connection.
+     */
+    private void createQuestionsTable(Connection conn) {
+        String sql = "CREATE TABLE Questions (\n"
+                + "    id INT PRIMARY KEY IDENTITY(1,1),\n"
+                + "    quizId INT NOT NULL,\n"
+                + "    questionText NVARCHAR(MAX) NOT NULL,\n"
+                + "    questionType VARCHAR(50) DEFAULT 'MULTIPLE_CHOICE', -- 'MULTIPLE_CHOICE', 'TRUE_FALSE'\n"
+                + "    createdAt DATETIME2 DEFAULT GETDATE(),\n"
+                + "    updatedAt DATETIME2 DEFAULT GETDATE(),\n"
+                + "    CONSTRAINT FK_Questions_Quizzes FOREIGN KEY (quizId) REFERENCES Quizzes(id) ON DELETE CASCADE\n"
+                + ");";
+        try (Statement stmt = conn.createStatement()) {
+            stmt.execute(sql);
+            LOGGER.log(Level.INFO, "Table 'Questions' created successfully.");
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Error creating Questions table", e);
+        }
+    }
+
+    /**
+     * Tạo bảng AnswerOptions nếu nó chưa tồn tại. Khi một Question bị xóa, các
+     * AnswerOptions thuộc về Question đó cũng sẽ bị xóa.
+     *
+     * @param conn Đối tượng Connection.
+     */
+    private void createAnswerOptionsTable(Connection conn) {
+        String sql = "CREATE TABLE AnswerOptions (\n"
+                + "    id INT PRIMARY KEY IDENTITY(1,1),\n"
+                + "    questionId INT NOT NULL,\n"
+                + "    optionText NVARCHAR(MAX) NOT NULL,\n"
+                + "    isCorrect BIT NOT NULL DEFAULT 0,\n"
+                + "    CONSTRAINT FK_AnswerOptions_Questions FOREIGN KEY (questionId) REFERENCES Questions(id) ON DELETE CASCADE\n"
+                + ");";
+        try (Statement stmt = conn.createStatement()) {
+            stmt.execute(sql);
+            LOGGER.log(Level.INFO, "Table 'AnswerOptions' created successfully.");
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Error creating AnswerOptions table", e);
         }
     }
 
@@ -552,7 +621,10 @@ public class DBInitializer {
                 createSubjectsTable(conn);
                 createLessonsTable(conn);
                 createDocumentsTable(conn);
-                createNotesTable(conn); // 🔥 Thêm tạo bảng Notes ở đây
+                createNotesTable(conn);
+                createQuizzesTable(conn);
+                createQuestionsTable(conn);
+                createAnswerOptionsTable(conn);
 
             } else {
                 // Nếu không reset, chỉ tạo các bảng nếu chúng chưa tồn tại

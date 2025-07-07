@@ -12,10 +12,10 @@
 <body>
     <%-- Include navigation của bạn --%>
     <div class="container mt-4">
-        <h2>Thêm Quiz cho buổi học: ${lesson.name}</h2>
+        <h2>Thêm Quiz cho môn học: ${subject.name}</h2>
         <hr>
         <form action="${pageContext.request.contextPath}/quizzes/add" method="post" id="quizForm">
-            <input type="hidden" id="lessonId" name="lessonId" value="${lesson.id}">
+            <input type="hidden" id="subjectId" name="subjectId" value="${subject.id}">
             
             <%-- Thông tin chung của Quiz --%>
             <div class="form-group">
@@ -38,7 +38,7 @@
             </button>
             <hr>
             <button type="submit" class="btn btn-primary">Lưu Quiz</button>
-            <a href="${pageContext.request.contextPath}/lessons/detail?id=${lesson.id}" class="btn btn-secondary">Hủy</a>
+            <a href="${pageContext.request.contextPath}/subjects/detail?id=${subject.id}" class="btn btn-secondary">Hủy</a>
         </form>
     </div>
 

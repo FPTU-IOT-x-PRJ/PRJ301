@@ -207,6 +207,43 @@
                     </div>
                 </div>
             </div>
+                            
+            <%-- ======================= PHẦN QUIZ ĐÃ ĐƯỢC CẬP NHẬT ======================= --%>
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <span><i class="fas fa-question-circle me-2"></i>Quiz</span>
+                            <a href="${pageContext.request.contextPath}/quizzes/add?subjectId=${subject.id}" class="btn btn-light btn-sm rounded-pill">
+                                <i class="fas fa-plus-circle me-2"></i>Thêm Quiz mới
+                            </a>
+                        </div>
+                        <div class="card-body">
+                            <c:if test="${empty quizzes}">
+                                <div class="alert alert-info text-center" role="alert">
+                                    Chưa có quiz nào cho môn này.
+                                </div>
+                            </c:if>
+                            <c:if test="${not empty quizzes}">
+                                <c:forEach var="quiz" items="${quizzes}">
+                                    <div class="quiz-item d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <h5 class="quiz-title mb-1">${quiz.title}</h5>
+                                            <p class="quiz-desc mb-0">${quiz.description}</p>
+                                        </div>
+                                        <div class="ms-3 flex-shrink-0">
+                                            <a href="${pageContext.request.contextPath}/quizzes/detail?id=${quiz.id}" class="btn btn-outline-info btn-sm rounded-pill px-3">Chi tiết</a>
+                                            <a href="${pageContext.request.contextPath}/quizzes/edit?id=${quiz.id}" class="btn btn-outline-warning btn-sm rounded-pill px-3">Sửa</a>
+                                            <a href="${pageContext.request.contextPath}/quizzes/delete-confirm?id=${quiz.id}" class="btn btn-outline-danger btn-sm rounded-pill px-3">Xóa</a>
+                                        </div>
+                                    </div>
+                                </c:forEach>
+                            </c:if>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <%-- ======================= KẾT THÚC PHẦN QUIZ ======================= --%>
 
             <div class="row">
                 <div class="col-md-12">

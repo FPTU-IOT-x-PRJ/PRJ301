@@ -13,9 +13,9 @@ public class QuizDAO extends DBContext {
     private static final Logger LOGGER = Logger.getLogger(QuizDAO.class.getName());
 
     // --- SQL Constants ---
-    private static final String INSERT_QUIZ_SQL = "INSERT INTO Quizzes (lessonId, title, description, createdAt, updatedAt) VALUES (?, ?, ?, GETDATE(), GETDATE())";
+private static final String INSERT_QUIZ_SQL = "INSERT INTO Quizzes (subjectId, title, description, createdAt, updatedAt) VALUES (?, ?, ?, GETDATE(), GETDATE())";
     private static final String SELECT_QUIZ_BY_ID_SQL = "SELECT * FROM Quizzes WHERE id = ?";
-    private static final String SELECT_QUIZZES_BY_LESSON_ID_SQL = "SELECT * FROM Quizzes WHERE lessonId = ? ORDER BY createdAt DESC";
+private static final String SELECT_QUIZZES_BY_SUBJECT_ID_SQL = "SELECT * FROM Quizzes WHERE subjectId = ? ORDER BY createdAt DESC"; // Đổi tên
     private static final String UPDATE_QUIZ_SQL = "UPDATE Quizzes SET title = ?, description = ?, updatedAt = GETDATE() WHERE id = ?";
     private static final String DELETE_QUIZ_SQL = "DELETE FROM Quizzes WHERE id = ?";
 
@@ -23,7 +23,7 @@ public class QuizDAO extends DBContext {
         int generatedId = -1;
         try (Connection con = getConnection();
              PreparedStatement ps = con.prepareStatement(INSERT_QUIZ_SQL, Statement.RETURN_GENERATED_KEYS)) {
-            ps.setInt(1, quiz.getLessonId());
+            ps.setInt(1, quiz.getSubjectId());
             ps.setString(2, quiz.getTitle());
             ps.setString(3, quiz.getDescription());
 
@@ -56,10 +56,10 @@ public class QuizDAO extends DBContext {
         return quiz;
     }
 
-    public List<Quiz> getQuizzesByLessonId(int lessonId) {
+    public List<Quiz> getQuizzesBySubjectId(int subjectId) {
         List<Quiz> quizzes = new ArrayList<>();
-        try (Connection con = getConnection(); PreparedStatement ps = con.prepareStatement(SELECT_QUIZZES_BY_LESSON_ID_SQL)) {
-            ps.setInt(1, lessonId);
+        try (Connection con = getConnection(); PreparedStatement ps = con.prepareStatement(SELECT_QUIZZES_BY_SUBJECT_ID_SQL)) {
+            ps.setInt(1, subjectId);
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
                     quizzes.add(extractQuizFromResultSet(rs));
@@ -100,7 +100,7 @@ public class QuizDAO extends DBContext {
     private Quiz extractQuizFromResultSet(ResultSet rs) throws SQLException {
         return new Quiz(
                 rs.getInt("id"),
-                rs.getInt("lessonId"),
+                rs.getInt("subjectId"),
                 rs.getString("title"),
                 rs.getString("description"),
                 rs.getTimestamp("createdAt").toLocalDateTime(),

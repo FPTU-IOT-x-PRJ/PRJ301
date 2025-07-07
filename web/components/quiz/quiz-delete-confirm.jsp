@@ -19,7 +19,7 @@
                 <form action="${pageContext.request.contextPath}/quizzes/delete" method="post" class="mt-4">
                     <input type="hidden" name="id" value="${quizToDelete.id}">
                     <button type="submit" class="btn btn-danger">Có, tôi chắc chắn</button>
-                    <a href="${pageContext.request.contextPath}/lessons/detail?id=${quizToDelete.lessonId}" class="btn btn-secondary">Không, quay lại</a>
+                    <a href="${pageContext.request.contextPath}/subjects/detail?id=${quizToDelete.subjectId}" class="btn btn-secondary">Không, quay lại</a>
                 </form>
             </div>
         </div>

@@ -12,8 +12,8 @@
 <body>
     <%-- Include navigation --%>
     <div class="container mt-4">
-        <a href="${pageContext.request.contextPath}/lessons/detail?id=${quiz.lessonId}">
-            <i class="fas fa-arrow-left"></i> Quay lại buổi học
+        <a href="${pageContext.request.contextPath}/subjects/detail?id=${quiz.subjectId}">
+            <i class="fas fa-arrow-left"></i> Quay lại 
         </a>
         <h2 class="mt-2">${quiz.title}</h2>
         <p class="text-muted">${quiz.description}</p>
