@@ -30,6 +30,6 @@ public class AnswerOption {
     public void setQuestionId(int questionId) { this.questionId = questionId; }
     public String getOptionText() { return optionText; }
     public void setOptionText(String optionText) { this.optionText = optionText; }
-    public boolean isIsCorrect() { return isCorrect; }
+    public boolean isCorrect() { return isCorrect; }
     public void setIsCorrect(boolean isCorrect) { this.isCorrect = isCorrect; }
 }

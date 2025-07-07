@@ -53,28 +53,29 @@
 
                 addQuestionBtn.addEventListener('click', function () {
                     questionIndex++;
-                    const questionHtml = `
-                        <div class="card mb-3 question-block" id="question-${questionIndex}">
-                            <div class="card-header d-flex justify-content-between">
-                                <span>Câu hỏi ${questionIndex}</span>
-                                <button type="button" class="btn btn-danger btn-sm remove-question-btn">Xóa</button>
-                            </div>
-                            <div class="card-body">
-                                <div class="form-group">
-                                    <label>Nội dung câu hỏi</label>
-                                    <textarea class="form-control" name="questionText_${questionIndex}" required></textarea> </div>
-                                <div class="form-group">
-                                   <label>Loại câu hỏi</label>
-                                   <select class="form-control" name="questionType_${questionIndex}"> <option value="MULTIPLE_CHOICE">Trắc nghiệm nhiều lựa chọn</option>
-                                   </select>
-                                </div>
-                                <h5>Các lựa chọn trả lời</h5>
-                                <div class="options-container">
-                                </div>
-                                <button type="button" class="btn btn-info btn-sm add-option-btn">Thêm lựa chọn</button>
-                            </div>
-                        </div>
-                    `;
+                    const questionHtml =
+                            '<div class="card mb-3 question-block" id="question-' + questionIndex + '">' +
+                            '<div class="card-header d-flex justify-content-between">' +
+                            '<span>Câu hỏi ' + questionIndex + '</span>' +
+                            '<button type="button" class="btn btn-danger btn-sm remove-question-btn">Xóa</button>' +
+                            '</div>' +
+                            '<div class="card-body">' +
+                            '<div class="form-group">' +
+                            '<label>Nội dung câu hỏi</label>' +
+                            '<textarea class="form-control" name="questionText_' + questionIndex + '" required></textarea>' +
+                            '</div>' +
+                            '<div class="form-group">' +
+                            '<label>Loại câu hỏi</label>' +
+                            '<select class="form-control" name="questionType_' + questionIndex + '"> ' +
+                            '<option value="MULTIPLE_CHOICE">Trắc nghiệm nhiều lựa chọn</option>' +
+                            '</select>' +
+                            '</div>' +
+                            '<h5>Các lựa chọn trả lời</h5>' +
+                            '<div class="options-container">' +
+                            '</div>' +
+                            '<button type="button" class="btn btn-info btn-sm add-option-btn">Thêm lựa chọn</button>' +
+                            '</div>' +
+                            '</div>';
                     questionsContainer.insertAdjacentHTML('beforeend', questionHtml);
                 });
 
@@ -95,19 +96,18 @@
                         const currentQuestionIndex = questionBlock.id.replace('question-', '');
 
                         const optionIndex = optionsContainer.children.length; // Chỉ số cho lựa chọn
-                        const optionHtml = `
-                            <div class="input-group mb-2">
-                                <div class="input-group-prepend">
-                                    <div class="input-group-text">
-                                        <input type="radio" name="isCorrect_q${currentQuestionIndex}" value="${optionIndex}" required>
-                                    </div>
-                                </div>
-                                <input type="text" class="form-control" name="optionText_q${currentQuestionIndex}" placeholder="Nội dung lựa chọn" required>
-                                 <div class="input-group-append">
-                                    <button class="btn btn-outline-danger remove-option-btn" type="button">Xóa</button>
-                                </div>
-                            </div>
-                        `;
+                        // Hoặc thử cách này:
+                        const optionHtml = '<div class="input-group mb-2">' +
+                                '<div class="input-group-prepend">' +
+                                '<div class="input-group-text">' +
+                                '<input type="radio" name="isCorrect_q' + currentQuestionIndex + '" value="' + optionIndex + '" required>' +
+                                '</div>' +
+                                '</div>' +
+                                '<input type="text" class="form-control" name="optionText_q' + currentQuestionIndex + '" placeholder="Nội dung lựa chọn" required>' +
+                                '<div class="input-group-append">' +
+                                '<button class="btn btn-outline-danger remove-option-btn" type="button">Xóa</button>' +
+                                '</div>' +
+                                '</div>';
                         optionsContainer.insertAdjacentHTML('beforeend', optionHtml);
                     }
                 });

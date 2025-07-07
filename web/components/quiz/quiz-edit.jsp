@@ -41,8 +41,16 @@
                             <div class="card-body">
                                 <div class="form-group">
                                     <label>Nội dung câu hỏi</label>
-                                    <textarea class="form-control" name="questionText" required>${question.questionText}</textarea>
+                                    <textarea class="form-control" name="questionText_${qLoop.index}" required>${question.questionText}</textarea>
                                 </div>
+                                <div class="form-group">
+                                    <label>Loại câu hỏi</label>
+                                    <select class="form-control" name="questionType_${qLoop.index}">
+                                        <option value="MULTIPLE_CHOICE" ${question.questionType == 'MULTIPLE_CHOICE' ? 'selected' : ''}>Trắc nghiệm nhiều lựa chọn</option>
+                                        <%-- Thêm các loại câu hỏi khác nếu có --%>
+                                    </select>
+                                </div>
+                                <h5>Các lựa chọn trả lời</h5>
                                 <div class="options-container">
                                     <c:forEach var="option" items="${question.answerOptions}" varStatus="oLoop">
                                         <div class="input-group mb-2">
@@ -72,20 +80,13 @@
         </div>
 
         <script>
-            // Script này cần được điều chỉnh một chút so với trang add
             document.addEventListener('DOMContentLoaded', function () {
                 const questionsContainer = document.getElementById('questions-container');
                 const addQuestionBtn = document.getElementById('add-question-btn');
                 let questionIndex = ${questions.size()}; // Bắt đầu index từ số câu hỏi đã có
 
-                // ... Toàn bộ script từ quiz-add.jsp được copy vào đây ...
-                // ... Cần sửa lại cách đặt tên cho các trường input của câu hỏi mới ...
-                // ví dụ `name="isCorrect_q${questionIndex}"` và `name="optionText_q${questionIndex}"`
-                // để đảm bảo không trùng với các câu hỏi đã có.
-
-                // Phần script copy từ quiz-add.jsp sẽ hoạt động gần như tương tự, 
-                // chỉ cần đảm bảo biến `questionIndex` được khởi tạo đúng
                 addQuestionBtn.addEventListener('click', function () {
+                    // Tăng questionIndex trước khi sử dụng để đảm bảo chỉ số mới
                     questionIndex++;
                     const questionHtml = `
                         <div class="card mb-3 question-block" id="question-${questionIndex}">
@@ -96,29 +97,33 @@
                             <div class="card-body">
                                 <div class="form-group">
                                     <label>Nội dung câu hỏi</label>
-                                    <textarea class="form-control" name="questionText" required></textarea>
+                                    <textarea class="form-control" name="questionText_${questionIndex}" required></textarea>
                                 </div>
                                 <div class="form-group">
-                                     <label>Loại câu hỏi</label>
-                                     <select class="form-control" name="questionType">
+                                    <label>Loại câu hỏi</label>
+                                    <select class="form-control" name="questionType_${questionIndex}">
                                         <option value="MULTIPLE_CHOICE">Trắc nghiệm nhiều lựa chọn</option>
-                                     </select>
+                                    </select>
                                 </div>
                                 <h5>Các lựa chọn trả lời</h5>
                                 <div class="options-container">
-            <%-- Nơi chứa các lựa chọn --%>
+                                <%-- Nơi chứa các lựa chọn --%>
                                 </div>
                                 <button type="button" class="btn btn-info btn-sm add-option-btn">Thêm lựa chọn</button>
                             </div>
                         </div>
                     `;
                     questionsContainer.insertAdjacentHTML('beforeend', questionHtml);
+                    // Cập nhật lại số thứ tự cho các câu hỏi sau khi thêm/xóa để hiển thị đúng
+                    updateQuestionNumbers();
                 });
 
                 // Event listener để xóa câu hỏi (delegation)
                 questionsContainer.addEventListener('click', function (e) {
                     if (e.target.classList.contains('remove-question-btn')) {
                         e.target.closest('.question-block').remove();
+                        // Cập nhật lại số thứ tự cho các câu hỏi sau khi thêm/xóa để hiển thị đúng
+                        updateQuestionNumbers();
                     }
                 });
 
@@ -126,16 +131,22 @@
                 questionsContainer.addEventListener('click', function (e) {
                     if (e.target.classList.contains('add-option-btn')) {
                         const optionsContainer = e.target.previousElementSibling;
-                        const optionIndex = optionsContainer.children.length;
+                        const optionIndex = optionsContainer.children.length; // Chỉ số cho lựa chọn mới
+
+                        // Lấy chỉ số câu hỏi từ thẻ cha `.question-block`
+                        const currentQuestionBlock = e.target.closest('.question-block');
+                        const currentQuestionId = currentQuestionBlock.id.replace('question-', ''); // Lấy "X" từ "question-X"
+                        
+                        // ĐÃ SỬA: Chỉ thêm HTML cho lựa chọn, không bao gồm thẻ select loại câu hỏi
                         const optionHtml = `
                             <div class="input-group mb-2">
                                 <div class="input-group-prepend">
                                     <div class="input-group-text">
-                                        <input type="radio" name="isCorrect_q${questionIndex}" value="${optionIndex}" required>
+                                        <input type="radio" name="isCorrect_q${currentQuestionId}" value="${optionIndex}" required>
                                     </div>
                                 </div>
-                                <input type="text" class="form-control" name="optionText_q${questionIndex}" placeholder="Nội dung lựa chọn" required>
-                                 <div class="input-group-append">
+                                <input type="text" class="form-control" name="optionText_q${currentQuestionId}" placeholder="Nội dung lựa chọn" required>
+                                <div class="input-group-append">
                                     <button class="btn btn-outline-danger remove-option-btn" type="button">Xóa</button>
                                 </div>
                             </div>
@@ -143,12 +154,100 @@
                         optionsContainer.insertAdjacentHTML('beforeend', optionHtml);
                     }
                 });
+                
                 // Event listener để xóa lựa chọn (delegation)
                 questionsContainer.addEventListener('click', function (e) {
                     if (e.target.classList.contains('remove-option-btn')) {
                         e.target.closest('.input-group').remove();
                     }
                 });
+
+                // Hàm cập nhật số thứ tự câu hỏi hiển thị và name attributes
+                function updateQuestionNumbers() {
+                    const questionBlocks = questionsContainer.querySelectorAll('.question-block');
+                    questionBlocks.forEach((block, index) => {
+                        const newIndex = index; // Bắt đầu từ 0 cho chỉ mục, tương ứng với qLoop.index
+                        const displayIndex = index + 1; // Bắt đầu từ 1 cho hiển thị
+                        
+                        // Cập nhật ID của block câu hỏi
+                        block.id = `question-${newIndex}`;
+
+                        // Cập nhật số hiển thị của câu hỏi
+                        const headerSpan = block.querySelector('.card-header span');
+                        if (headerSpan) {
+                            headerSpan.textContent = `Câu hỏi ${displayIndex}`;
+                        }
+
+                        // Cập nhật name attributes bên trong câu hỏi
+                        const questionTextarea = block.querySelector('textarea[name^="questionText_"]');
+                        if (questionTextarea) {
+                            questionTextarea.name = `questionText_${newIndex}`;
+                        }
+
+                        const questionTypeSelect = block.querySelector('select[name^="questionType_"]');
+                        if (questionTypeSelect) {
+                            questionTypeSelect.name = `questionType_${newIndex}`;
+                        }
+                        
+                        // Cập nhật name attributes cho các lựa chọn trả lời
+                        // Lấy tất cả các input radio và text option trong options-container của từng câu hỏi
+                        const optionInputs = block.querySelectorAll('.options-container input[type="radio"], .options-container input[type="text"]');
+                        let optionCounter = 0; // Đếm chỉ mục cho các lựa chọn trong câu hỏi hiện tại
+                        optionInputs.forEach(input => {
+                            if (input.type === 'radio') {
+                                input.name = `isCorrect_q${newIndex}`;
+                                input.value = optionCounter; // Cập nhật lại value cho radio button để phản ánh đúng index mới
+                            } else if (input.type === 'text') {
+                                input.name = `optionText_q${newIndex}`;
+                            }
+                            // Tăng bộ đếm chỉ mục nếu là radio hoặc text option (chỉ 1 trong 2 được tăng mỗi lần lặp qua 1 cặp input)
+                            if (input.type === 'radio') { // Hoặc input.name.startsWith('optionText_')
+                                optionCounter++;
+                            }
+                        });
+                    });
+                    // Đặt lại questionIndex cho lần thêm câu hỏi tiếp theo
+                    // Tìm index lớn nhất hiện có hoặc bằng tổng số câu hỏi
+                    questionIndex = questionBlocks.length > 0 ? parseInt(questionBlocks[questionBlocks.length - 1].id.replace('question-', '')) + 1 : 0;
+                }
+                // Gọi lần đầu để đảm bảo tính nhất quán sau khi DOM được tải
+                updateQuestionNumbers();
+                
+                const quizForm = document.getElementById('quizForm');
+                if (quizForm) {
+                    quizForm.addEventListener('submit', function(e) {
+                        console.log('=== EDIT QUIZ FORM SUBMIT DEBUG ===');
+
+                        const formData = new FormData(quizForm);
+                        console.log('Form data:');
+                        for (let [key, value] of formData.entries()) {
+                            console.log(`${key}: ${value}`);
+                        }
+
+                        // Kiểm tra câu hỏi
+                        const questionBlocks = document.querySelectorAll('.question-block');
+                        console.log(`Total questions: ${questionBlocks.length}`);
+
+                        questionBlocks.forEach((block, index) => {
+                            const questionId = block.id.replace('question-', '');
+                            const questionText = block.querySelector(`textarea[name="questionText_${questionId}"]`);
+                            const options = block.querySelectorAll(`input[name="optionText_q${questionId}"]`);
+                            const correctAnswer = block.querySelector(`input[name="isCorrect_q${questionId}"]:checked`);
+
+                            console.log(`Question ${index + 1} (ID: ${questionId}):`);
+                            console.log(`- Text: ${questionText ? questionText.value : 'NOT FOUND'}`);
+                            console.log(`- Options: ${options.length}`);
+                            console.log(`- Correct answer: ${correctAnswer ? correctAnswer.value : 'NONE'}`);
+
+                            // Kiểm tra tất cả radio buttons
+                            const allRadios = block.querySelectorAll(`input[name="isCorrect_q${questionId}"]`);
+                            allRadios.forEach((radio, radioIndex) => {
+                                console.log(`  Radio ${radioIndex}: value=${radio.value}, checked=${radio.checked}`);
+                            });
+                        });
+                        console.log('=== END DEBUG ===');
+                    });
+                }
             });
         </script>
     </body>

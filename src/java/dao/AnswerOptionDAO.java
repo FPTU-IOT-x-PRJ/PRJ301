@@ -23,7 +23,7 @@ public class AnswerOptionDAO extends DBContext {
              PreparedStatement ps = con.prepareStatement(INSERT_OPTION_SQL)) {
             ps.setInt(1, option.getQuestionId());
             ps.setString(2, option.getOptionText());
-            ps.setBoolean(3, option.isIsCorrect());
+            ps.setBoolean(3, option.isCorrect());
             rowInserted = ps.executeUpdate() > 0;
         } catch (SQLException e) {
             printSQLException(e);

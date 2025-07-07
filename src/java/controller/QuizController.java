@@ -330,7 +330,7 @@ public class QuizController extends HttpServlet {
                     int userAnswerId = Integer.parseInt(userAnswerIdStr);
                     boolean isCorrect = false;
                     for (AnswerOption option : correctOptions) {
-                        if (option.getId() == userAnswerId && option.isIsCorrect()) {
+                        if (option.getId() == userAnswerId && option.isCorrect()) {
                             isCorrect = true;
                             break;
                         }
@@ -385,87 +385,106 @@ public class QuizController extends HttpServlet {
      * is used by both add and edit actions.
      */
     private void saveQuestionsAndOptions(HttpServletRequest request, int quizId) {
-        // Lấy tất cả các tên tham số từ request
-        Enumeration<String> parameterNames = request.getParameterNames();
-        List<Integer> submittedQuestionIndices = new ArrayList<>();
+    // Lấy tất cả các tên tham số từ request
+    Enumeration<String> parameterNames = request.getParameterNames();
+    List<Integer> submittedQuestionIndices = new ArrayList<>();
 
-        LOGGER.log(Level.INFO, "Start processing parameters for quizId: {0}", quizId);
+    LOGGER.log(Level.INFO, "Start processing parameters for quizId: {0}", quizId);
 
-        while (parameterNames.hasMoreElements()) {
-            String paramName = parameterNames.nextElement();
-            LOGGER.log(Level.INFO, "Parameter name received: {0}", paramName); // Thêm dòng này để log tất cả tên tham số
+    while (parameterNames.hasMoreElements()) {
+        String paramName = parameterNames.nextElement();
+        LOGGER.log(Level.INFO, "Parameter name received: {0}", paramName);
 
-            if (paramName.startsWith("questionText_")) {
-                try {
-                    int qIdx = Integer.parseInt(paramName.substring("questionText_".length()));
-                    submittedQuestionIndices.add(qIdx);
-                    LOGGER.log(Level.INFO, "Found question index: {0} from param: {1}", new Object[]{qIdx, paramName});
-                } catch (NumberFormatException e) {
-                    LOGGER.log(Level.WARNING, "Invalid questionText parameter name format: {0}", paramName);
-                }
-            }
-        }
-        LOGGER.log(Level.INFO, "Submitted question indices found: {0}", submittedQuestionIndices);
-
-        // Sắp xếp các chỉ số để xử lý câu hỏi theo thứ tự (tùy chọn nhưng nên làm)
-        Collections.sort(submittedQuestionIndices);
-
-        if (submittedQuestionIndices.isEmpty()) {
-            return; // Không có câu hỏi nào để thêm
-        }
-
-        // Bước 2: Duyệt qua từng chỉ số câu hỏi đã tìm được
-        for (int qIdx : submittedQuestionIndices) {
-            String qText = request.getParameter("questionText_" + qIdx);
-            String questionType = request.getParameter("questionType_" + qIdx); // Lấy loại câu hỏi tương ứng
-
-            if (qText == null || qText.trim().isEmpty()) {
-                continue; // Bỏ qua khối câu hỏi rỗng
-            }
-
-            // Bước 2a: Thêm câu hỏi để lấy ID
-            // Mặc định là MULTIPLE_CHOICE nếu questionType là null hoặc rỗng
-            if (questionType == null || questionType.trim().isEmpty()) {
-                questionType = "MULTIPLE_CHOICE";
-            }
-
-            Question newQuestion = new Question(quizId, qText, questionType);
-            int questionId = questionDao.addQuestion(newQuestion);
-
-            if (questionId > 0) {
-                // Bước 2b: Lấy các lựa chọn và đáp án đúng cho câu hỏi này
-                // Tên của các input text cho lựa chọn là "optionText_q" + qIdx
-                String[] optionTexts = request.getParameterValues("optionText_q" + qIdx);
-                // Tên của radio button cho đáp án đúng là "isCorrect_q" + qIdx
-                String correctOptionIndexStr = request.getParameter("isCorrect_q" + qIdx);
-                int correctOptionIndex = -1;
-                if (correctOptionIndexStr != null && !correctOptionIndexStr.isEmpty()) {
-                    try {
-                        correctOptionIndex = Integer.parseInt(correctOptionIndexStr);
-                    } catch (NumberFormatException e) {
-                        LOGGER.log(Level.WARNING, "Invalid correctOptionIndexStr for qIdx {0}: {1}", new Object[]{qIdx, correctOptionIndexStr});
-                    }
-                }
-
-                if (optionTexts != null) {
-                    for (int j = 0; j < optionTexts.length; j++) {
-                        String oText = optionTexts[j];
-                        if (oText != null && !oText.trim().isEmpty()) {
-                            boolean isCorrect = (j == correctOptionIndex);
-                            AnswerOption newOption = new AnswerOption(questionId, oText, isCorrect);
-                            boolean added = answerOptionDao.addAnswerOption(newOption);
-                            if (!added) {
-                                // Log lỗi nếu không thêm được lựa chọn
-                                LOGGER.log(Level.SEVERE, "Failed to add answer option: {0} for questionId: {1}", new Object[]{oText, questionId});
-                            }
-                        }
-                    }
-                }
-            } else {
-                // Log lỗi nếu không thêm được câu hỏi
-                LOGGER.log(Level.SEVERE, "Failed to add question for quizId: {0} with text: {1}", new Object[]{quizId, qText});
+        if (paramName.startsWith("questionText_")) {
+            try {
+                int qIdx = Integer.parseInt(paramName.substring("questionText_".length()));
+                submittedQuestionIndices.add(qIdx);
+                LOGGER.log(Level.INFO, "Found question index: {0} from param: {1}", new Object[]{qIdx, paramName});
+            } catch (NumberFormatException e) {
+                LOGGER.log(Level.WARNING, "Invalid questionText parameter name format: {0}", paramName);
             }
         }
     }
+    LOGGER.log(Level.INFO, "Submitted question indices found: {0}", submittedQuestionIndices);
+
+    // Sắp xếp các chỉ số để xử lý câu hỏi theo thứ tự
+    Collections.sort(submittedQuestionIndices);
+
+    if (submittedQuestionIndices.isEmpty()) {
+        return; // Không có câu hỏi nào để thêm
+    }
+
+    // Duyệt qua từng chỉ số câu hỏi đã tìm được
+    for (int qIdx : submittedQuestionIndices) {
+        String qText = request.getParameter("questionText_" + qIdx);
+        String questionType = request.getParameter("questionType_" + qIdx);
+
+        if (qText == null || qText.trim().isEmpty()) {
+            continue; // Bỏ qua khối câu hỏi rỗng
+        }
+
+        // Mặc định là MULTIPLE_CHOICE nếu questionType là null hoặc rỗng
+        if (questionType == null || questionType.trim().isEmpty()) {
+            questionType = "MULTIPLE_CHOICE";
+        }
+
+        Question newQuestion = new Question(quizId, qText, questionType);
+        int questionId = questionDao.addQuestion(newQuestion);
+
+        if (questionId > 0) {
+            // FIX: Lấy các lựa chọn và đáp án đúng cho câu hỏi này
+            String[] optionTexts = request.getParameterValues("optionText_q" + qIdx);
+            String correctOptionIndexStr = request.getParameter("isCorrect_q" + qIdx);
+            
+            LOGGER.log(Level.INFO, "Processing question {0}: optionTexts count = {1}, correctOptionIndexStr = {2}", 
+                      new Object[]{qIdx, optionTexts != null ? optionTexts.length : 0, correctOptionIndexStr});
+            
+            int correctOptionIndex = -1;
+            if (correctOptionIndexStr != null && !correctOptionIndexStr.isEmpty()) {
+                try {
+                    correctOptionIndex = Integer.parseInt(correctOptionIndexStr);
+                } catch (NumberFormatException e) {
+                    LOGGER.log(Level.WARNING, "Invalid correctOptionIndexStr for qIdx {0}: {1}", new Object[]{qIdx, correctOptionIndexStr});
+                }
+            }
+
+            if (optionTexts != null && optionTexts.length > 0) {
+                // FIX: Lọc bỏ các lựa chọn rỗng trước khi xử lý
+                List<String> validOptions = new ArrayList<>();
+                for (String oText : optionTexts) {
+                    if (oText != null && !oText.trim().isEmpty()) {
+                        validOptions.add(oText.trim());
+                    }
+                }
+                
+                LOGGER.log(Level.INFO, "Valid options count: {0}", validOptions.size());
+                
+                // FIX: Xử lý với danh sách đã được lọc
+                for (int j = 0; j < validOptions.size(); j++) {
+                    String oText = validOptions.get(j);
+                    boolean isCorrect = (j == correctOptionIndex);
+                    
+                    LOGGER.log(Level.INFO, "Adding option {0}: text = {1}, isCorrect = {2}", 
+                              new Object[]{j, oText, isCorrect});
+                    
+                    AnswerOption newOption = new AnswerOption(questionId, oText, isCorrect);
+                    boolean added = answerOptionDao.addAnswerOption(newOption);
+                    if (!added) {
+                        LOGGER.log(Level.SEVERE, "Failed to add answer option: {0} for questionId: {1}", 
+                                  new Object[]{oText, questionId});
+                    } else {
+                        LOGGER.log(Level.INFO, "Successfully added answer option: {0} for questionId: {1}", 
+                                  new Object[]{oText, questionId});
+                    }
+                }
+            } else {
+                LOGGER.log(Level.WARNING, "No valid options found for question {0}", qIdx);
+            }
+        } else {
+            LOGGER.log(Level.SEVERE, "Failed to add question for quizId: {0} with text: {1}", 
+                      new Object[]{quizId, qText});
+        }
+    }
+}
 
 }

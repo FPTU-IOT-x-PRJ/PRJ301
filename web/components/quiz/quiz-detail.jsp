@@ -33,7 +33,7 @@
                                 <li class="list-group-item ${option.isCorrect() ? 'list-group-item-success' : ''}">
                                     ${option.optionText}
                                     <c:if test="${option.isCorrect()}">
-                                        <span class="badge badge-success float-right">Đáp án đúng</span>
+                                        <span class="badge text-bg-success float-right">Đáp án đúng</span>
                                     </c:if>
                                 </li>
                             </c:forEach>
