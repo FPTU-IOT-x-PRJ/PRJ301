@@ -282,6 +282,33 @@ public class DBInitializer {
             LOGGER.log(Level.SEVERE, "Error creating AnswerOptions table", e);
         }
     }
+    
+    /**
+     * Tạo bảng Submissions nếu nó chưa tồn tại.
+     *
+     * @param conn Đối tượng Connection.
+     */
+    private void createSubmissionsTable(Connection conn) {
+        String sql = "CREATE TABLE Submissions (\n"
+                + "    id INT PRIMARY KEY IDENTITY(1,1),\n"
+                + "    quizId INT NOT NULL,\n"
+                + "    userId INT NOT NULL,\n"
+                + "    score INT NOT NULL,\n"
+                + "    timeTakenMinutes INT NOT NULL,\n"
+                + "    submissionTime DATETIME NOT NULL DEFAULT GETDATE()\n" // Sử dụng DATETIME cho LocalDateTime
+                + ");";
+        try (Statement stmt = conn.createStatement()) {
+            stmt.execute(sql);
+            LOGGER.log(Level.INFO, "Table 'Submissions' created successfully.");
+        } catch (SQLException e) {
+            // Kiểm tra nếu lỗi là do bảng đã tồn tại
+            if (e.getMessage() != null && e.getMessage().contains("already exists")) {
+                LOGGER.log(Level.INFO, "Table 'Submissions' already exists. Skipping creation.");
+            } else {
+                LOGGER.log(Level.SEVERE, "Error creating Submissions table", e);
+            }
+        }
+    }
 
     /**
      * Thêm dữ liệu giả vào các bảng.
@@ -606,46 +633,59 @@ public class DBInitializer {
             }
 
             // Đảm bảo thứ tự drop và create chính xác theo phụ thuộc khóa ngoại
-            String[] tableNames = {"Notes", "Documents", "Lessons", "Subjects", "Semesters", "Users"};
+            // Thứ tự drop: từ bảng phụ thuộc nhiều nhất đến ít nhất
+            String[] dropOrderTableNames = {
+                "Submissions", "AnswerOptions", "Questions", "Notes", "Documents",
+                "Lessons", "Subjects", "Quizzes", "Semesters", "Users"
+            };
+
+            // Thứ tự tạo: từ bảng ít phụ thuộc nhất đến nhiều nhất
+            String[] createOrderTableNames = {
+                "Users", "Semesters", "Subjects", "Lessons", "Documents",
+                "Notes", "Quizzes", "Questions", "AnswerOptions", "Submissions"
+            };
 
             if (enforceReset) {
                 LOGGER.log(Level.INFO, "Enforce reset is true. Dropping all tables...");
-                for (int i = tableNames.length - 1; i >= 0; i--) {
-                    dropTable(conn, tableNames[i]);
+                for (String tableName : dropOrderTableNames) {
+                    dropTable(conn, tableName);
                 }
 
-                // Sau khi drop, tạo lại bảng theo đúng thứ tự phụ thuộc
                 LOGGER.log(Level.INFO, "Creating tables after reset...");
-                createUsersTable(conn);
-                createSemestersTable(conn);
-                createSubjectsTable(conn);
-                createLessonsTable(conn);
-                createDocumentsTable(conn);
-                createNotesTable(conn);
-                createQuizzesTable(conn);
-                createQuestionsTable(conn);
-                createAnswerOptionsTable(conn);
-
+                for (String tableName : createOrderTableNames) {
+                    switch (tableName) {
+                        case "Users": createUsersTable(conn); break;
+                        case "Semesters": createSemestersTable(conn); break;
+                        case "Subjects": createSubjectsTable(conn); break;
+                        case "Lessons": createLessonsTable(conn); break;
+                        case "Documents": createDocumentsTable(conn); break;
+                        case "Notes": createNotesTable(conn); break;
+                        case "Quizzes": createQuizzesTable(conn); break;
+                        case "Questions": createQuestionsTable(conn); break;
+                        case "AnswerOptions": createAnswerOptionsTable(conn); break;
+                        case "Submissions": createSubmissionsTable(conn); break;
+                        default: LOGGER.log(Level.WARNING, "Unknown table name for creation: " + tableName);
+                    }
+                }
             } else {
-                // Nếu không reset, chỉ tạo các bảng nếu chúng chưa tồn tại
                 LOGGER.log(Level.INFO, "Enforce reset is false. Creating missing tables...");
-                if (!tableExists(conn, "Users")) {
-                    createUsersTable(conn);
-                }
-                if (!tableExists(conn, "Semesters")) {
-                    createSemestersTable(conn);
-                }
-                if (!tableExists(conn, "Subjects")) {
-                    createSubjectsTable(conn);
-                }
-                if (!tableExists(conn, "Lessons")) {
-                    createLessonsTable(conn);
-                }
-                if (!tableExists(conn, "Documents")) {
-                    createDocumentsTable(conn);
-                }
-                if (!tableExists(conn, "Notes")) {
-                    createNotesTable(conn); // 🔥 Thêm tạo bảng Notes ở đây
+                // Tạo các bảng theo đúng thứ tự phụ thuộc nếu chúng chưa tồn tại
+                for (String tableName : createOrderTableNames) {
+                    if (!tableExists(conn, tableName)) {
+                        switch (tableName) {
+                            case "Users": createUsersTable(conn); break;
+                            case "Semesters": createSemestersTable(conn); break;
+                            case "Subjects": createSubjectsTable(conn); break;
+                            case "Lessons": createLessonsTable(conn); break;
+                            case "Documents": createDocumentsTable(conn); break;
+                            case "Notes": createNotesTable(conn); break;
+                            case "Quizzes": createQuizzesTable(conn); break;
+                            case "Questions": createQuestionsTable(conn); break;
+                            case "AnswerOptions": createAnswerOptionsTable(conn); break;
+                            case "Submissions": createSubmissionsTable(conn); break;
+                            default: LOGGER.log(Level.WARNING, "Unknown table name for creation: " + tableName);
+                        }
+                    }
                 }
             }
 
