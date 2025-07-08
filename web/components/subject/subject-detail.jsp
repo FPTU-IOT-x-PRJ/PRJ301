@@ -207,9 +207,21 @@
                     <div class="card">
                         <div class="card-header d-flex justify-content-between align-items-center">
                             <span><i class="fas fa-question-circle me-2"></i>Quiz</span>
-                            <a href="${pageContext.request.contextPath}/quizzes/add?subjectId=${subject.id}" class="btn btn-light btn-sm rounded-pill">
-                                <i class="fas fa-plus-circle me-2"></i>Thêm Quiz mới
-                            </a>
+
+                            <div>
+                                <%-- ======================= NÚT TẠO QUIZ BẰNG AI (MỚI) ======================= --%>
+                                <button type="button" class="btn btn-info btn-sm rounded-pill me-2" 
+                                        data-bs-toggle="modal" data-bs-target="#generateQuizModal"
+                                        <c:if test="${empty documents}">disabled title="Cần có ít nhất 1 tài liệu để tạo quiz"</c:if>>
+                                            <i class="fas fa-magic me-2"></i>Tạo Quiz bằng AI
+                                        </button>
+                                <%-- ======================= KẾT THÚC NÚT MỚI ======================= --%>
+
+                                <a href="${pageContext.request.contextPath}/quizzes/add?subjectId=${subject.id}" class="btn btn-light btn-sm rounded-pill">
+                                    <i class="fas fa-plus-circle me-2"></i>Thêm Quiz mới
+                                </a>
+                            </div>
+
                         </div>
                         <div class="card-body">
                             <%-- Nhúng partial hiển thị danh sách quiz --%>
@@ -310,6 +322,49 @@
                             <button type="button" class="btn btn-secondary rounded-pill" data-bs-dismiss="modal">Hủy</button>
                             <button type="submit" class="btn btn-primary rounded-pill">Lưu ghi chú</button>
                         </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal fade" id="generateQuizModal" tabindex="-1" aria-labelledby="generateQuizModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+
+                    <%-- THAY ĐỔI 1: Thêm action và method vào thẻ form --%>
+                    <form id="generateQuizForm" action="${pageContext.request.contextPath}/quizzes/generateQuiz" method="POST">
+
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="generateQuizModalLabel">
+                                <i class="fas fa-magic me-2"></i>Tạo Quiz Tự động bằng AI
+                            </h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+
+                        <div class="modal-body">
+                            <p>Chọn một tài liệu từ danh sách dưới đây để AI phân tích và tạo ra một bài kiểm tra.</p>
+
+                            <div class="mb-3">
+                                <label for="documentSelect" class="form-label"><strong>Chọn tài liệu nguồn:</strong></label>
+                                <select class="form-select" id="documentSelect" name="documentId" required>
+                                    <option value="" selected disabled>-- Vui lòng chọn một tài liệu --</option>
+                                    <c:forEach var="doc" items="${documents}">
+                                        <%-- Dùng doc.title hoặc doc.fileName tùy thuộc vào thuộc tính bạn muốn hiển thị --%>
+                                        <option value="${doc.id}">${doc.fileName}</option> 
+                                    </c:forEach>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary rounded-pill" data-bs-dismiss="modal">Hủy</button>
+
+                            <%-- THAY ĐỔI 2: Đổi type="button" thành type="submit" và xóa các thẻ span --%>
+                            <button type="submit" class="btn btn-primary rounded-pill">
+                                Bắt đầu tạo
+                            </button>
+                        </div>
+
                     </form>
                 </div>
             </div>
