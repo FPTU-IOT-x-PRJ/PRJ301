@@ -45,6 +45,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import utils.ConfigManager;
 
 public class QuizController extends HttpServlet {
 
@@ -550,11 +551,17 @@ public class QuizController extends HttpServlet {
             outputFile = subjectTempDirPath.resolve(outputFileName).toFile();
 
             // === BƯỚC 3: THỰC THI SCRIPT PYTHON ===
+            String geminiApiKey = ConfigManager.getInstance().getProperty("GEMINI_API_KEY");
+            if (geminiApiKey == null || geminiApiKey.trim().isEmpty()) {
+                sendErrorResponse(response, HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "GEMINI_API_KEY chưa được cấu hình trong file .env.");
+                return;
+            }
             String pythonScriptPath = getServletContext().getRealPath("/scripts/quiz-generator.py");
-            int exitCode = executePythonScript(pythonScriptPath, subjectTempDirPath.toFile(), inputFileName, outputFileName);
+            int exitCode = executePythonScript(pythonScriptPath, subjectTempDirPath.toFile(), inputFileName, outputFileName, geminiApiKey);
 
             if (exitCode != 0) {
                 sendErrorResponse(response, HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "AI không thể tạo quiz do lỗi từ script Python. Vui lòng kiểm tra log của server.");
+                request.getRequestDispatcher("/components/errorGeneral.jsp").forward(request, response);
                 return;
             }
 
@@ -587,7 +594,6 @@ public class QuizController extends HttpServlet {
             saveQuestionsAndOptions(questionsJsonArray, quizId);
 
             // === BƯỚC 5: PHẢN HỒI THÀNH CÔNG ===
-            
             out.print("{\"success\": true, \"message\": \"Quiz đã được tạo thành công!\", \"quizId\": " + quizId + "}");
             LOGGER.log(Level.INFO, "Successfully generated quiz with ID: {0} for document ID: {1}", new Object[]{quizId, documentId});
             response.sendRedirect(request.getContextPath() + "/quizzes/detail?id=" + quizId);
@@ -619,18 +625,16 @@ public class QuizController extends HttpServlet {
      *
      * @return Mã thoát (exit code) của tiến trình. 0 là thành công.
      */
-    private int executePythonScript(String scriptPath, File workingDir, String inputFileName, String outputFileName) throws IOException, InterruptedException {
+    private int executePythonScript(String scriptPath, File workingDir, String inputFileName, String outputFileName, String geminiApiKey) throws IOException, InterruptedException {
         String pythonExecutable = "python";
-        // <<< THAY ĐỔI: Thêm outputFileName làm tham số thứ 3 >>>
         ProcessBuilder pb = new ProcessBuilder(pythonExecutable, scriptPath, inputFileName, outputFileName);
         pb.directory(workingDir);
 
-        // Không cần đọc output nữa, nhưng vẫn nên xem log lỗi để debug
+            // Thiết lập biến môi trường 'GEMINI_API_KEY' cho riêng tiến trình Python này.
+        pb.environment().put("GEMINI_API_KEY", geminiApiKey);
+
         pb.redirectError(ProcessBuilder.Redirect.INHERIT);
-
         Process process = pb.start();
-
-        // Chờ tiến trình kết thúc. Không cần timeout nếu không lo script bị treo vô tận.
         return process.waitFor();
     }
 

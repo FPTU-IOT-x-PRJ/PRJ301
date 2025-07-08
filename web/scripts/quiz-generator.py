@@ -22,7 +22,7 @@ except ImportError:
 
 # --- CẤU HÌNH ---
 # <<< THAY ĐỔI QUAN TRỌNG: API KEY NÊN LẤY TỪ BIẾN MÔI TRƯỜNG ĐỂ BẢO MẬT >>>
-API_KEY = os.getenv("GEMINI_API_KEY", "AIzaSyBBowrQYTN1iZtjKwwRHElE1dQ_z4q0tDw") 
+API_KEY = os.getenv("GEMINI_API_KEY") 
 # --- KẾT THÚC CẤU HÌNH ---
 
 if not API_KEY or "YOUR_API_KEY" in API_KEY:
