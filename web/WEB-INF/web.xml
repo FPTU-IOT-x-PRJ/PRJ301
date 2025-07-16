@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <web-app version="6.0" xmlns="https://jakarta.ee/xml/ns/jakartaee" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="https://jakarta.ee/xml/ns/jakartaee https://jakarta.ee/xml/ns/jakartaee/web-app_6_0.xsd">
+     <listener>
+        <listener-class>config.AppListener</listener-class> 
+     </listener>
     <servlet>
         <servlet-name>TestDB</servlet-name>
         <servlet-class>controller.TestDB</servlet-class>
@@ -31,10 +34,6 @@
     <servlet>
         <servlet-name>CalendarController</servlet-name>
         <servlet-class>controller.CalendarController</servlet-class>
-    </servlet>
-    <servlet>
-        <servlet-name>GoogleLogin</servlet-name>
-        <servlet-class>controller.GoogleLogin</servlet-class>
     </servlet>
     <servlet>
         <servlet-name>NoteController</servlet-name>
@@ -80,10 +79,6 @@
     <servlet-mapping>
         <servlet-name>NoteController</servlet-name>
         <url-pattern>/notes/*</url-pattern>
-    </servlet-mapping>
-    <servlet-mapping>
-        <servlet-name>GoogleLogin</servlet-name>
-        <url-pattern>/google-login</url-pattern>
     </servlet-mapping>
     <servlet-mapping>
         <servlet-name>QuizController</servlet-name>
