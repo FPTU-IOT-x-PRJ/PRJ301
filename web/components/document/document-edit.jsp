@@ -148,7 +148,7 @@
                         </div>
 
                         <div class="d-flex justify-content-end mt-4">
-                            <a href="${pageContext.request.contextPath}/documents/display" class="btn btn-secondary-custom me-2">
+                            <a href="${pageContext.request.contextPath}/documents/detail?id=${document.id}" class="btn btn-secondary-custom me-2">
                                 <i class="fas fa-arrow-left me-2"></i>Hủy
                             </a>
                             <button type="submit" class="btn btn-primary-custom">

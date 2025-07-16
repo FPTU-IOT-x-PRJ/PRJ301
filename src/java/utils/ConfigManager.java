@@ -55,7 +55,7 @@ public class ConfigManager {
         // Fallback về file .env
         String fileValue = properties.getProperty(key);
         if (fileValue != null) {
-            LOGGER.log(Level.INFO, "Loaded from .env file: {0} = {1}", new Object[]{key, maskIfSensitive(key, fileValue)});
+//            LOGGER.log(Level.INFO, "Loaded from .env file: {0} = {1}", new Object[]{key, maskIfSensitive(key, fileValue)});
         } else {
             LOGGER.log(Level.WARNING, "Configuration key not found: {0}", key);
         }

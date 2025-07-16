@@ -32,7 +32,7 @@ public class DBContext {
 
             Class.forName("com.microsoft.sqlserver.jdbc.SQLServerDriver");
             con = DriverManager.getConnection(url, username, password);
-            LOGGER.log(Level.INFO, "New database connection successfully acquired.");
+//            LOGGER.log(Level.INFO, "New database connection successfully acquired.");
             return con;
         } catch (ClassNotFoundException e) {
             LOGGER.log(Level.SEVERE, "SQL Server JDBC Driver not found", e);
