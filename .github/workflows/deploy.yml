@@ -4,6 +4,9 @@ on:
   pull_request:
     branches: 
       - main
+  push:
+    branches:
+      - deploy-v2
 
 jobs:
   deploy:
